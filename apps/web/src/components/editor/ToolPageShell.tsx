@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Brand from "@/components/layout/Brand";
 import SessionControls from "@/components/layout/SessionControls";
 import ThemeSwitcher from "@/components/layout/ThemeSwitcher";
@@ -20,38 +20,49 @@ export default function ToolPageShell({
   title,
 }: ToolPageShellProps) {
   return (
-    <main className="app-shell min-h-screen px-4 py-5 sm:px-6 lg:px-8">
-      <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] max-w-7xl flex-col gap-6">
-        <header className="glass theme-header rounded-[28px] px-5 py-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
+    <main className="app-shell min-h-screen px-4 py-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-7xl flex-col gap-4">
+        {/* Header */}
+        <header
+          className="glass theme-header rounded-sm px-4 py-3"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
               <Link
-                className="theme-button-secondary inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm transition"
+                className="theme-button-secondary inline-flex items-center gap-2 rounded-sm px-3 py-1.5 text-xs transition"
                 href="/editor"
               >
-                <ArrowLeft size={16} />
-                Back to editor
+                <ArrowLeft size={14} />
+                Back
               </Link>
               <Brand compact />
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <ThemeSwitcher />
               <SessionControls />
             </div>
           </div>
         </header>
 
-        <section className="panel rounded-[32px] p-6 sm:p-8">
-          <div className="theme-chip inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs uppercase tracking-[0.26em]">
-            <Sparkles size={14} />
+        {/* Content */}
+        <section className="panel rounded-sm p-5 sm:p-7 flex-1">
+          <div
+            className="inline-flex items-center gap-2 rounded-sm px-3 py-1.5 text-xs font-semibold uppercase tracking-widest"
+            style={{ background: "var(--accent-soft)", border: "1px solid var(--border-strong)", color: "var(--accent)" }}
+          >
             {eyebrow}
           </div>
-          <h1 className="display-font theme-text-strong mt-5 text-4xl font-semibold tracking-[-0.05em] sm:text-5xl">
+          <h1 className="display-font theme-text-strong mt-5 text-3xl font-bold sm:text-4xl">
             {title}
           </h1>
-          <p className="theme-muted mt-4 max-w-3xl text-base leading-8">{description}</p>
-          <div className="mt-8">{children}</div>
+          <p className="theme-muted mt-3 max-w-3xl text-sm leading-7">{description}</p>
+          <div className="mt-6">{children}</div>
         </section>
+
+        {/* Footer */}
+        <footer className="voidlab-footer rounded-sm">
+          © 2025 Voxion Labs. All rights reserved.
+        </footer>
       </div>
     </main>
   );

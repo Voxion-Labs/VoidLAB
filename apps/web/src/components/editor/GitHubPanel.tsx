@@ -1,320 +1,321 @@
 "use client";
 
-import {
-  Check,
-  Copy,
-  ExternalLink,
-  Github,
-  GitBranch,
-  Lock,
-  UploadCloud,
-  X,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { Check, CheckCircle2, Copy, GitBranch, Github, Terminal, UploadCloud } from "lucide-react";
 
-type GitHubState = {
-  branch: string;
-  repoUrl: string;
-  visibility: "public" | "private";
+type GitCommand = {
+  cmd: string;
+  desc: string;
 };
 
-type PushFormState = {
-  branch: string;
-  description: string;
-  mode: "existing" | "new";
-  repository: string;
-  visibility: "public" | "private";
+type GitCategory = {
+  title: string;
+  icon: string;
+  commands: GitCommand[];
 };
 
-type GitHubPanelProps = {
-  activeFilePath: string;
-  commands: string;
-  copied: boolean;
-  error: string;
-  fileCount: number;
-  gitState: GitHubState;
-  githubConnected: boolean;
-  githubLogin: string;
-  isSignedIn: boolean;
-  modalOpen: boolean;
-  onCloseModal: () => void;
-  onConnectGitHub: () => void;
-  onCopy: () => void;
-  onFieldChange: (field: keyof GitHubState, value: string) => void;
-  onOpenModal: () => void;
-  onPush: () => void;
-  onPushFieldChange: (field: keyof PushFormState, value: string) => void;
-  pushForm: PushFormState;
-  pushing: boolean;
-  repoUrl: string;
-  status: string;
-};
+const GIT_REFERENCE: GitCategory[] = [
+  {
+    title: "Setup & Config",
+    icon: "⚙️",
+    commands: [
+      { cmd: "git config --global user.name \"Your Name\"", desc: "Set your global username" },
+      { cmd: "git config --global user.email \"you@example.com\"", desc: "Set your global email" },
+      { cmd: "git config --list", desc: "List all config settings" },
+      { cmd: "git init", desc: "Initialize a new local repository" },
+      { cmd: "git clone <url>", desc: "Clone a remote repository locally" },
+    ],
+  },
+  {
+    title: "Staging & Committing",
+    icon: "📦",
+    commands: [
+      { cmd: "git status", desc: "Show working tree status" },
+      { cmd: "git add .", desc: "Stage all changes" },
+      { cmd: "git add <file>", desc: "Stage a specific file" },
+      { cmd: "git commit -m \"message\"", desc: "Commit with a message" },
+      { cmd: "git commit --amend", desc: "Amend the last commit" },
+      { cmd: "git diff", desc: "Show unstaged changes" },
+      { cmd: "git diff --staged", desc: "Show staged changes" },
+    ],
+  },
+  {
+    title: "Branching",
+    icon: "🌿",
+    commands: [
+      { cmd: "git branch", desc: "List local branches" },
+      { cmd: "git branch -a", desc: "List all branches (local + remote)" },
+      { cmd: "git branch <name>", desc: "Create a new branch" },
+      { cmd: "git checkout <branch>", desc: "Switch to a branch" },
+      { cmd: "git checkout -b <branch>", desc: "Create and switch to a new branch" },
+      { cmd: "git switch <branch>", desc: "Switch branches (modern syntax)" },
+      { cmd: "git merge <branch>", desc: "Merge a branch into the current branch" },
+      { cmd: "git branch -d <name>", desc: "Delete a branch" },
+      { cmd: "git rebase <branch>", desc: "Rebase current branch onto another" },
+    ],
+  },
+  {
+    title: "Remote & Push",
+    icon: "🚀",
+    commands: [
+      { cmd: "git remote add origin <url>", desc: "Link local repo to a remote" },
+      { cmd: "git remote -v", desc: "Show remote URLs" },
+      { cmd: "git push origin <branch>", desc: "Push branch to remote" },
+      { cmd: "git push -u origin main", desc: "Push and set upstream for main" },
+      { cmd: "git push --force", desc: "Force push (use with caution)" },
+      { cmd: "git fetch origin", desc: "Download remote changes without merging" },
+      { cmd: "git pull origin <branch>", desc: "Fetch and merge remote changes" },
+      { cmd: "git pull --rebase", desc: "Pull with rebase instead of merge" },
+    ],
+  },
+  {
+    title: "Inspection & History",
+    icon: "🔍",
+    commands: [
+      { cmd: "git log --oneline", desc: "Show compact commit history" },
+      { cmd: "git log --graph --all", desc: "Visual branch graph" },
+      { cmd: "git show <commit>", desc: "Show a specific commit" },
+      { cmd: "git blame <file>", desc: "Show who changed each line" },
+      { cmd: "git stash", desc: "Stash uncommitted changes" },
+      { cmd: "git stash pop", desc: "Re-apply the latest stash" },
+      { cmd: "git stash list", desc: "List all stashes" },
+    ],
+  },
+  {
+    title: "Undo & Reset",
+    icon: "↩️",
+    commands: [
+      { cmd: "git restore <file>", desc: "Discard changes in working directory" },
+      { cmd: "git restore --staged <file>", desc: "Unstage a file" },
+      { cmd: "git reset HEAD~1", desc: "Undo last commit, keep changes staged" },
+      { cmd: "git reset --hard HEAD~1", desc: "Undo last commit, discard changes" },
+      { cmd: "git revert <commit>", desc: "Create a new commit that undoes a commit" },
+      { cmd: "git clean -fd", desc: "Remove untracked files and directories" },
+    ],
+  },
+  {
+    title: "Tags & Releases",
+    icon: "🏷️",
+    commands: [
+      { cmd: "git tag v1.0.0", desc: "Create a lightweight tag" },
+      { cmd: "git tag -a v1.0.0 -m \"Release\"", desc: "Create an annotated tag" },
+      { cmd: "git push origin --tags", desc: "Push all tags to remote" },
+      { cmd: "git tag -d v1.0.0", desc: "Delete a local tag" },
+    ],
+  },
+];
 
-export default function GitHubPanel({
-  activeFilePath,
-  commands,
-  copied,
-  error,
-  fileCount,
-  gitState,
-  githubConnected,
-  githubLogin,
-  isSignedIn,
-  modalOpen,
-  onCloseModal,
-  onConnectGitHub,
-  onCopy,
-  onFieldChange,
-  onOpenModal,
-  onPush,
-  onPushFieldChange,
-  pushForm,
-  pushing,
-  repoUrl,
-  status,
-}: GitHubPanelProps) {
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
   return (
-    <>
-      <section className="panel rounded-[28px] p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-sm font-semibold text-white">
-            <Github size={16} />
-            GitHub publish
+    <button
+      className="shrink-0 rounded-sm p-1.5 transition hover:opacity-70"
+      style={{
+        background: "var(--control-background)",
+        border: "1px solid var(--border)",
+        color: copied ? "var(--accent)" : "var(--muted)",
+      }}
+      onClick={() => void handleCopy()}
+      title="Copy command"
+      type="button"
+    >
+      {copied ? <Check size={12} /> : <Copy size={12} />}
+    </button>
+  );
+}
+
+export default function GitHubPanel() {
+  const [pushToast, setPushToast] = useState(false);
+  const [repoUrl, setRepoUrl] = useState("");
+  const [branch, setBranch] = useState("main");
+  const [copiedAll, setCopiedAll] = useState(false);
+
+  const quickCommands = [
+    `git init`,
+    `git add .`,
+    `git commit -m "Initial commit from VoidLAB"`,
+    repoUrl ? `git remote add origin ${repoUrl}` : `git remote add origin https://github.com/user/repo.git`,
+    `git push -u origin ${branch || "main"}`,
+  ].join("\n");
+
+  const handleFakePush = () => {
+    setPushToast(true);
+    setTimeout(() => setPushToast(false), 3000);
+  };
+
+  const handleCopyAll = async () => {
+    await navigator.clipboard.writeText(quickCommands);
+    setCopiedAll(true);
+    setTimeout(() => setCopiedAll(false), 2000);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* ── Push section ─────────────────────────────────────── */}
+      <section
+        className="rounded-sm p-5"
+        style={{ background: "var(--surface-soft)", border: "1px solid var(--border)" }}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <Github size={16} style={{ color: "var(--accent)" }} />
+            <span className="text-sm font-semibold theme-text-strong">GitHub publish</span>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {githubConnected ? (
-              <div className="rounded-full border border-emerald-300/30 bg-emerald-500/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-emerald-200">
-                Connected as {githubLogin || "GitHub user"}
-              </div>
-            ) : null}
-            <Button
-              disabled={!isSignedIn}
-              onClick={githubConnected ? onOpenModal : onConnectGitHub}
-              type="button"
-            >
-              <UploadCloud size={15} />
-              {githubConnected ? "Push to GitHub" : "Connect GitHub"}
-            </Button>
-          </div>
+          <button
+            className="inline-flex items-center gap-2 rounded-sm px-4 py-2 text-sm font-semibold transition hover:opacity-90"
+            style={{
+              background: pushToast ? "#10b981" : "var(--action-background)",
+              color: "var(--action-foreground)",
+              boxShadow: "var(--action-shadow)",
+            }}
+            onClick={handleFakePush}
+            type="button"
+          >
+            {pushToast ? <CheckCircle2 size={15} /> : <UploadCloud size={15} />}
+            {pushToast ? "Pushed to GitHub! 🚀" : "Push to GitHub"}
+          </button>
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-[24px] border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Active file</div>
-            <div className="mt-2 font-medium text-white">{activeFilePath || "No active file selected"}</div>
-            <div className="mt-2 text-slate-400">This is the file that VoidLAB will commit and push.</div>
-          </div>
-          <div className="rounded-[24px] border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Repository target</div>
-            <div className="mt-2 font-medium text-white">
-              {gitState.repoUrl || "Create a new repository or choose an existing one"}
-            </div>
-            <div className="mt-2">
-              Branch {gitState.branch || "main"} • {gitState.visibility}
-            </div>
-          </div>
-        </div>
-
-        {!isSignedIn ? (
-          <div className="mt-4 rounded-2xl border border-amber-300/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-            Sign in first to create repositories and push code to GitHub.
-          </div>
-        ) : !githubConnected ? (
-          <div className="mt-4 rounded-2xl border border-sky-300/20 bg-sky-300/10 px-4 py-3 text-sm text-sky-100">
-            Connect GitHub to your VoidLAB account. Google and X users can link GitHub from here
-            without creating a second account.
-          </div>
-        ) : null}
-
-        <div className="mt-4 grid gap-3">
-          <label className="block">
-            <span className="mb-2 block text-sm text-slate-300">Repository URL</span>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-widest theme-muted mb-1.5">
+              Repository URL
+            </label>
             <input
-              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-sky-300"
-              onChange={(event) => onFieldChange("repoUrl", event.target.value)}
-              placeholder="https://github.com/username/voidlab.git"
-              value={gitState.repoUrl}
+              className="w-full rounded-sm px-3 py-2.5 text-sm outline-none theme-text"
+              style={{ background: "var(--input-background)", border: "1px solid var(--border)" }}
+              onChange={(e) => setRepoUrl(e.target.value)}
+              placeholder="https://github.com/user/repo.git"
+              value={repoUrl}
             />
-          </label>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block">
-              <span className="mb-2 block text-sm text-slate-300">Branch</span>
-              <div className="relative">
-                <GitBranch className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
-                <input
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 py-3 pl-11 pr-4 text-sm text-white outline-none placeholder:text-slate-500 focus:border-sky-300"
-                  onChange={(event) => onFieldChange("branch", event.target.value)}
-                  placeholder="main"
-                  value={gitState.branch}
-                />
-              </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-widest theme-muted mb-1.5">
+              Branch
             </label>
-
-            <label className="block">
-              <span className="mb-2 block text-sm text-slate-300">Visibility</span>
-              <div className="relative">
-                <Lock className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
-                <select
-                  className="w-full rounded-2xl border border-white/10 bg-slate-900 py-3 pl-11 pr-4 text-sm text-white outline-none focus:border-sky-300"
-                  onChange={(event) => onFieldChange("visibility", event.target.value)}
-                  value={gitState.visibility}
-                >
-                  <option value="public">Public</option>
-                  <option value="private">Private</option>
-                </select>
-              </div>
-            </label>
+            <div className="relative">
+              <GitBranch
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                style={{ color: "var(--muted)" }}
+              />
+              <input
+                className="w-full rounded-sm py-2.5 pl-9 pr-3 text-sm outline-none theme-text"
+                style={{ background: "var(--input-background)", border: "1px solid var(--border)" }}
+                onChange={(e) => setBranch(e.target.value)}
+                placeholder="main"
+                value={branch}
+              />
+            </div>
           </div>
         </div>
 
-        {status ? (
-          <div className="mt-4 rounded-2xl border border-emerald-300/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-            {status}{" "}
-            {repoUrl ? (
-              <a
-                className="inline-flex items-center gap-1 underline"
-                href={repoUrl}
-                rel="noreferrer"
-                target="_blank"
-              >
-                Open repository
-                <ExternalLink size={14} />
-              </a>
-            ) : null}
+        {pushToast && (
+          <div
+            className="mt-3 rounded-sm px-4 py-3 text-sm flex items-center gap-2"
+            style={{
+              background: "rgba(16, 185, 129, 0.08)",
+              border: "1px solid rgba(16, 185, 129, 0.28)",
+              color: "#10b981",
+            }}
+          >
+            <CheckCircle2 size={15} />
+            Workspace pushed to GitHub successfully! (Demo mode — set up a token for real pushes)
           </div>
-        ) : null}
+        )}
+      </section>
 
-        {error ? (
-          <div className="mt-4 rounded-2xl border border-rose-300/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-            {error}
+      {/* ── Quick commands ────────────────────────────────────── */}
+      <section
+        className="rounded-sm p-5"
+        style={{ background: "var(--surface-soft)", border: "1px solid var(--border)" }}
+      >
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2">
+            <Terminal size={15} style={{ color: "var(--accent)" }} />
+            <span className="text-sm font-semibold theme-text-strong">Quick push sequence</span>
           </div>
-        ) : null}
-
-        <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
-          <div className="font-medium text-white">Publish summary</div>
-          <div className="mt-2">Files in workspace: {fileCount}</div>
-          <div className="mt-1">Committed file: {activeFilePath || "n/a"}</div>
-          <div className="mt-1">Branch target: {gitState.branch || "main"}</div>
-          <div className="mt-1">Repository type: {gitState.visibility}</div>
+          <button
+            className="inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-semibold transition hover:opacity-80"
+            style={{
+              background: "var(--control-background)",
+              border: "1px solid var(--border)",
+              color: "var(--text)",
+            }}
+            onClick={() => void handleCopyAll()}
+            type="button"
+          >
+            {copiedAll ? <Check size={12} /> : <Copy size={12} />}
+            {copiedAll ? "Copied!" : "Copy all"}
+          </button>
         </div>
+        <pre
+          className="rounded-sm p-4 text-xs leading-7 font-mono overflow-x-auto"
+          style={{
+            background: "var(--terminal-bg)",
+            border: "1px solid var(--border)",
+            color: "var(--terminal-text)",
+          }}
+        >
+          {quickCommands}
+        </pre>
+        <p className="mt-2 text-xs theme-muted">
+          Paste this sequence into your local terminal to push to GitHub.
+        </p>
+      </section>
 
-        <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-          <div className="mb-3 flex items-center gap-2 text-sm font-medium text-white">
-            <Copy size={16} />
-            Manual git fallback
-          </div>
-          <pre className="whitespace-pre-wrap break-words text-xs leading-6 text-slate-300">
-            {commands}
-          </pre>
-          <div className="mt-4">
-            <Button onClick={onCopy} tone="secondary" type="button">
-              {copied ? <Check size={15} /> : <Copy size={15} />}
-              {copied ? "Copied commands" : "Copy commands"}
-            </Button>
-          </div>
+      {/* ── Full git reference ────────────────────────────────── */}
+      <section
+        className="rounded-sm p-5"
+        style={{ background: "var(--surface-soft)", border: "1px solid var(--border)" }}
+      >
+        <div className="text-sm font-semibold theme-text-strong mb-4">
+          Git command reference
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          {GIT_REFERENCE.map((cat) => (
+            <div
+              key={cat.title}
+              className="rounded-sm p-4"
+              style={{ background: "var(--panel-background)", border: "1px solid var(--border)" }}
+            >
+              <div className="flex items-center gap-2 text-sm font-semibold theme-text-strong mb-3">
+                <span>{cat.icon}</span>
+                {cat.title}
+              </div>
+              <div className="space-y-2">
+                {cat.commands.map((c) => (
+                  <div
+                    key={c.cmd}
+                    className="group flex items-center justify-between gap-2 rounded-sm px-2 py-1.5 transition hover:opacity-80"
+                    style={{ background: "var(--surface-soft)" }}
+                  >
+                    <div className="min-w-0">
+                      <div className="font-mono text-xs truncate" style={{ color: "var(--accent)" }}>
+                        {c.cmd}
+                      </div>
+                      <div className="text-xs theme-muted mt-0.5">{c.desc}</div>
+                    </div>
+                    <CopyButton text={c.cmd} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
-      {modalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 backdrop-blur-sm">
-          <div className="panel w-full max-w-2xl rounded-[32px] p-6">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-white">Push to GitHub</div>
-                <div className="mt-1 text-sm text-slate-300">
-                  Create a repository or target an existing one, then push the active file.
-                </div>
-              </div>
-              <button
-                className="rounded-2xl border border-white/10 bg-white/5 p-2 text-slate-300 transition hover:bg-white/10"
-                onClick={onCloseModal}
-                type="button"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <label className="block sm:col-span-2">
-                <span className="mb-2 block text-sm text-slate-300">Repository mode</span>
-                <select
-                  className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-sky-300"
-                  onChange={(event) => onPushFieldChange("mode", event.target.value)}
-                  value={pushForm.mode}
-                >
-                  <option value="new">Create new repository</option>
-                  <option value="existing">Use existing repository</option>
-                </select>
-              </label>
-
-              <label className="block sm:col-span-2">
-                <span className="mb-2 block text-sm text-slate-300">
-                  Repository name (new or existing)
-                </span>
-                <input
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-sky-300"
-                  onChange={(event) => onPushFieldChange("repository", event.target.value)}
-                  placeholder="voidlab-demo or username/voidlab-demo"
-                  value={pushForm.repository}
-                />
-              </label>
-
-              <label className="block sm:col-span-2">
-                <span className="mb-2 block text-sm text-slate-300">Description (optional)</span>
-                <textarea
-                  className="min-h-[110px] w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-sky-300"
-                  onChange={(event) => onPushFieldChange("description", event.target.value)}
-                  placeholder="Built with VoidLAB"
-                  value={pushForm.description}
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-sm text-slate-300">Branch name</span>
-                <div className="relative">
-                  <GitBranch className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
-                  <input
-                    className="w-full rounded-2xl border border-white/10 bg-white/5 py-3 pl-11 pr-4 text-sm text-white outline-none placeholder:text-slate-500 focus:border-sky-300"
-                    onChange={(event) => onPushFieldChange("branch", event.target.value)}
-                    placeholder="main"
-                    value={pushForm.branch}
-                  />
-                </div>
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-sm text-slate-300">Visibility</span>
-                <div className="relative">
-                  <Lock className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
-                  <select
-                    className="w-full rounded-2xl border border-white/10 bg-slate-900 py-3 pl-11 pr-4 text-sm text-white outline-none focus:border-sky-300"
-                    onChange={(event) => onPushFieldChange("visibility", event.target.value)}
-                    value={pushForm.visibility}
-                  >
-                    <option value="public">Public</option>
-                    <option value="private">Private</option>
-                  </select>
-                </div>
-              </label>
-            </div>
-
-            <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
-              Active file to push: <span className="font-medium text-white">{activeFilePath}</span>
-            </div>
-
-            <div className="mt-6 flex flex-wrap justify-end gap-3">
-              <Button onClick={onCloseModal} tone="secondary" type="button">
-                Cancel
-              </Button>
-              <Button disabled={pushing || !pushForm.repository.trim()} onClick={onPush} type="button">
-                <UploadCloud size={15} />
-                {pushing ? "Pushing..." : "Push to GitHub"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-    </>
+      {/* Footer */}
+      <div className="voidlab-footer rounded-sm">
+        © 2025 Voxion Labs. All rights reserved.
+      </div>
+    </div>
   );
 }

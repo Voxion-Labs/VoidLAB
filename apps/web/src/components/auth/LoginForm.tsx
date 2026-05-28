@@ -1,34 +1,12 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
-import { ArrowRight, Github, Globe2, Mail, Phone, ShieldCheck, Sparkles, User2 } from "lucide-react";
+import { ArrowRight, Globe2, Mail, Phone, User2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/context/UserContext";
-import { buildOAuthStartUrl } from "@/lib/auth";
 import { apiBaseUrl } from "@/lib/api";
 import { storeSessionToken } from "@/lib/session";
-
-const providerCards = [
-  {
-    description: "Use your Google account for a polished one-click sign-in flow.",
-    href: buildOAuthStartUrl("google"),
-    icon: Mail,
-    label: "Continue with Google",
-  },
-  {
-    description: "Connect GitHub to unlock real repository pushes from VoidLAB.",
-    href: buildOAuthStartUrl("github"),
-    icon: Github,
-    label: "Continue with GitHub",
-  },
-  {
-    description: "Use X OAuth 2.0 so your profile and identity stay linked securely.",
-    href: buildOAuthStartUrl("x"),
-    icon: Sparkles,
-    label: "Continue with X",
-  },
-];
 
 const emptyForm = {
   email: "",
@@ -62,7 +40,7 @@ export default function LoginForm({ authError = "" }: LoginFormProps) {
     setError("");
 
     if (!form.name.trim() || !form.email.trim() || !form.phone.trim() || !form.region.trim()) {
-      setError("Please fill name, email, phone, and region first.");
+      setError("Please fill in your name, email, phone, and region.");
       return;
     }
 
@@ -71,9 +49,7 @@ export default function LoginForm({ authError = "" }: LoginFormProps) {
     try {
       const response = await fetch(`${apiBaseUrl}/api/auth/manual-login`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
           email: form.email.trim(),
@@ -103,34 +79,43 @@ export default function LoginForm({ authError = "" }: LoginFormProps) {
   };
 
   return (
-    <section className="glass w-full max-w-xl rounded-[32px] p-5 sm:p-8">
+    <section className="glass w-full max-w-xl rounded-sm p-6 sm:p-8">
+      {/* Header */}
       <div className="mb-8 flex items-start justify-between gap-4">
         <div>
-          <div className="display-font text-3xl font-semibold tracking-[-0.05em] theme-text">
+          <div className="display-font text-3xl font-bold tracking-tight theme-text-strong">
             Enter VoidLAB
           </div>
           <p className="mt-2 text-sm leading-6 theme-muted">
-            Use the simple direct entry form like before, or keep things connected with Google,
-            GitHub, or X whenever you want.
+            Create or access your workspace with a simple one-step form. No passwords, no friction.
           </p>
         </div>
-        <div className="rounded-2xl border border-sky-100 bg-sky-50 px-3 py-2 text-right shadow-[inset_0_0_0_1px_rgba(96,165,250,0.08)]">
-          <div className="text-xs uppercase tracking-[0.24em] text-sky-700">Access</div>
-          <div className="display-font text-xl font-semibold text-slate-900">{completion}%</div>
+        <div
+          className="shrink-0 rounded-sm px-3 py-2 text-right"
+          style={{
+            background: "var(--accent-soft)",
+            border: "1px solid var(--border-strong)",
+          }}
+        >
+          <div className="text-xs font-semibold uppercase tracking-widest accent-text">
+            Access
+          </div>
+          <div className="display-font text-xl font-bold theme-text-strong">{completion}%</div>
         </div>
       </div>
 
+      {/* Form */}
       <form className="space-y-4" onSubmit={(event) => void handleManualLogin(event)}>
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
-            icon={<User2 size={16} />}
+            icon={<User2 size={15} />}
             label="Full name"
             onChange={handleField("name")}
-            placeholder="Liam"
+            placeholder="Your name"
             value={form.name}
           />
           <Input
-            icon={<Mail size={16} />}
+            icon={<Mail size={15} />}
             label="Email"
             onChange={handleField("email")}
             placeholder="you@example.com"
@@ -138,14 +123,14 @@ export default function LoginForm({ authError = "" }: LoginFormProps) {
             value={form.email}
           />
           <Input
-            icon={<Phone size={16} />}
+            icon={<Phone size={15} />}
             label="Phone number"
             onChange={handleField("phone")}
-            placeholder="Phone number"
+            placeholder="+91 98765 43210"
             value={form.phone}
           />
           <Input
-            icon={<Globe2 size={16} />}
+            icon={<Globe2 size={15} />}
             label="Region"
             onChange={handleField("region")}
             placeholder="Kolkata, India"
@@ -153,73 +138,65 @@ export default function LoginForm({ authError = "" }: LoginFormProps) {
           />
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[28px] border border-sky-100 bg-white p-5">
-          <div>
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-950">
-              <ShieldCheck size={16} />
-              Traditional entry
-            </div>
-            <div className="mt-2 text-sm leading-6 text-slate-600">
-              This creates or reuses your real VoidLAB account and signs you in directly without
-              going through another app.
-            </div>
+        <div
+          className="flex flex-wrap items-center justify-between gap-3 rounded-sm p-4"
+          style={{
+            background: "var(--surface-soft)",
+            border: "1px solid var(--border)",
+          }}
+        >
+          <div className="text-sm theme-muted leading-6">
+            Your workspace is stored securely and privately. No external logins required.
           </div>
-          <Button className="min-w-[190px]" disabled={submitting} type="submit">
+          <Button className="min-w-[180px]" disabled={submitting} type="submit">
             {submitting ? "Entering..." : "Enter VoidLAB"}
-            <ArrowRight size={16} />
+            <ArrowRight size={15} />
           </Button>
         </div>
       </form>
 
+      {/* Error */}
       {error || authError ? (
-        <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <div
+          className="mt-4 rounded-sm px-4 py-3 text-sm"
+          style={{
+            background: "rgba(225, 29, 72, 0.08)",
+            border: "1px solid rgba(225, 29, 72, 0.28)",
+            color: "var(--accent)",
+          }}
+        >
           {error || authError}
         </div>
       ) : null}
 
-      <div className="my-6 flex items-center gap-4">
-        <div className="h-px flex-1 bg-sky-100" />
-        <div className="text-xs uppercase tracking-[0.24em] text-slate-500">Or continue with</div>
-        <div className="h-px flex-1 bg-sky-100" />
-      </div>
-
-      <div className="space-y-3">
-        {providerCards.map((provider) => {
-          const Icon = provider.icon;
-
-          return (
-            <a
-              className="flex items-center justify-between rounded-[28px] border border-sky-100 bg-white px-5 py-4 text-left shadow-[0_10px_24px_rgba(148,163,184,0.12)] transition hover:-translate-y-0.5 hover:border-sky-200"
-              href={provider.href}
-              key={provider.label}
-            >
-              <span className="flex min-w-0 items-center gap-4">
-                <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-sky-100 bg-sky-50 text-slate-900">
-                  <Icon size={18} />
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-sm font-semibold text-slate-950">{provider.label}</span>
-                  <span className="mt-1 block text-sm leading-6 text-slate-600">
-                    {provider.description}
-                  </span>
-                </span>
-              </span>
-            </a>
-          );
-        })}
-      </div>
-
+      {/* Already signed in */}
       {isReady && profile ? (
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-sky-900">
-          <span>Signed in as {profile.name}. Open your workspace when you’re ready.</span>
+        <div
+          className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-sm px-4 py-3 text-sm"
+          style={{
+            background: "var(--accent-soft)",
+            border: "1px solid var(--border-strong)",
+          }}
+        >
+          <span className="theme-text">Signed in as <strong>{profile.name}</strong>. Your workspace is ready.</span>
           <a
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-sky-400 px-4 py-2.5 text-sm font-medium text-white shadow-[0_14px_32px_rgba(59,130,246,0.22)] transition duration-200 hover:bg-sky-300"
+            className="inline-flex items-center justify-center gap-2 rounded-sm px-4 py-2 text-sm font-semibold transition hover:opacity-90"
             href="/editor"
+            style={{
+              background: "var(--action-background)",
+              color: "var(--action-foreground)",
+              boxShadow: "var(--action-shadow)",
+            }}
           >
             Open editor
           </a>
         </div>
       ) : null}
+
+      {/* Copyright */}
+      <div className="mt-8 text-center text-xs theme-muted" style={{ letterSpacing: "0.03em" }}>
+        © 2025 Voxion Labs. All rights reserved.
+      </div>
     </section>
   );
 }

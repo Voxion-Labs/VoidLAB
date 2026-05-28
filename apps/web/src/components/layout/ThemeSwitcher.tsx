@@ -4,10 +4,8 @@ import { Palette } from "lucide-react";
 import { ThemeName, useTheme } from "@/context/ThemeContext";
 
 const labels: Record<ThemeName, string> = {
-  porcelain: "Porcelain",
-  cerulean: "Cerulean",
-  midnight: "Midnight",
-  ember: "Ember",
+  "light-red": "Fade white",
+  "black-red": "Rich black",
 };
 
 export default function ThemeSwitcher() {

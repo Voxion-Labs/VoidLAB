@@ -1,8 +1,25 @@
 "use client";
 
-import { FileCode2, FilePlus2, Folder, FolderPlus, FolderTree, Trash2, Upload } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  FileCode2,
+  FilePlus2,
+  Folder,
+  FolderPlus,
+  FolderTree,
+  MoreHorizontal,
+  MoveRight,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 import { languageGroups } from "@/lib/languages";
-import { formatWorkspacePath, getWorkspaceBaseName, getWorkspaceParentPath } from "@/lib/workspace";
+import {
+  formatWorkspacePath,
+  getWorkspaceBaseName,
+  getWorkspaceParentPath,
+  mountWorkspaceVfs,
+} from "@/lib/workspace";
 
 type ExplorerFile = {
   id: string;
@@ -12,18 +29,8 @@ type ExplorerFile = {
 };
 
 type TreeItem =
-  | {
-      depth: number;
-      kind: "folder";
-      path: string;
-    }
-  | {
-      depth: number;
-      id: string;
-      kind: "file";
-      languageId: string;
-      path: string;
-    };
+  | { depth: number; kind: "folder"; path: string }
+  | { depth: number; id: string; kind: "file"; languageId: string; path: string };
 
 type FileExplorerProps = {
   activeFileId: string;
@@ -40,25 +47,23 @@ type FileExplorerProps = {
   onDraftNameChange: (value: string) => void;
   onImportFiles: () => void;
   onImportFolder: () => void;
+  onMoveFile: (fileId: string, targetFolder: string) => void;
+  onMoveFolder: (srcPath: string, targetFolder: string) => void;
   onSelectFile: (id: string) => void;
 };
 
 const buildTree = (folders: string[], files: ExplorerFile[], parent = "", depth = 0): TreeItem[] => {
   const folderItems = folders
     .filter((folder) => getWorkspaceParentPath(folder) === parent)
-    .sort((left, right) => left.localeCompare(right))
+    .sort((a, b) => a.localeCompare(b))
     .flatMap((folder) => [
-      {
-        depth,
-        kind: "folder" as const,
-        path: folder,
-      },
+      { depth, kind: "folder" as const, path: folder },
       ...buildTree(folders, files, folder, depth + 1),
     ]);
 
   const fileItems = files
     .filter((file) => getWorkspaceParentPath(file.path) === parent)
-    .sort((left, right) => left.path.localeCompare(right.path))
+    .sort((a, b) => a.path.localeCompare(b.path))
     .map(
       (file) =>
         ({
@@ -72,6 +77,149 @@ const buildTree = (folders: string[], files: ExplorerFile[], parent = "", depth 
 
   return [...folderItems, ...fileItems];
 };
+
+/* ── Move modal ─────────────────────────────────────────── */
+type MoveTarget = { kind: "file"; id: string; path: string } | { kind: "folder"; path: string } | null;
+
+function MoveModal({
+  target,
+  folders,
+  onMove,
+  onClose,
+}: {
+  target: MoveTarget;
+  folders: string[];
+  onMove: (targetFolder: string) => void;
+  onClose: () => void;
+}) {
+  const [selected, setSelected] = useState<string>("");
+
+  if (!target) return null;
+
+  const label = target.kind === "file"
+    ? getWorkspaceBaseName(target.path)
+    : getWorkspaceBaseName(target.path);
+
+  const availableFolders = ["(root)", ...folders.filter((f) =>
+    f !== target.path && !f.startsWith(`${target.path}/`)
+  )];
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className="w-full max-w-sm rounded-sm p-5"
+        style={{ background: "var(--panel-background)", border: "1px solid var(--border-strong)", boxShadow: "var(--shadow)" }}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-sm font-semibold theme-text-strong flex items-center gap-2">
+            <MoveRight size={15} style={{ color: "var(--accent)" }} />
+            Move &quot;{label}&quot;
+          </div>
+          <button onClick={onClose} className="theme-muted hover:opacity-70" type="button">
+            <X size={15} />
+          </button>
+        </div>
+
+        <div className="text-xs theme-muted mb-3">Select destination folder:</div>
+
+        <div className="space-y-1 max-h-48 overflow-y-auto scrollbar-thin">
+          {availableFolders.map((folder) => (
+            <button
+              key={folder}
+              className="w-full rounded-sm px-3 py-2 text-left text-sm transition hover:opacity-80"
+              style={{
+                background: selected === folder ? "var(--accent-soft)" : "var(--control-background)",
+                border: selected === folder ? "1px solid var(--accent)" : "1px solid var(--border)",
+                color: selected === folder ? "var(--accent)" : "var(--text)",
+              }}
+              onClick={() => setSelected(folder)}
+              type="button"
+            >
+              {folder === "(root)" ? "/ (project root)" : `/${folder}`}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-4 flex gap-2 justify-end">
+          <button
+            className="rounded-sm px-3 py-2 text-sm transition hover:opacity-70"
+            style={{ background: "var(--control-background)", border: "1px solid var(--border)", color: "var(--text)" }}
+            onClick={onClose}
+            type="button"
+          >
+            Cancel
+          </button>
+          <button
+            className="rounded-sm px-4 py-2 text-sm font-semibold transition hover:opacity-90 disabled:opacity-40"
+            disabled={!selected}
+            style={{ background: "var(--action-background)", color: "var(--action-foreground)" }}
+            onClick={() => { if (selected) { onMove(selected === "(root)" ? "" : selected); onClose(); } }}
+            type="button"
+          >
+            Move here
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Context menu ───────────────────────────────────────── */
+function ContextMenu({
+  item,
+  onDelete,
+  onMove,
+  onClose,
+}: {
+  item: TreeItem;
+  onDelete: () => void;
+  onMove: () => void;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [onClose]);
+
+  return (
+    <div
+      ref={ref}
+      className="absolute right-0 top-8 z-20 rounded-sm py-1 min-w-[130px]"
+      style={{
+        background: "var(--panel-background)",
+        border: "1px solid var(--border-strong)",
+        boxShadow: "var(--shadow)",
+      }}
+    >
+      <button
+        className="flex w-full items-center gap-2 px-3 py-2 text-xs theme-text transition hover:opacity-70"
+        onClick={() => { onMove(); onClose(); }}
+        type="button"
+      >
+        <MoveRight size={13} style={{ color: "var(--accent)" }} />
+        Move to…
+      </button>
+      <button
+        className="flex w-full items-center gap-2 px-3 py-2 text-xs transition hover:opacity-70"
+        style={{ color: "#f43f5e" }}
+        onClick={() => { onDelete(); onClose(); }}
+        type="button"
+      >
+        <Trash2 size={13} />
+        Delete
+      </button>
+    </div>
+  );
+}
 
 export default function FileExplorer({
   activeFileId,
@@ -88,30 +236,76 @@ export default function FileExplorer({
   onDraftNameChange,
   onImportFiles,
   onImportFolder,
+  onMoveFile,
+  onMoveFolder,
   onSelectFile,
 }: FileExplorerProps) {
   const items = buildTree(folders, files);
+  const [storageLabel, setStorageLabel] = useState("mounting local VFS");
+  const [contextItem, setContextItem] = useState<TreeItem | null>(null);
+  const [moveTarget, setMoveTarget] = useState<MoveTarget>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    void mountWorkspaceVfs()
+      .then(({ backend }) => {
+        if (!mounted) return;
+        setStorageLabel(backend === "opfs" ? "OPFS" : "IndexedDB");
+      })
+      .catch(() => { if (!mounted) return; setStorageLabel("local"); });
+    return () => { mounted = false; };
+  }, []);
+
+  const openMove = (item: TreeItem) => {
+    if (item.kind === "file") {
+      setMoveTarget({ kind: "file", id: item.id, path: item.path });
+    } else {
+      setMoveTarget({ kind: "folder", path: item.path });
+    }
+  };
+
+  const handleMove = (targetFolder: string) => {
+    if (!moveTarget) return;
+    if (moveTarget.kind === "file") {
+      onMoveFile(moveTarget.id, targetFolder);
+    } else {
+      onMoveFolder(moveTarget.path, targetFolder);
+    }
+  };
 
   return (
-    <div className="flex h-full flex-col border-r border-white/10 bg-black/10">
-      <div className="border-b border-white/10 px-4 py-4">
-        <div className="flex items-center gap-2 text-sm font-semibold text-white">
-          <FolderTree size={16} />
-          Project explorer
+    <div
+      className="flex h-full flex-col"
+      style={{ borderRight: "1px solid var(--border)", background: "var(--surface-soft)" }}
+    >
+      {/* ── Top controls ─────────────────────────────────── */}
+      <div className="p-3" style={{ borderBottom: "1px solid var(--border)" }}>
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest theme-text-strong mb-3">
+          <FolderTree size={13} style={{ color: "var(--accent)" }} />
+          Explorer
         </div>
-        <div className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-400">
-          Working directory {formatWorkspacePath(cwd)}
+
+        <div className="text-xs theme-muted mb-1">Dir: {formatWorkspacePath(cwd)}</div>
+        <div
+          className="mb-3 rounded-sm px-2 py-1 text-xs theme-muted"
+          style={{ background: "var(--control-background)", border: "1px solid var(--border)" }}
+        >
+          Storage: {storageLabel}
         </div>
-        <div className="mt-4 space-y-3">
+
+        {/* New file name + language */}
+        <div className="space-y-2">
           <input
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white outline-none placeholder:text-slate-500 focus:border-teal-400"
-            onChange={(event) => onDraftNameChange(event.target.value)}
+            className="w-full rounded-sm px-3 py-2 text-xs outline-none theme-text"
+            style={{ background: "var(--input-background)", border: "1px solid var(--border)" }}
+            onChange={(e) => onDraftNameChange(e.target.value)}
             placeholder="src/main"
             value={draftName}
           />
           <select
-            className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-2.5 text-sm text-slate-100 outline-none focus:border-sky-300"
-            onChange={(event) => onDraftLanguageChange(event.target.value)}
+            className="w-full rounded-sm px-3 py-2 text-xs outline-none theme-text"
+            style={{ background: "var(--input-background)", border: "1px solid var(--border)" }}
+            onChange={(e) => onDraftLanguageChange(e.target.value)}
             value={draftLanguage}
           >
             {languageGroups.map((group) => (
@@ -124,115 +318,149 @@ export default function FileExplorer({
               </optgroup>
             ))}
           </select>
-          <div className="grid gap-2 sm:grid-cols-2">
+
+          {/* Action buttons */}
+          <div className="grid grid-cols-2 gap-1.5">
             <button
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-sky-400 px-4 py-2.5 text-sm font-medium text-slate-950 transition hover:bg-sky-300"
+              className="inline-flex items-center justify-center gap-1.5 rounded-sm py-2 text-xs font-semibold transition hover:opacity-90"
+              style={{ background: "var(--action-background)", color: "var(--action-foreground)" }}
               onClick={onCreateFile}
               type="button"
             >
-              <FilePlus2 size={15} />
-              Create file
+              <FilePlus2 size={13} />
+              New file
             </button>
             <button
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
+              className="inline-flex items-center justify-center gap-1.5 rounded-sm py-2 text-xs font-medium transition hover:opacity-70"
+              style={{ background: "var(--control-background)", border: "1px solid var(--border)", color: "var(--text)" }}
               onClick={onCreateFolder}
               type="button"
             >
-              <FolderPlus size={15} />
-              Create folder
+              <FolderPlus size={13} />
+              New folder
             </button>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2">
             <button
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
+              className="inline-flex items-center justify-center gap-1.5 rounded-sm py-2 text-xs font-medium transition hover:opacity-70"
+              style={{ background: "var(--control-background)", border: "1px solid var(--border)", color: "var(--text)" }}
               onClick={onImportFiles}
               type="button"
             >
-              <Upload size={15} />
+              <Upload size={13} />
               Import files
             </button>
             <button
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
+              className="inline-flex items-center justify-center gap-1.5 rounded-sm py-2 text-xs font-medium transition hover:opacity-70"
+              style={{ background: "var(--control-background)", border: "1px solid var(--border)", color: "var(--text)" }}
               onClick={onImportFolder}
               type="button"
             >
-              <Upload size={15} />
+              <Upload size={13} />
               Import folder
             </button>
           </div>
         </div>
       </div>
 
-      <div className="scrollbar-thin flex-1 overflow-y-auto p-3">
-        <div className="space-y-2">
+      {/* ── File tree ─────────────────────────────────────── */}
+      <div className="scrollbar-thin flex-1 overflow-y-auto p-2">
+        <div className="space-y-0.5">
           {items.length ? (
             items.map((item) => {
-              const paddingLeft = 12 + item.depth * 16;
+              const paddingLeft = 8 + item.depth * 14;
+              const isFolder = item.kind === "folder";
+              const isActive = item.kind === "file" && item.id === activeFileId;
+              const isCtxOpen = contextItem === item;
 
-              if (item.kind === "folder") {
-                return (
-                  <div
-                    className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-3 py-3"
-                    key={item.path}
-                    style={{ paddingLeft }}
-                  >
-                    <div className="min-w-0 text-left">
-                      <div className="flex items-center gap-2 text-sm font-medium text-white">
-                        <Folder size={14} className="text-sky-200" />
-                        <span className="truncate">{getWorkspaceBaseName(item.path)}</span>
-                      </div>
-                      <div className="truncate text-xs text-slate-400">{formatWorkspacePath(item.path)}</div>
-                    </div>
-                    <button
-                      className="rounded-full p-2 text-slate-400 transition hover:bg-white/10 hover:text-rose-300"
-                      onClick={() => onDeleteFolder(item.path)}
-                      type="button"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                );
-              }
-
-              const isActive = item.id === activeFileId;
               return (
                 <div
-                  className={`flex items-center justify-between rounded-2xl border px-3 py-3 transition ${
-                    isActive
-                      ? "border-sky-300/35 bg-sky-300/10"
-                      : "border-white/10 bg-white/5 hover:bg-white/10"
-                  }`}
-                  key={item.id}
-                  style={{ paddingLeft }}
+                  className="relative flex items-center justify-between rounded-sm px-2 py-2 group transition"
+                  key={isFolder ? item.path : item.id}
+                  style={{
+                    paddingLeft,
+                    background: isActive
+                      ? "var(--accent-soft)"
+                      : "transparent",
+                    border: isActive
+                      ? "1px solid var(--border-strong)"
+                      : "1px solid transparent",
+                  }}
+                  onMouseLeave={() => { if (isCtxOpen) setContextItem(null); }}
                 >
+                  {/* Main clickable area */}
                   <button
                     className="min-w-0 flex-1 text-left"
-                    onClick={() => onSelectFile(item.id)}
+                    onClick={() => {
+                      if (!isFolder) onSelectFile((item as { id: string }).id);
+                    }}
                     type="button"
                   >
-                    <div className="flex items-center gap-2 truncate text-sm font-medium text-white">
-                      <FileCode2 size={14} />
-                      <span className="truncate">{getWorkspaceBaseName(item.path)}</span>
+                    <div className="flex items-center gap-1.5 truncate">
+                      {isFolder ? (
+                        <Folder size={12} style={{ color: "var(--accent)", flexShrink: 0 }} />
+                      ) : (
+                        <FileCode2 size={12} style={{ color: isActive ? "var(--accent)" : "var(--muted)", flexShrink: 0 }} />
+                      )}
+                      <span
+                        className="truncate text-xs font-medium"
+                        style={{ color: isActive ? "var(--accent)" : "var(--text-strong)" }}
+                      >
+                        {getWorkspaceBaseName(item.path)}
+                      </span>
                     </div>
-                    <div className="truncate text-xs text-slate-400">{formatWorkspacePath(item.path)}</div>
+                    <div className="truncate pl-4 text-xs theme-muted" style={{ fontSize: "10px" }}>
+                      {formatWorkspacePath(item.path)}
+                    </div>
                   </button>
+
+                  {/* ⋮ menu button */}
                   <button
-                    className="rounded-full p-2 text-slate-400 transition hover:bg-white/10 hover:text-rose-300"
-                    onClick={() => onDeleteFile(item.id)}
+                    className="relative shrink-0 rounded-sm p-1 opacity-0 group-hover:opacity-100 transition"
+                    style={{ color: "var(--muted)" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setContextItem(isCtxOpen ? null : item);
+                    }}
                     type="button"
                   >
-                    <Trash2 size={14} />
+                    <MoreHorizontal size={13} />
                   </button>
+
+                  {/* Context menu */}
+                  {isCtxOpen && (
+                    <ContextMenu
+                      item={item}
+                      onDelete={() => {
+                        if (isFolder) onDeleteFolder(item.path);
+                        else onDeleteFile((item as { id: string }).id);
+                        setContextItem(null);
+                      }}
+                      onMove={() => { openMove(item); setContextItem(null); }}
+                      onClose={() => setContextItem(null)}
+                    />
+                  )}
                 </div>
               );
             })
           ) : (
-            <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-4 text-sm text-slate-400">
+            <div
+              className="rounded-sm px-3 py-4 text-xs theme-muted"
+              style={{ border: "1px dashed var(--border)" }}
+            >
               Import a folder or create files to populate the workspace tree.
             </div>
           )}
         </div>
       </div>
+
+      {/* ── Move modal ────────────────────────────────────── */}
+      {moveTarget && (
+        <MoveModal
+          target={moveTarget}
+          folders={folders}
+          onMove={handleMove}
+          onClose={() => setMoveTarget(null)}
+        />
+      )}
     </div>
   );
 }

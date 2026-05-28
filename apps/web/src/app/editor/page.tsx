@@ -623,6 +623,50 @@ export default function EditorPage() {
     });
   };
 
+  /* ── Move file to a different folder ─────────────────────── */
+  const handleMoveFile = (fileId: string, targetFolder: string) => {
+    if (!workspace) return;
+
+    const file = workspace.files.find((f) => f.id === fileId);
+    if (!file) return;
+
+    const baseName = getWorkspaceBaseName(file.path);
+    const newPath = targetFolder ? `${targetFolder}/${baseName}` : baseName;
+
+    const nextFiles = workspace.files.map((f) =>
+      f.id === fileId ? { ...f, path: newPath, name: baseName } : f
+    );
+
+    const nextFolders = new Set(workspace.folders);
+    if (targetFolder) nextFolders.add(targetFolder);
+
+    persist({ ...workspace, files: nextFiles, folders: Array.from(nextFolders) });
+    setStatusMessage(`Moved ${baseName} to ${targetFolder || "root"}.`);
+  };
+
+  /* ── Move folder to a different parent ─────────────────────── */
+  const handleMoveFolder = (srcPath: string, targetFolder: string) => {
+    if (!workspace) return;
+
+    const folderName = getWorkspaceBaseName(srcPath);
+    const newFolderPath = targetFolder ? `${targetFolder}/${folderName}` : folderName;
+
+    const nextFolders = workspace.folders
+      .filter((f) => f !== srcPath && !f.startsWith(`${srcPath}/`))
+      .concat([newFolderPath]);
+
+    const nextFiles = workspace.files.map((file) => {
+      if (file.path === srcPath || file.path.startsWith(`${srcPath}/`)) {
+        const relative = file.path.slice(srcPath.length);
+        return { ...file, path: `${newFolderPath}${relative}` };
+      }
+      return file;
+    });
+
+    persist({ ...workspace, files: nextFiles, folders: nextFolders });
+    setStatusMessage(`Moved folder ${folderName}.`);
+  };
+
   useShortcuts({
     onEscape: () => setIsSidebarOpen(false),
     onNewFile: handleCreateFile,
@@ -652,19 +696,19 @@ export default function EditorPage() {
         type="file"
       />
       <div className="flex min-h-screen flex-col">
-        <header className="theme-header sticky top-0 z-30 border-b border-white/10">
-          <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
+        <header className="theme-header sticky top-0 z-30" style={{ borderBottom: "1px solid var(--border)" }}>
+          <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-6">
             <div className="flex items-center gap-3">
               <button
-                className="theme-button-secondary rounded-xl p-2 lg:hidden"
+                className="theme-button-secondary rounded-sm p-2 lg:hidden"
                 onClick={() => setIsSidebarOpen((value) => !value)}
                 type="button"
               >
-                <Menu size={18} />
+                <Menu size={16} />
               </button>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <Brand compact />
-                <div className="theme-muted text-sm">
+                <div className="theme-muted text-xs">
                   Hi {firstName}, your cloud workspace is ready.
                 </div>
               </div>
@@ -672,12 +716,12 @@ export default function EditorPage() {
 
             <div className="flex flex-wrap items-center gap-2">
               <ThemeSwitcher />
-              <div className="theme-chip hidden rounded-2xl px-4 py-2 text-sm sm:flex sm:items-center sm:gap-2">
-                <Sparkles size={14} />
+              <div className="theme-chip hidden rounded-sm px-3 py-1.5 text-xs sm:flex sm:items-center sm:gap-1.5">
+                <Sparkles size={12} />
                 {profile.region || "Global"}
               </div>
               <Link
-                className="theme-button-secondary inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm transition"
+                className="theme-button-secondary inline-flex items-center gap-2 rounded-sm px-3 py-1.5 text-xs transition"
                 href="/editor/profile"
               >
                 Profile
@@ -704,17 +748,17 @@ export default function EditorPage() {
             <div className="flex flex-col gap-4">
               <ToolLauncherBar />
 
-              <section className="panel overflow-hidden rounded-[28px]">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-4">
+              <section className="panel overflow-hidden rounded-sm">
+                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
                   <div>
-                    <div className="theme-text-strong text-sm font-medium">VoidLAB project workspace</div>
-                    <div className="theme-muted text-xs">
-                      Active file: {formatWorkspacePath(activeFile.path)} | {currentLanguage.label}
+                    <div className="theme-text-strong text-xs font-semibold uppercase tracking-widest">VoidLAB workspace</div>
+                    <div className="theme-muted text-xs mt-0.5">
+                      {formatWorkspacePath(activeFile.path)} · {currentLanguage.label}
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <select
-                      className="theme-select rounded-2xl px-4 py-2 text-sm outline-none transition"
+                      className="theme-select rounded-sm px-3 py-1.5 text-xs outline-none transition"
                       onChange={(event) => handleLanguageChange(event.target.value)}
                       value={currentLanguage.id}
                     >
@@ -729,15 +773,15 @@ export default function EditorPage() {
                       ))}
                     </select>
                     <Button onClick={handleSave} tone="secondary" type="button">
-                      <Save size={15} />
+                      <Save size={14} />
                       Save
                     </Button>
                     <Button onClick={handleDownload} tone="secondary" type="button">
-                      <Download size={15} />
+                      <Download size={14} />
                       Export
                     </Button>
                     <Button onClick={handleInsertBoilerplate} tone="secondary" type="button">
-                      <FileCode2 size={15} />
+                      <FileCode2 size={14} />
                       Boilerplate
                     </Button>
                     <Button
@@ -745,7 +789,7 @@ export default function EditorPage() {
                       onClick={() => void handleRun()}
                       type="button"
                     >
-                      {loading ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} />}
+                      {loading ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
                       {loading ? "Running" : currentLanguage.previewable ? "Preview" : "Run"}
                     </Button>
                   </div>
@@ -758,7 +802,7 @@ export default function EditorPage() {
                   onSelectFile={handleSelectFile}
                 />
 
-                <div className="grid min-h-[520px] md:grid-cols-[300px_minmax(0,1fr)]">
+                <div className="grid min-h-[520px] md:grid-cols-[260px_minmax(0,1fr)]">
                   <FileExplorer
                     activeFileId={activeFile.id}
                     cwd={workspace.terminal.cwd}
@@ -774,6 +818,8 @@ export default function EditorPage() {
                     onDraftNameChange={setDraftName}
                     onImportFiles={() => fileImportRef.current?.click()}
                     onImportFolder={() => folderImportRef.current?.click()}
+                    onMoveFile={handleMoveFile}
+                    onMoveFolder={handleMoveFolder}
                     onSelectFile={handleSelectFile}
                   />
                   <div className="min-h-[420px]">
@@ -787,7 +833,10 @@ export default function EditorPage() {
                   </div>
                 </div>
 
-                <div className="theme-muted flex flex-wrap items-center justify-between gap-2 border-t border-white/10 px-4 py-3 text-xs">
+                <div
+                  className="theme-muted flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-xs"
+                  style={{ borderTop: "1px solid var(--border)" }}
+                >
                   <span>{statusMessage}</span>
                   <span>
                     {currentLanguage.runtimeLabel ??
@@ -825,6 +874,9 @@ export default function EditorPage() {
           </section>
         </div>
       </div>
+      <footer className="voidlab-footer">
+        © 2025 Voxion Labs. All rights reserved.
+      </footer>
     </main>
   );
 }

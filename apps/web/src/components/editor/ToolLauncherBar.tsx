@@ -5,31 +5,31 @@ import { BookOpenText, Bot, Github, UserRound, Users2 } from "lucide-react";
 
 const tools = [
   {
-    description: "Read the illustrated operator handbook, command sheet, and execution flow.",
+    description: "Operator handbook, command sheet and execution guide.",
     href: "/editor/manual",
     icon: BookOpenText,
     label: "Manual",
   },
   {
-    description: "Prepare repository links and publish commands.",
+    description: "Git command reference and publish tools.",
     href: "/editor/github",
     icon: Github,
     label: "GitHub",
   },
   {
-    description: "Create rooms, invite teammates, and sync workspace state.",
+    description: "Create rooms, invite teammates, sync workspaces.",
     href: "/editor/collaboration",
     icon: Users2,
-    label: "Collaboration",
+    label: "Collab",
   },
   {
-    description: "Ask the built-in guide for workflow and debugging help.",
+    description: "Instant guide for workflow and debugging help.",
     href: "/editor/ai",
     icon: Bot,
     label: "AI Guide",
   },
   {
-    description: "Review the user profile, social links, and recent activities.",
+    description: "Profile, social links and recent activity.",
     href: "/editor/profile",
     icon: UserRound,
     label: "Profile",
@@ -38,31 +38,45 @@ const tools = [
 
 export default function ToolLauncherBar() {
   return (
-    <section className="panel rounded-[28px] p-4 sm:p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-sm font-semibold text-white">Feature hub</div>
-          <div className="mt-1 text-sm text-slate-300">
-            Open focused pages for product help, publishing, collaboration, and AI guidance.
-          </div>
-        </div>
+    <section
+      className="panel rounded-sm p-3"
+    >
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <div className="text-xs font-semibold uppercase tracking-widest theme-muted">Feature hub</div>
       </div>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
         {tools.map((tool) => {
           const Icon = tool.icon;
 
           return (
             <Link
-              className="rounded-[24px] border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:bg-white/10"
+              className="group flex items-center gap-3 rounded-sm p-3 transition hover:opacity-80"
               href={tool.href}
               key={tool.href}
+              style={{
+                background: "var(--control-background)",
+                border: "1px solid var(--border)",
+              }}
             >
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-sky-300/20 bg-sky-300/10 text-sky-200">
-                <Icon size={18} />
+              <div
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm"
+                style={{
+                  background: "var(--accent-soft)",
+                  border: "1px solid var(--border-strong)",
+                }}
+              >
+                <Icon size={14} style={{ color: "var(--accent)" }} />
               </div>
-              <div className="mt-4 text-sm font-semibold text-white">{tool.label}</div>
-              <div className="mt-2 text-sm leading-6 text-slate-300">{tool.description}</div>
+              <div className="min-w-0">
+                <div className="text-xs font-semibold theme-text-strong truncate">{tool.label}</div>
+                <div
+                  className="mt-0.5 text-xs leading-4 theme-muted truncate hidden sm:block"
+                  style={{ fontSize: "10px" }}
+                >
+                  {tool.description}
+                </div>
+              </div>
             </Link>
           );
         })}

@@ -46,6 +46,14 @@ type TerminalBoxProps = {
   transcript: OutputTranscriptEntry[];
 };
 
+type RuntimeStdinPrompt = {
+  capacity: number;
+  prompt: string;
+  requestId: string;
+  sequence: number;
+  sharedBuffer: SharedArrayBuffer;
+};
+
 type OutputSectionProps = {
   label: string;
   tone?: "danger" | "default" | "success";
@@ -58,58 +66,68 @@ const tabs: Array<{ id: TerminalTab; label: string }> = [
   { id: "ports", label: "Ports" },
 ];
 
+/* ── Button styles using CSS vars ─────────────────────────── */
 const terminalButtonBase =
-  "inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-medium transition outline-none disabled:cursor-not-allowed disabled:opacity-50";
-const terminalButtonPrimary = `${terminalButtonBase} border-sky-400/40 bg-sky-400 text-slate-950 hover:bg-sky-300`;
-const terminalButtonSecondary = `${terminalButtonBase} border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08]`;
+  "inline-flex items-center justify-center gap-2 rounded-sm border px-4 py-2 text-sm font-medium transition outline-none disabled:cursor-not-allowed disabled:opacity-50";
+
+const stdinHeaderBytes = 32;
+const stdinState = 0;
+const stdinResponseBytes = 2;
+const stdinCapacity = 3;
+const stdinWaiting = 1;
+const stdinResponseReady = 2;
+const stdinReadyEventName = "voidlab:stdin-response";
+const stdinRequestEventName = "voidlab:stdin-request";
 
 function OutputSection({ label, tone = "default", value }: OutputSectionProps) {
   if (!value) return null;
 
-  const classes =
+  const style =
     tone === "danger"
-      ? "border-rose-500/30 bg-rose-500/[0.06] text-rose-100"
+      ? { background: "rgba(225,29,72,0.06)", border: "1px solid rgba(225,29,72,0.25)", color: "var(--text)" }
       : tone === "success"
-        ? "border-emerald-500/30 bg-emerald-500/[0.06] text-emerald-100"
-        : "border-white/10 bg-white/[0.03] text-zinc-100";
+        ? { background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.25)", color: "var(--text)" }
+        : { background: "var(--surface-soft)", border: "1px solid var(--border)", color: "var(--text)" };
 
   return (
-    <div className={`rounded-[22px] border p-4 ${classes}`}>
-      <div className="mb-3 text-xs uppercase tracking-[0.24em] text-white/45">{label}</div>
-      <pre className="whitespace-pre-wrap break-words font-mono text-sm leading-7">{value}</pre>
+    <div className="rounded-sm p-4" style={style}>
+      <div className="mb-2 text-xs uppercase tracking-widest theme-muted">{label}</div>
+      <pre className="whitespace-pre-wrap break-words font-mono text-sm leading-7 theme-text">{value}</pre>
     </div>
   );
 }
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[20px] border border-white/10 bg-white/[0.03] p-4">
-      <div className="text-xs uppercase tracking-[0.22em] text-white/40">{label}</div>
-      <div className="mt-3 text-base font-semibold text-white">{value}</div>
+    <div
+      className="rounded-sm p-3"
+      style={{ background: "var(--surface-soft)", border: "1px solid var(--border)" }}
+    >
+      <div className="text-xs uppercase tracking-widest theme-muted">{label}</div>
+      <div className="mt-2 text-sm font-semibold theme-text-strong">{value}</div>
     </div>
   );
 }
 
 function TranscriptLine({ entry }: { entry: OutputTranscriptEntry }) {
-  const toneClass =
-    entry.tone === "error"
-      ? "text-rose-200"
-      : entry.tone === "timeout"
-        ? "text-amber-200"
-        : entry.tone === "input"
-          ? "text-sky-200"
-          : entry.tone === "prompt"
-            ? "text-amber-100"
-            : entry.tone === "success"
-              ? "text-emerald-200"
-              : entry.tone === "stdout"
-                ? "text-zinc-100"
-                : "text-white/70";
+  const colorMap: Record<string, string> = {
+    error: "#f43f5e",
+    timeout: "#f59e0b",
+    input: "var(--accent)",
+    prompt: "#f59e0b",
+    success: "#10b981",
+    stdout: "var(--text)",
+    status: "var(--muted)",
+  };
 
+  const color = colorMap[entry.tone] ?? "var(--muted)";
   const Icon = entry.tone === "timeout" ? Clock : null;
 
   return (
-    <div className={`flex items-start gap-2 whitespace-pre-wrap break-words font-mono text-sm leading-7 ${toneClass}`}>
+    <div
+      className="flex items-start gap-2 whitespace-pre-wrap break-words font-mono text-sm leading-7"
+      style={{ color }}
+    >
       {Icon && <Icon className="mt-1 shrink-0 opacity-80" size={13} />}
       <span>{entry.text}</span>
     </div>
@@ -135,50 +153,121 @@ export default function TerminalBox({
   transcript,
 }: TerminalBoxProps) {
   const [activeTab, setActiveTab] = useState<TerminalTab>("output");
+  const [runtimeStdinInput, setRuntimeStdinInput] = useState("");
+  const [runtimeStdinPrompt, setRuntimeStdinPrompt] = useState<RuntimeStdinPrompt | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const stdinInputRef = useRef<HTMLTextAreaElement>(null);
   const timedOut = execution?.timedOut || error.includes("timed out");
+  const stdinCaptureActive = interactiveSession.active || Boolean(runtimeStdinPrompt);
   const stagedInputLines = useMemo(
-    () => countBufferedStdinLines(interactiveSession.active ? pendingInteractiveInput : stdin),
-    [interactiveSession.active, pendingInteractiveInput, stdin],
+    () =>
+      countBufferedStdinLines(
+        runtimeStdinPrompt ? runtimeStdinInput : interactiveSession.active ? pendingInteractiveInput : stdin,
+      ),
+    [interactiveSession.active, pendingInteractiveInput, runtimeStdinInput, runtimeStdinPrompt, stdin],
   );
 
   const latestStatus =
-    execution?.status.description ?? (interactiveSession.active ? "Input required" : loading ? "Running" : "Idle");
+    runtimeStdinPrompt
+      ? "Input required"
+      : execution?.status.description ?? (interactiveSession.active ? "Input required" : loading ? "Running" : "Idle");
+
+  const submitRuntimeStdin = () => {
+    if (!runtimeStdinPrompt) return;
+
+    const control = new Int32Array(
+      runtimeStdinPrompt.sharedBuffer,
+      0,
+      stdinHeaderBytes / Int32Array.BYTES_PER_ELEMENT,
+    );
+    const data = new Uint8Array(runtimeStdinPrompt.sharedBuffer, stdinHeaderBytes);
+
+    if (Atomics.load(control, stdinState) !== stdinWaiting) {
+      setRuntimeStdinPrompt(null);
+      setRuntimeStdinInput("");
+      return;
+    }
+
+    const encodedInput = new TextEncoder().encode(`${runtimeStdinInput}\n`);
+    const capacity = Math.min(Atomics.load(control, stdinCapacity), data.byteLength, runtimeStdinPrompt.capacity);
+    const byteLength = Math.min(encodedInput.byteLength, capacity);
+
+    data.fill(0);
+    data.set(encodedInput.slice(0, byteLength), 0);
+    Atomics.store(control, stdinResponseBytes, byteLength);
+    Atomics.store(control, stdinState, stdinResponseReady);
+    Atomics.notify(control, stdinState, 1);
+
+    window.dispatchEvent(
+      new CustomEvent(stdinReadyEventName, {
+        detail: {
+          requestId: runtimeStdinPrompt.requestId,
+          sequence: runtimeStdinPrompt.sequence,
+        },
+      }),
+    );
+    setRuntimeStdinPrompt(null);
+    setRuntimeStdinInput("");
+  };
 
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [transcript]);
 
   useEffect(() => {
-    if (interactiveSession.active) {
+    if (stdinCaptureActive) {
       const timer = setTimeout(() => stdinInputRef.current?.focus(), 80);
       return () => clearTimeout(timer);
     }
-  }, [interactiveSession.active]);
+  }, [stdinCaptureActive]);
+
+  useEffect(() => {
+    const handleRuntimeStdinRequest = (event: Event) => {
+      const detail = (event as CustomEvent<RuntimeStdinPrompt>).detail;
+      if (!detail?.sharedBuffer) return;
+      setActiveTab("output");
+      setRuntimeStdinInput("");
+      setRuntimeStdinPrompt(detail);
+    };
+
+    window.addEventListener(stdinRequestEventName, handleRuntimeStdinRequest);
+    return () => window.removeEventListener(stdinRequestEventName, handleRuntimeStdinRequest);
+  }, []);
 
   return (
-    <section className="overflow-hidden rounded-[28px] border border-white/10 bg-black shadow-[0_22px_80px_rgba(0,0,0,0.58)]">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
+    <section
+      className="overflow-hidden rounded-sm panel"
+    >
+      {/* ── Header ─────────────────────────────────────────── */}
+      <div
+        className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+        style={{ borderBottom: "1px solid var(--border)" }}
+      >
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-sm font-semibold text-white">
-            <TerminalSquare size={16} />
-            Unified console
-          </div>
-          <div className="hidden text-xs uppercase tracking-[0.22em] text-white/40 sm:block">
+          <TerminalSquare size={15} style={{ color: "var(--accent)" }} />
+          <span className="text-sm font-semibold theme-text-strong">Unified console</span>
+          <span className="hidden text-xs uppercase tracking-widest theme-muted sm:block">
             {latestStatus}
-          </div>
+          </span>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-full border border-white/10 bg-white/[0.03] p-1">
+          {/* Tab switcher */}
+          <div
+            className="inline-flex rounded-sm p-0.5"
+            style={{ background: "var(--control-background)", border: "1px solid var(--border)" }}
+          >
             {tabs.map((tab) => (
               <button
-                className={`rounded-full px-3 py-1.5 text-xs uppercase tracking-[0.22em] transition ${
+                className="rounded-sm px-3 py-1.5 text-xs font-medium uppercase tracking-widest transition"
+                style={
                   activeTab === tab.id
-                    ? "bg-white text-slate-950"
-                    : "text-white/60 hover:bg-white/[0.06] hover:text-white"
-                }`}
+                    ? {
+                        background: "var(--action-background)",
+                        color: "var(--action-foreground)",
+                      }
+                    : { color: "var(--muted)" }
+                }
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 type="button"
@@ -187,16 +276,37 @@ export default function TerminalBox({
               </button>
             ))}
           </div>
-          <button className={terminalButtonPrimary} disabled={loading} onClick={onRun} type="button">
-            <Play size={15} />
-            {loading ? "Running" : interactiveSession.active ? "Run with input" : "Run active file"}
+
+          {/* Run button */}
+          <button
+            className={terminalButtonBase}
+            style={{
+              background: "var(--action-background)",
+              borderColor: "var(--action-background)",
+              color: "var(--action-foreground)",
+              boxShadow: "var(--action-shadow)",
+            }}
+            disabled={loading && !runtimeStdinPrompt}
+            onClick={runtimeStdinPrompt ? submitRuntimeStdin : onRun}
+            type="button"
+          >
+            <Play size={14} />
+            {runtimeStdinPrompt
+              ? "Send input"
+              : loading
+                ? "Running"
+                : interactiveSession.active
+                  ? "Run with input"
+                  : "Run"}
           </button>
         </div>
       </div>
 
+      {/* ── Output tab ─────────────────────────────────────── */}
       {activeTab === "output" ? (
-        <div className="p-5">
-          <div className="grid gap-3 md:grid-cols-4">
+        <div className="p-4">
+          {/* Metrics */}
+          <div className="grid gap-2 md:grid-cols-4">
             <MetricCard label="Status" value={latestStatus} />
             <MetricCard
               label="Input lines"
@@ -205,14 +315,22 @@ export default function TerminalBox({
             <MetricCard label="Time" value={execution?.time ? `${execution.time} sec` : loading ? "running" : "n/a"} />
             <MetricCard
               label="Memory"
-              value={execution?.memory !== null && execution?.memory !== undefined ? `${execution.memory} KB` : "n/a"}
+              value={
+                execution?.memory !== null && execution?.memory !== undefined
+                  ? `${execution.memory} KB`
+                  : "n/a"
+              }
             />
           </div>
 
-          <div className="mt-4 rounded-[24px] border border-white/10 bg-[#030405] p-4">
+          {/* Transcript */}
+          <div
+            className="mt-3 rounded-sm p-4"
+            style={{ background: "var(--terminal-bg)", border: "1px solid var(--border)" }}
+          >
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <div className="text-xs uppercase tracking-[0.22em] text-white/40">Execution stream</div>
-              <div className="truncate text-xs text-white/45">{formatWorkspacePath(activeFilePath)}</div>
+              <div className="text-xs uppercase tracking-widest theme-muted">Execution stream</div>
+              <div className="truncate text-xs theme-muted">{formatWorkspacePath(activeFilePath)}</div>
             </div>
 
             <div className="scrollbar-thin h-[240px] space-y-3 overflow-y-auto pr-2">
@@ -222,56 +340,122 @@ export default function TerminalBox({
                   <div ref={transcriptEndRef} />
                 </>
               ) : (
-                <div className="font-mono text-sm leading-7 text-white/55">
+                <div className="font-mono text-sm leading-7 theme-muted">
                   [system] Run the active file and VoidLAB will stream status, stdin prompts, stdout, and diagnostics here.
                 </div>
               )}
             </div>
 
-            {interactiveSession.active ? (
-              <div className="mt-4 rounded-[20px] border border-sky-400/20 bg-sky-400/[0.05] p-4">
-                <div className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-sky-200">
+            {/* stdin capture */}
+            {stdinCaptureActive ? (
+              <div
+                className="mt-4 rounded-sm p-4"
+                style={{
+                  background: "var(--accent-soft)",
+                  border: "1px solid var(--border-strong)",
+                }}
+              >
+                <div className="flex items-center gap-2 text-xs uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>
                   <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-sky-300" />
+                    <span
+                      className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
+                      style={{ background: "var(--accent)" }}
+                    />
+                    <span
+                      className="relative inline-flex h-2 w-2 rounded-full"
+                      style={{ background: "var(--accent)" }}
+                    />
                   </span>
                   Input required
                 </div>
-                <div className="mt-2 text-sm leading-6 text-zinc-200">{interactiveSession.helperText}</div>
-                <div className="mt-3 rounded-2xl border border-white/10 bg-black/40 px-3 py-2 font-mono text-sm text-amber-100">
-                  {interactiveSession.promptLabel}
+                <div className="text-sm leading-6 theme-text mb-3">
+                  {runtimeStdinPrompt
+                    ? "The running program is blocked on stdin. Press Enter to resume execution."
+                    : interactiveSession.helperText}
+                </div>
+                <div
+                  className="rounded-sm px-3 py-2 font-mono text-sm mb-3"
+                  style={{
+                    background: "var(--panel-background)",
+                    border: "1px solid var(--border)",
+                    color: "var(--accent)",
+                  }}
+                >
+                  {runtimeStdinPrompt?.prompt ?? interactiveSession.promptLabel}
                 </div>
                 <textarea
-                  className="mt-4 min-h-[120px] w-full resize-y rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 font-mono text-sm text-white outline-none transition placeholder:text-white/30 focus:border-sky-300"
-                  onChange={(event) => onInteractiveInputChange(event.target.value)}
-                  placeholder={"Enter stdin exactly as your program expects it.\nUse a new line for each value."}
+                  className="min-h-[100px] w-full resize-y rounded-sm px-4 py-3 font-mono text-sm outline-none transition"
+                  style={{
+                    background: "var(--input-background)",
+                    border: "1px solid var(--border)",
+                    color: "var(--text)",
+                    caretColor: "var(--accent)",
+                  }}
+                  onChange={(event) =>
+                    runtimeStdinPrompt
+                      ? setRuntimeStdinInput(event.target.value)
+                      : onInteractiveInputChange(event.target.value)
+                  }
+                  onKeyDown={(event) => {
+                    if (runtimeStdinPrompt && event.key === "Enter" && !event.shiftKey) {
+                      event.preventDefault();
+                      submitRuntimeStdin();
+                    }
+                  }}
+                  placeholder={
+                    runtimeStdinPrompt
+                      ? "Type one stdin line and press Enter."
+                      : "Enter stdin exactly as your program expects it.\nUse a new line for each value."
+                  }
                   ref={stdinInputRef}
                   spellCheck={false}
-                  value={pendingInteractiveInput}
+                  value={runtimeStdinPrompt ? runtimeStdinInput : pendingInteractiveInput}
                 />
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <button className={terminalButtonSecondary} onClick={onResetBufferedInput} type="button">
-                    <RotateCcw size={15} />
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    className={terminalButtonBase}
+                    style={{
+                      background: "var(--control-background)",
+                      borderColor: "var(--border)",
+                      color: "var(--text)",
+                    }}
+                    onClick={runtimeStdinPrompt ? () => setRuntimeStdinInput("") : onResetBufferedInput}
+                    type="button"
+                  >
+                    <RotateCcw size={14} />
                     Clear input
                   </button>
-                  <button className={terminalButtonPrimary} disabled={!pendingInteractiveInput.length || loading} onClick={onRun} type="button">
-                    <Play size={15} />
-                    Run program
+                  <button
+                    className={terminalButtonBase}
+                    style={{
+                      background: "var(--action-background)",
+                      borderColor: "var(--action-background)",
+                      color: "var(--action-foreground)",
+                    }}
+                    disabled={runtimeStdinPrompt ? false : !pendingInteractiveInput.length || loading}
+                    onClick={runtimeStdinPrompt ? submitRuntimeStdin : onRun}
+                    type="button"
+                  >
+                    <Play size={14} />
+                    {runtimeStdinPrompt ? "Send line" : "Run program"}
                   </button>
                 </div>
               </div>
             ) : null}
           </div>
 
-          <div className="mt-4 space-y-3">
+          <div className="mt-3 space-y-3">
             {error ? (
-              <div className={`rounded-[22px] border p-4 ${
-                timedOut
-                  ? "border-amber-500/30 bg-amber-500/[0.06] text-amber-100"
-                  : "border-rose-500/30 bg-rose-500/[0.06] text-rose-100"
-              }`}>
-                <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
-                  {timedOut ? <Clock size={16} /> : <AlertTriangle size={16} />}
+              <div
+                className="rounded-sm p-4"
+                style={
+                  timedOut
+                    ? { background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.28)", color: "#f59e0b" }
+                    : { background: "rgba(225,29,72,0.07)", border: "1px solid rgba(225,29,72,0.28)", color: "#f43f5e" }
+                }
+              >
+                <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                  {timedOut ? <Clock size={15} /> : <AlertTriangle size={15} />}
                   {timedOut ? "Execution timed out" : "Execution gateway error"}
                 </div>
                 <pre className="whitespace-pre-wrap break-words font-mono text-sm leading-7">{error}</pre>
@@ -280,13 +464,10 @@ export default function TerminalBox({
 
             {execution ? (
               <>
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                  <MetricCard label="Judge0 status" value={execution.status.description} />
+                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                  <MetricCard label="Runtime status" value={execution.status.description} />
                   <MetricCard label="Exit code" value={execution.exitCode !== null ? String(execution.exitCode) : "n/a"} />
-                  <MetricCard
-                    label="Exit signal"
-                    value={execution.exitSignal !== null ? String(execution.exitSignal) : "n/a"}
-                  />
+                  <MetricCard label="Exit signal" value={execution.exitSignal !== null ? String(execution.exitSignal) : "n/a"} />
                   <MetricCard label="Token" value={execution.token ?? "n/a"} />
                 </div>
                 <OutputSection label="Stdout" tone="success" value={execution.stdout} />
@@ -294,7 +475,10 @@ export default function TerminalBox({
                 <OutputSection label="Compile output" tone="danger" value={execution.compileOutput} />
                 <OutputSection label="Runtime message" value={execution.message} />
                 {!execution.stdout && !execution.stderr && !execution.compileOutput && !execution.message ? (
-                  <div className="rounded-[22px] border border-white/10 bg-white/[0.03] p-4 text-sm leading-7 text-zinc-200">
+                  <div
+                    className="rounded-sm p-4 text-sm leading-7 theme-muted"
+                    style={{ background: "var(--surface-soft)", border: "1px solid var(--border)" }}
+                  >
                     The program finished without producing visible output.
                   </div>
                 ) : null}
@@ -304,42 +488,58 @@ export default function TerminalBox({
         </div>
       ) : null}
 
+      {/* ── Terminal tab ────────────────────────────────────── */}
       {activeTab === "terminal" ? (
-        <div className="p-5">
-          <div className="rounded-[24px] border border-white/10 bg-[#030405] p-4">
-            <div className="mb-3 text-xs uppercase tracking-[0.22em] text-white/40">Workspace terminal</div>
-            <div className="mb-4 text-sm text-white/55">Current directory {formatWorkspacePath(cwd)}</div>
+        <div className="p-4">
+          <div
+            className="rounded-sm p-4"
+            style={{ background: "var(--terminal-bg)", border: "1px solid var(--border)" }}
+          >
+            <div className="mb-2 text-xs uppercase tracking-widest theme-muted">Workspace terminal</div>
+            <div className="mb-3 text-xs theme-muted">Current directory {formatWorkspacePath(cwd)}</div>
 
             <div className="scrollbar-thin h-[280px] space-y-4 overflow-y-auto pr-2 font-mono text-sm leading-7">
               {commandHistory.length ? (
                 commandHistory.map((entry) => (
                   <div key={entry.id}>
-                    <div className="text-sky-200">
+                    <div style={{ color: "var(--accent)" }}>
                       {formatWorkspacePath(entry.cwd)} $ {entry.command}
                     </div>
                     <pre
-                      className={`mt-1 whitespace-pre-wrap break-words ${
-                        entry.status === "error"
-                          ? "text-rose-200"
-                          : entry.status === "success"
-                            ? "text-zinc-100"
-                            : "text-white/70"
-                      }`}
+                      className="mt-1 whitespace-pre-wrap break-words"
+                      style={{
+                        color:
+                          entry.status === "error"
+                            ? "#f43f5e"
+                            : entry.status === "success"
+                              ? "var(--text)"
+                              : "var(--muted)",
+                      }}
                     >
                       {entry.output}
                     </pre>
                   </div>
                 ))
               ) : (
-                <div className="text-white/55">
-                  Run commands like <code>ls</code>, <code>tree</code>, <code>mkdir src</code>, <code>touch src/main.py</code>, <code>open src/main.py</code>, or <code>help</code>.
+                <div className="theme-muted">
+                  Run commands like <code className="theme-text-strong">ls</code>,{" "}
+                  <code className="theme-text-strong">tree</code>,{" "}
+                  <code className="theme-text-strong">mkdir src</code>,{" "}
+                  <code className="theme-text-strong">touch src/main.py</code>, or{" "}
+                  <code className="theme-text-strong">help</code>.
                 </div>
               )}
             </div>
 
-            <div className="mt-4 flex flex-col gap-3 lg:flex-row">
+            <div className="mt-4 flex flex-col gap-2 lg:flex-row">
               <input
-                className="flex-1 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 font-mono text-sm text-white outline-none transition placeholder:text-white/30 focus:border-sky-300"
+                className="flex-1 rounded-sm px-4 py-2.5 font-mono text-sm outline-none transition"
+                style={{
+                  background: "var(--input-background)",
+                  border: "1px solid var(--border)",
+                  color: "var(--text)",
+                  caretColor: "var(--accent)",
+                }}
                 onChange={(event) => onCommandChange(event.target.value)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
@@ -350,7 +550,16 @@ export default function TerminalBox({
                 placeholder="touch src/main.py"
                 value={commandInput}
               />
-              <button className={terminalButtonSecondary} onClick={onCommandRun} type="button">
+              <button
+                className={terminalButtonBase}
+                style={{
+                  background: "var(--control-background)",
+                  borderColor: "var(--border)",
+                  color: "var(--text)",
+                }}
+                onClick={onCommandRun}
+                type="button"
+              >
                 Run command
               </button>
             </div>
@@ -358,17 +567,25 @@ export default function TerminalBox({
         </div>
       ) : null}
 
+      {/* ── Ports tab ───────────────────────────────────────── */}
       {activeTab === "ports" ? (
-        <div className="p-5">
-          <div className="flex min-h-[340px] flex-col items-start justify-center rounded-[24px] border border-white/10 bg-[#030405] p-6">
-            <div className="flex items-center gap-2 text-sm font-semibold text-white">
-              <Globe size={16} />
+        <div className="p-4">
+          <div
+            className="flex min-h-[300px] flex-col items-start justify-center rounded-sm p-6"
+            style={{ background: "var(--terminal-bg)", border: "1px solid var(--border)" }}
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold theme-text-strong">
+              <Globe size={15} style={{ color: "var(--accent)" }} />
               Ports
             </div>
-            <div className="mt-3 max-w-xl text-sm leading-7 text-white/60">
-              Runtime-exposed ports will appear here once VoidLAB adds forwarded process sessions. For now, browser-preview files still open directly in a new tab from the editor toolbar.
+            <div className="mt-3 max-w-xl text-sm leading-7 theme-muted">
+              Runtime-exposed ports will appear here once VoidLAB adds forwarded process sessions.
+              For now, browser-preview files still open directly in a new tab from the editor toolbar.
             </div>
-            <div className="mt-6 rounded-[20px] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/70">
+            <div
+              className="mt-5 rounded-sm px-4 py-2.5 text-sm theme-muted"
+              style={{ background: "var(--surface-soft)", border: "1px solid var(--border)" }}
+            >
               Active file: {formatWorkspacePath(activeFilePath)}
             </div>
           </div>
