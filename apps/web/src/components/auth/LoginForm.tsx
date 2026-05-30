@@ -1,12 +1,11 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowRight, Globe2, Mail, Phone, User2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/context/UserContext";
-import { apiBaseUrl } from "@/lib/api";
-import { storeSessionToken } from "@/lib/session";
 
 const emptyForm = {
   email: "",
@@ -20,7 +19,8 @@ type LoginFormProps = {
 };
 
 export default function LoginForm({ authError = "" }: LoginFormProps) {
-  const { isReady, profile, refreshProfile } = useUser();
+  const router = useRouter();
+  const { isReady, profile, refreshProfile, saveProfile, recordActivity } = useUser();
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -47,30 +47,22 @@ export default function LoginForm({ authError = "" }: LoginFormProps) {
     setSubmitting(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/api/auth/manual-login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          email: form.email.trim(),
-          name: form.name.trim(),
-          phone: form.phone.trim(),
-          region: form.region.trim(),
-        }),
+      await saveProfile({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        region: form.region.trim(),
+        bio: `Local-First Developer: ${form.name.trim()}`,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "VoidLAB could not enter your workspace.");
-      }
-
-      if (data.token) {
-        storeSessionToken(String(data.token));
-      }
+      recordActivity({
+        title: "Workspace Initialized",
+        detail: `${form.name.trim()} started a local backend-less session.`,
+        type: "profile",
+      });
 
       await refreshProfile();
-      window.location.href = "/editor";
+      router.push("/editor"); 
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : "VoidLAB could not enter your workspace.");
     } finally {
@@ -179,9 +171,9 @@ export default function LoginForm({ authError = "" }: LoginFormProps) {
           }}
         >
           <span className="theme-text">Signed in as <strong>{profile.name}</strong>. Your workspace is ready.</span>
-          <a
+          <button
+            onClick={() => router.push("/editor")}
             className="inline-flex items-center justify-center gap-2 rounded-sm px-4 py-2 text-sm font-semibold transition hover:opacity-90"
-            href="/editor"
             style={{
               background: "var(--action-background)",
               color: "var(--action-foreground)",
@@ -189,13 +181,13 @@ export default function LoginForm({ authError = "" }: LoginFormProps) {
             }}
           >
             Open editor
-          </a>
+          </button>
         </div>
       ) : null}
 
       {/* Copyright */}
       <div className="mt-8 text-center text-xs theme-muted" style={{ letterSpacing: "0.03em" }}>
-        © 2025 Voxion Labs. All rights reserved.
+        © 2026 VoidLAB. All rights reserved.
       </div>
     </section>
   );

@@ -6,7 +6,16 @@ export type UserSocialLinks = { github: string; instagram: string; linkedin: str
 export type UserProfile = { avatar: string; bio: string; email: string; githubConnected: boolean; githubLogin: string; id: string; name: string; phone: string; providers: { github: boolean; google: boolean; x: boolean; }; region: string; socials: UserSocialLinks; };
 export type UserActivity = { createdAt: string; detail: string; id: string; title: string; type: "ai" | "command" | "profile" | "run" | "save" | "workspace"; };
 
-type UserContextValue = { activities: UserActivity[]; isReady: boolean; logout: () => Promise<void>; profile: UserProfile | null; recordActivity: (activity: Omit<UserActivity, "createdAt" | "id">) => void; refreshProfile: () => Promise<UserProfile | null>; saveAvatar: (avatar: string) => void; saveProfile: (profile: Partial<Pick<UserProfile, "bio" | "phone" | "region" | "socials">>) => Promise<UserProfile | null>; };
+type UserContextValue = { 
+  activities: UserActivity[]; 
+  isReady: boolean; 
+  logout: () => Promise<void>; 
+  profile: UserProfile | null; 
+  recordActivity: (activity: Omit<UserActivity, "createdAt" | "id">) => void; 
+  refreshProfile: () => Promise<UserProfile | null>; 
+  saveAvatar: (avatar: string) => void; 
+  saveProfile: (profile: Partial<UserProfile>) => Promise<UserProfile | null>; 
+};
 
 const activityStorageKey = "voidlab-user-activities";
 const profileStorageKey = "voidlab-local-profile";
@@ -34,7 +43,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // 100% Backend-less Profile Load
     const storedProfile = window.localStorage.getItem(profileStorageKey);
     setProfile(storedProfile ? JSON.parse(storedProfile) : defaultProfile);
 
@@ -60,7 +68,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     window.localStorage.setItem(profileStorageKey, JSON.stringify(updated));
   };
 
-  const saveProfile = async (updates: Partial<Pick<UserProfile, "bio" | "phone" | "region" | "socials">>) => {
+  const saveProfile = async (updates: Partial<UserProfile>) => {
     if (!profile) return null;
     const updated = { ...profile, ...updates } as UserProfile;
     setProfile(updated);
