@@ -40,7 +40,7 @@ type FileExplorerProps = {
   files: ExplorerFile[];
   folders: string[];
   onCreateFile: () => void;
-  onCreateFolder: () => void;
+  onCreateFolder: (folderName: string) => void;
   onDeleteFile: (id: string) => void;
   onDeleteFolder: (path: string) => void;
   onDraftLanguageChange: (value: string) => void;
@@ -51,6 +51,85 @@ type FileExplorerProps = {
   onMoveFolder: (srcPath: string, targetFolder: string) => void;
   onSelectFile: (id: string) => void;
 };
+
+/* ── New Folder Modal ───────────────────────────────────── */
+function NewFolderModal({
+  onConfirm,
+  onClose,
+}: {
+  onConfirm: (name: string) => void;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const handleSubmit = () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    onConfirm(trimmed);
+    onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className="w-full max-w-xs rounded-sm p-5"
+        style={{ background: "var(--panel-background)", border: "1px solid var(--border-strong)", boxShadow: "var(--shadow)" }}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-sm font-semibold theme-text-strong flex items-center gap-2">
+            <FolderPlus size={15} style={{ color: "var(--accent)" }} />
+            New Folder
+          </div>
+          <button onClick={onClose} className="theme-muted hover:opacity-70" type="button">
+            <X size={15} />
+          </button>
+        </div>
+
+        <input
+          ref={inputRef}
+          className="w-full rounded-sm px-3 py-2 text-sm outline-none mb-4 theme-text"
+          style={{ background: "var(--input-background)", border: "1px solid var(--border)" }}
+          placeholder="e.g. components"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSubmit();
+            if (e.key === "Escape") onClose();
+          }}
+        />
+
+        <div className="flex gap-2 justify-end">
+          <button
+            className="rounded-sm px-3 py-2 text-sm transition hover:opacity-70"
+            style={{ background: "var(--control-background)", border: "1px solid var(--border)", color: "var(--text)" }}
+            onClick={onClose}
+            type="button"
+          >
+            Cancel
+          </button>
+          <button
+            className="rounded-sm px-4 py-2 text-sm font-semibold transition hover:opacity-90 disabled:opacity-40"
+            disabled={!name.trim()}
+            style={{ background: "var(--action-background)", color: "var(--action-foreground)" }}
+            onClick={handleSubmit}
+            type="button"
+          >
+            Create
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const buildTree = (folders: string[], files: ExplorerFile[], parent = "", depth = 0): TreeItem[] => {
   const folderItems = folders
@@ -244,6 +323,7 @@ export default function FileExplorer({
   const [storageLabel, setStorageLabel] = useState("mounting local VFS");
   const [contextItem, setContextItem] = useState<TreeItem | null>(null);
   const [moveTarget, setMoveTarget] = useState<MoveTarget>(null);
+  const [showNewFolderModal, setShowNewFolderModal] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -333,7 +413,7 @@ export default function FileExplorer({
             <button
               className="inline-flex items-center justify-center gap-1.5 rounded-sm py-2 text-xs font-medium transition hover:opacity-70"
               style={{ background: "var(--control-background)", border: "1px solid var(--border)", color: "var(--text)" }}
-              onClick={onCreateFolder}
+              onClick={() => setShowNewFolderModal(true)}
               type="button"
             >
               <FolderPlus size={13} />
@@ -459,6 +539,14 @@ export default function FileExplorer({
           folders={folders}
           onMove={handleMove}
           onClose={() => setMoveTarget(null)}
+        />
+      )}
+
+      {/* ── New Folder modal ──────────────────────────────── */}
+      {showNewFolderModal && (
+        <NewFolderModal
+          onConfirm={(folderName) => onCreateFolder(folderName)}
+          onClose={() => setShowNewFolderModal(false)}
         />
       )}
     </div>

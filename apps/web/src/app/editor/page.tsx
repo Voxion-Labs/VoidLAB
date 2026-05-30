@@ -168,10 +168,10 @@ export default function EditorPage() {
     });
   };
 
-  const handleCreateFolder = () => {
+  const handleCreateFolder = (folderName: string) => {
     if (!workspace) return;
 
-    const nextFolderPath = createFolderPath(draftName || "src", workspace.folders, workspace.files, workspace.terminal.cwd);
+    const nextFolderPath = createFolderPath(folderName, workspace.folders, workspace.files, workspace.terminal.cwd);
 
     if (!nextFolderPath) {
       setStatusMessage("Folder name is required.");
