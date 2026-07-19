@@ -1,4 +1,4 @@
-"use client";
+`"use client";
 
 import { useState } from "react";
 import { Check, CheckCircle2, Copy, GitBranch, Github, Terminal, UploadCloud } from "lucide-react";
@@ -132,185 +132,155 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export default function GitHubPanel() {
-  const [pushToast, setPushToast] = useState(false);
+
   const [repoUrl, setRepoUrl] = useState("");
   const [branch, setBranch] = useState("main");
   const [copiedAll, setCopiedAll] = useState(false);
 
   const quickCommands = [
     `git init`,
-    `git add .`,
-    `git commit -m "Initial commit from VoidLAB"`,
-    repoUrl ? `git remote add origin ${repoUrl}` : `git remote add origin https://github.com/user/repo.git`,
-    `git push -u origin ${branch || "main"}`,
+    `git add.`,
+    `git commit - m "Initial commit from VoidLAB"`,
+    repoUrl ? `git remote add origin ${ repoUrl } ` : `git remote add origin https://github.com/user/repo.git`,
+`git push -u origin ${branch || "main"}`,
   ].join("\n");
 
-  const handleFakePush = () => {
-    setPushToast(true);
-    setTimeout(() => setPushToast(false), 3000);
-  };
 
-  const handleCopyAll = async () => {
-    await navigator.clipboard.writeText(quickCommands);
-    setCopiedAll(true);
-    setTimeout(() => setCopiedAll(false), 2000);
-  };
 
-  return (
-    <div className="space-y-4">
-      {/* ── Push section ─────────────────────────────────────── */}
-      <section
-        className="rounded-sm p-5"
-        style={{ background: "var(--surface-soft)", border: "1px solid var(--border)" }}
-      >
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-2">
-            <Github size={16} style={{ color: "var(--accent)" }} />
-            <span className="text-sm font-semibold theme-text-strong">GitHub publish</span>
-          </div>
-          <button
-            className="inline-flex items-center gap-2 rounded-sm px-4 py-2 text-sm font-semibold transition hover:opacity-90"
-            style={{
-              background: pushToast ? "#10b981" : "var(--action-background)",
-              color: "var(--action-foreground)",
-              boxShadow: "var(--action-shadow)",
-            }}
-            onClick={handleFakePush}
-            type="button"
-          >
-            {pushToast ? <CheckCircle2 size={15} /> : <UploadCloud size={15} />}
-            {pushToast ? "Pushed to GitHub! 🚀" : "Push to GitHub"}
-          </button>
+const handleCopyAll = async () => {
+  await navigator.clipboard.writeText(quickCommands);
+  setCopiedAll(true);
+  setTimeout(() => setCopiedAll(false), 2000);
+};
+
+return (
+  <div className="space-y-4">
+    {/* ── Push section ─────────────────────────────────────── */}
+    <section
+      className="rounded-sm p-5"
+      style={{ background: "var(--surface-soft)", border: "1px solid var(--border)" }}
+    >
+      <div className="flex items-center gap-2 mb-4">
+        <Github size={16} style={{ color: "var(--accent)" }} />
+        <span className="text-sm font-semibold theme-text-strong">GitHub publish target</span>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-widest theme-muted mb-1.5">
+            Repository URL
+          </label>
+          <input
+            className="w-full rounded-sm px-3 py-2.5 text-sm outline-none theme-text"
+            style={{ background: "var(--input-background)", border: "1px solid var(--border)" }}
+            onChange={(e) => setRepoUrl(e.target.value)}
+            placeholder="https://github.com/user/repo.git"
+            value={repoUrl}
+          />
         </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-widest theme-muted mb-1.5">
-              Repository URL
-            </label>
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-widest theme-muted mb-1.5">
+            Branch
+          </label>
+          <div className="relative">
+            <GitBranch
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+              style={{ color: "var(--muted)" }}
+            />
             <input
-              className="w-full rounded-sm px-3 py-2.5 text-sm outline-none theme-text"
+              className="w-full rounded-sm py-2.5 pl-9 pr-3 text-sm outline-none theme-text"
               style={{ background: "var(--input-background)", border: "1px solid var(--border)" }}
-              onChange={(e) => setRepoUrl(e.target.value)}
-              placeholder="https://github.com/user/repo.git"
-              value={repoUrl}
+              onChange={(e) => setBranch(e.target.value)}
+              placeholder="main"
+              value={branch}
             />
           </div>
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-widest theme-muted mb-1.5">
-              Branch
-            </label>
-            <div className="relative">
-              <GitBranch
-                size={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                style={{ color: "var(--muted)" }}
-              />
-              <input
-                className="w-full rounded-sm py-2.5 pl-9 pr-3 text-sm outline-none theme-text"
-                style={{ background: "var(--input-background)", border: "1px solid var(--border)" }}
-                onChange={(e) => setBranch(e.target.value)}
-                placeholder="main"
-                value={branch}
-              />
-            </div>
-          </div>
         </div>
+      </div>
 
-        {pushToast && (
-          <div
-            className="mt-3 rounded-sm px-4 py-3 text-sm flex items-center gap-2"
-            style={{
-              background: "rgba(16, 185, 129, 0.08)",
-              border: "1px solid rgba(16, 185, 129, 0.28)",
-              color: "#10b981",
-            }}
-          >
-            <CheckCircle2 size={15} />
-            Workspace pushed to GitHub successfully! (Demo mode — set up a token for real pushes)
-          </div>
-        )}
-      </section>
 
-      {/* ── Quick commands ────────────────────────────────────── */}
-      <section
-        className="rounded-sm p-5"
-        style={{ background: "var(--surface-soft)", border: "1px solid var(--border)" }}
-      >
-        <div className="flex items-center justify-between gap-3 mb-3">
-          <div className="flex items-center gap-2">
-            <Terminal size={15} style={{ color: "var(--accent)" }} />
-            <span className="text-sm font-semibold theme-text-strong">Quick push sequence</span>
-          </div>
-          <button
-            className="inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-semibold transition hover:opacity-80"
-            style={{
-              background: "var(--control-background)",
-              border: "1px solid var(--border)",
-              color: "var(--text)",
-            }}
-            onClick={() => void handleCopyAll()}
-            type="button"
-          >
-            {copiedAll ? <Check size={12} /> : <Copy size={12} />}
-            {copiedAll ? "Copied!" : "Copy all"}
-          </button>
+    </section>
+
+    {/* ── Quick commands ────────────────────────────────────── */}
+    <section
+      className="rounded-sm p-5"
+      style={{ background: "var(--surface-soft)", border: "1px solid var(--border)" }}
+    >
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <div className="flex items-center gap-2">
+          <Terminal size={15} style={{ color: "var(--accent)" }} />
+          <span className="text-sm font-semibold theme-text-strong">Quick push sequence</span>
         </div>
-        <pre
-          className="rounded-sm p-4 text-xs leading-7 font-mono overflow-x-auto"
+        <button
+          className="inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-semibold transition hover:opacity-80"
           style={{
-            background: "var(--terminal-bg)",
+            background: "var(--control-background)",
             border: "1px solid var(--border)",
-            color: "var(--terminal-text)",
+            color: "var(--text)",
           }}
+          onClick={() => void handleCopyAll()}
+          type="button"
         >
-          {quickCommands}
-        </pre>
-        <p className="mt-2 text-xs theme-muted">
-          Paste this sequence into your local terminal to push to GitHub.
-        </p>
-      </section>
-
-      {/* ── Full git reference ────────────────────────────────── */}
-      <section
-        className="rounded-sm p-5"
-        style={{ background: "var(--surface-soft)", border: "1px solid var(--border)" }}
+          {copiedAll ? <Check size={12} /> : <Copy size={12} />}
+          {copiedAll ? "Copied!" : "Copy all"}
+        </button>
+      </div>
+      <pre
+        className="rounded-sm p-4 text-xs leading-7 font-mono overflow-x-auto"
+        style={{
+          background: "var(--terminal-bg)",
+          border: "1px solid var(--border)",
+          color: "var(--terminal-text)",
+        }}
       >
-        <div className="text-sm font-semibold theme-text-strong mb-4">
-          Git command reference
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          {GIT_REFERENCE.map((cat) => (
-            <div
-              key={cat.title}
-              className="rounded-sm p-4"
-              style={{ background: "var(--panel-background)", border: "1px solid var(--border)" }}
-            >
-              <div className="flex items-center gap-2 text-sm font-semibold theme-text-strong mb-3">
-                <span>{cat.icon}</span>
-                {cat.title}
-              </div>
-              <div className="space-y-2">
-                {cat.commands.map((c) => (
-                  <div
-                    key={c.cmd}
-                    className="group flex items-center justify-between gap-2 rounded-sm px-2 py-1.5 transition hover:opacity-80"
-                    style={{ background: "var(--surface-soft)" }}
-                  >
-                    <div className="min-w-0">
-                      <div className="font-mono text-xs truncate" style={{ color: "var(--accent)" }}>
-                        {c.cmd}
-                      </div>
-                      <div className="text-xs theme-muted mt-0.5">{c.desc}</div>
-                    </div>
-                    <CopyButton text={c.cmd} />
-                  </div>
-                ))}
-              </div>
+        {quickCommands}
+      </pre>
+      <p className="mt-2 text-xs theme-muted">
+        Paste this sequence into your local terminal to push to GitHub.
+      </p>
+    </section>
+
+    {/* ── Full git reference ────────────────────────────────── */}
+    <section
+      className="rounded-sm p-5"
+      style={{ background: "var(--surface-soft)", border: "1px solid var(--border)" }}
+    >
+      <div className="text-sm font-semibold theme-text-strong mb-4">
+        Git command reference
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        {GIT_REFERENCE.map((cat) => (
+          <div
+            key={cat.title}
+            className="rounded-sm p-4"
+            style={{ background: "var(--panel-background)", border: "1px solid var(--border)" }}
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold theme-text-strong mb-3">
+              <span>{cat.icon}</span>
+              {cat.title}
             </div>
-          ))}
-        </div>
-      </section>
-    </div>
-  );
+            <div className="space-y-2">
+              {cat.commands.map((c) => (
+                <div
+                  key={c.cmd}
+                  className="group flex items-center justify-between gap-2 rounded-sm px-2 py-1.5 transition hover:opacity-80"
+                  style={{ background: "var(--surface-soft)" }}
+                >
+                  <div className="min-w-0">
+                    <div className="font-mono text-xs truncate" style={{ color: "var(--accent)" }}>
+                      {c.cmd}
+                    </div>
+                    <div className="text-xs theme-muted mt-0.5">{c.desc}</div>
+                  </div>
+                  <CopyButton text={c.cmd} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  </div>
+);
 }

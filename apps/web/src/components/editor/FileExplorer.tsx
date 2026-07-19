@@ -508,8 +508,8 @@ export default function FileExplorer({
               New file
             </button>
             <button
-              className="inline-flex items-center justify-center gap-2 rounded-2xl py-2.5 text-sm font-medium transition hover:bg-[var(--control-hover)]"
-              style={{ background: "var(--control-background)", border: "1px solid var(--border)", color: "var(--text)" }}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl py-2.5 text-sm font-medium transition hover:scale-[1.02] hover:opacity-90"
+              style={{ background: "var(--action-background)", color: "var(--action-foreground)" }}
               onClick={() => setShowNewFolderModal(true)}
               type="button"
             >
@@ -517,8 +517,8 @@ export default function FileExplorer({
               New folder
             </button>
             <button
-              className="inline-flex items-center justify-center gap-2 rounded-2xl py-2.5 text-sm font-medium transition hover:bg-[var(--control-hover)]"
-              style={{ background: "var(--control-background)", border: "1px solid var(--border)", color: "var(--text)" }}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl py-2.5 text-sm font-medium transition hover:scale-[1.02] hover:opacity-90"
+              style={{ background: "var(--action-background)", color: "var(--action-foreground)" }}
               onClick={onImportFiles}
               type="button"
             >
@@ -526,8 +526,8 @@ export default function FileExplorer({
               Import files
             </button>
             <button
-              className="inline-flex items-center justify-center gap-2 rounded-2xl py-2.5 text-sm font-medium transition hover:bg-[var(--control-hover)]"
-              style={{ background: "var(--control-background)", border: "1px solid var(--border)", color: "var(--text)" }}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl py-2.5 text-sm font-medium transition hover:scale-[1.02] hover:opacity-90"
+              style={{ background: "var(--action-background)", color: "var(--action-foreground)" }}
               onClick={onImportFolder}
               type="button"
             >
@@ -554,11 +554,8 @@ export default function FileExplorer({
                   key={isFolder ? item.path : item.id}
                   style={{
                     paddingLeft,
-                    background: isActive
-                      ? "var(--accent-soft)"
-                      : "transparent",
+                    background: isActive ? "var(--control-hover)" : "transparent",
                   }}
-                  onMouseLeave={() => { if (isCtxOpen) setContextItem(null); }}
                 >
                   {/* Main clickable area */}
                   <button

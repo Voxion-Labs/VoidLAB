@@ -73,9 +73,6 @@ export default function GitHubWorkspacePanel() {
     window.setTimeout(() => setCopied(""), 1600);
   };
 
-  const fakePush = () => {
-    setStatus("Fake push complete. No network call was made. Use the copied commands in your own terminal when ready.");
-  };
 
   if (!workspace || !activeFile) return null;
 
@@ -86,10 +83,7 @@ export default function GitHubWorkspacePanel() {
           <Github size={16} />
           GitHub command center
         </div>
-        <Button onClick={fakePush} type="button">
-          <UploadCloud size={15} />
-          Fake push
-        </Button>
+
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
