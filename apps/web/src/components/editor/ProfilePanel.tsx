@@ -245,25 +245,25 @@ export default function ProfilePanel() {
             <div className="theme-text-strong text-sm font-semibold">Social links</div>
             <div className="mt-3 grid gap-3">
               <input
-                className="theme-input w-full rounded-2xl px-4 py-3 text-sm outline-none transition placeholder:text-slate-400"
+                className="theme-input w-full rounded-2xl px-4 py-3 text-sm outline-none transition placeholder:opacity-50"
                 onChange={handleSocialChange("github")}
                 placeholder="GitHub URL"
                 value={draft.socials.github}
               />
               <input
-                className="theme-input w-full rounded-2xl px-4 py-3 text-sm outline-none transition placeholder:text-slate-400"
+                className="theme-input w-full rounded-2xl px-4 py-3 text-sm outline-none transition placeholder:opacity-50"
                 onChange={handleSocialChange("linkedin")}
                 placeholder="LinkedIn URL"
                 value={draft.socials.linkedin}
               />
               <input
-                className="theme-input w-full rounded-2xl px-4 py-3 text-sm outline-none transition placeholder:text-slate-400"
+                className="theme-input w-full rounded-2xl px-4 py-3 text-sm outline-none transition placeholder:opacity-50"
                 onChange={handleSocialChange("x")}
                 placeholder="X URL"
                 value={draft.socials.x}
               />
               <input
-                className="theme-input w-full rounded-2xl px-4 py-3 text-sm outline-none transition placeholder:text-slate-400"
+                className="theme-input w-full rounded-2xl px-4 py-3 text-sm outline-none transition placeholder:opacity-50"
                 onChange={handleSocialChange("instagram")}
                 placeholder="Instagram URL"
                 value={draft.socials.instagram}

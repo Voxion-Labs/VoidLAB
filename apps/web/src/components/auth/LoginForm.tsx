@@ -1,8 +1,7 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowRight, Globe2, Mail, Phone, User2 } from "lucide-react";
+import { ArrowRight, Mail, MapPin, Phone, User2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/context/UserContext";
@@ -19,9 +18,13 @@ type LoginFormProps = {
 };
 
 export default function LoginForm({ authError = "" }: LoginFormProps) {
-  const router = useRouter();
-  const { isReady, profile, refreshProfile, saveProfile, recordActivity } = useUser();
-  const [form, setForm] = useState(emptyForm);
+  const { profile, saveProfile } = useUser();
+  const [form, setForm] = useState(() => ({
+    email: profile?.email ?? "",
+    name: profile?.name ?? "",
+    phone: profile?.phone ?? "",
+    region: profile?.region ?? "",
+  }));
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -35,160 +38,71 @@ export default function LoginForm({ authError = "" }: LoginFormProps) {
       setForm((current) => ({ ...current, [field]: event.target.value }));
     };
 
-  const handleManualLogin = async (event: FormEvent<HTMLFormElement>) => {
+  const handleLocalEntry = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
 
-    if (!form.name.trim() || !form.email.trim() || !form.phone.trim() || !form.region.trim()) {
-      setError("Please fill in your name, email, phone, and region.");
+    if (!form.name.trim() || !form.email.trim()) {
+      setError("Name and email are required to open the local workspace.");
       return;
     }
 
     setSubmitting(true);
-
-    try {
-      await saveProfile({
-        name: form.name.trim(),
-        email: form.email.trim(),
-        phone: form.phone.trim(),
-        region: form.region.trim(),
-        bio: `Local-First Developer: ${form.name.trim()}`,
-      });
-
-      recordActivity({
-        title: "Workspace Initialized",
-        detail: `${form.name.trim()} started a local backend-less session.`,
-        type: "profile",
-      });
-
-      await refreshProfile();
-      router.push("/editor"); 
-    } catch (loginError) {
-      setError(loginError instanceof Error ? loginError.message : "VoidLAB could not enter your workspace.");
-    } finally {
-      setSubmitting(false);
-    }
+    await saveProfile({
+      email: form.email.trim(),
+      id: profile?.id ?? `local-${Date.now()}`,
+      name: form.name.trim(),
+      phone: form.phone.trim(),
+      region: form.region.trim() || "Local",
+    });
+    window.location.href = "/editor";
   };
 
   return (
-    <section className="glass w-full max-w-xl rounded-sm p-6 sm:p-8">
-      {/* Header */}
+    <section className="glass w-full max-w-xl rounded-[6px] p-6 sm:p-8">
       <div className="mb-8 flex items-start justify-between gap-4">
         <div>
-          <div className="display-font text-3xl font-bold tracking-tight theme-text-strong">
+          <div className="display-font text-3xl font-semibold theme-text-strong">
             Enter VoidLAB
           </div>
           <p className="mt-2 text-sm leading-6 theme-muted">
-            Create or access your workspace with a simple one-step form. No passwords, no friction.
+            Create a local profile and open your browser-native IDE. No cloud account,
+            OAuth, database, or backend session is required.
           </p>
         </div>
-        <div
-          className="shrink-0 rounded-sm px-3 py-2 text-right"
-          style={{
-            background: "var(--accent-soft)",
-            border: "1px solid var(--border-strong)",
-          }}
-        >
-          <div className="text-xs font-semibold uppercase tracking-widest accent-text">
-            Access
-          </div>
-          <div className="display-font text-xl font-bold theme-text-strong">{completion}%</div>
+        <div className="theme-chip px-3 py-2 text-right">
+          <div className="text-xs uppercase tracking-[0.18em]">Local</div>
+          <div className="text-xl font-semibold">{completion}%</div>
         </div>
       </div>
 
-      {/* Form */}
-      <form className="space-y-4" onSubmit={(event) => void handleManualLogin(event)}>
+      <form className="space-y-4" onSubmit={(event) => void handleLocalEntry(event)}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Input
-            icon={<User2 size={15} />}
-            label="Full name"
-            onChange={handleField("name")}
-            placeholder="Your name"
-            value={form.name}
-          />
-          <Input
-            icon={<Mail size={15} />}
-            label="Email"
-            onChange={handleField("email")}
-            placeholder="you@example.com"
-            type="email"
-            value={form.email}
-          />
-          <Input
-            icon={<Phone size={15} />}
-            label="Phone number"
-            onChange={handleField("phone")}
-            placeholder="+91 98765 43210"
-            value={form.phone}
-          />
-          <Input
-            icon={<Globe2 size={15} />}
-            label="Region"
-            onChange={handleField("region")}
-            placeholder="Kolkata, India"
-            value={form.region}
-          />
+          <Input icon={<User2 size={16} />} label="Full name" onChange={handleField("name")} placeholder="Alex" value={form.name} />
+          <Input icon={<Mail size={16} />} label="Email" onChange={handleField("email")} placeholder="you@local.dev" type="email" value={form.email} />
+          <Input icon={<Phone size={16} />} label="Phone" onChange={handleField("phone")} placeholder="Optional" value={form.phone} />
+          <Input icon={<MapPin size={16} />} label="Region" onChange={handleField("region")} placeholder="Kolkata, India" value={form.region} />
         </div>
 
-        <div
-          className="flex flex-wrap items-center justify-between gap-3 rounded-sm p-4"
-          style={{
-            background: "var(--surface-soft)",
-            border: "1px solid var(--border)",
-          }}
-        >
-          <div className="text-sm theme-muted leading-6">
-            Your workspace is stored securely and privately. No external logins required.
+        <div className="theme-surface flex flex-wrap items-center justify-between gap-3 rounded-[6px] p-5">
+          <div>
+            <div className="text-sm font-semibold theme-text-strong">Local-first workspace</div>
+            <div className="mt-1 text-sm leading-6 theme-muted">
+              Your profile, files, rooms, and settings stay inside this browser.
+            </div>
           </div>
-          <Button className="min-w-[180px]" disabled={submitting} type="submit">
-            {submitting ? "Entering..." : "Enter VoidLAB"}
-            <ArrowRight size={15} />
+          <Button className="min-w-[170px]" disabled={submitting} type="submit">
+            {submitting ? "Opening..." : "Open IDE"}
+            <ArrowRight size={16} />
           </Button>
         </div>
       </form>
 
-      {/* Error */}
       {error || authError ? (
-        <div
-          className="mt-4 rounded-sm px-4 py-3 text-sm"
-          style={{
-            background: "rgba(225, 29, 72, 0.08)",
-            border: "1px solid rgba(225, 29, 72, 0.28)",
-            color: "var(--accent)",
-          }}
-        >
+        <div className="mt-4 rounded-[6px] border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm accent-text">
           {error || authError}
         </div>
       ) : null}
-
-      {/* Already signed in */}
-      {isReady && profile ? (
-        <div
-          className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-sm px-4 py-3 text-sm"
-          style={{
-            background: "var(--accent-soft)",
-            border: "1px solid var(--border-strong)",
-          }}
-        >
-          <span className="theme-text">Signed in as <strong>{profile.name}</strong>. Your workspace is ready.</span>
-          <button
-            onClick={() => router.push("/editor")}
-            className="inline-flex items-center justify-center gap-2 rounded-sm px-4 py-2 text-sm font-semibold transition hover:opacity-90"
-            style={{
-              background: "var(--action-background)",
-              color: "var(--action-foreground)",
-              boxShadow: "var(--action-shadow)",
-            }}
-          >
-            Open editor
-          </button>
-        </div>
-      ) : null}
-
-      {/* Copyright */}
-      <div className="mt-8 text-center text-xs theme-muted" style={{ letterSpacing: "0.03em" }}>
-        © 2026 VoidLAB. All rights reserved.
-      </div>
     </section>
   );
 }

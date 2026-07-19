@@ -20,7 +20,7 @@ export default function ThemeSwitcher() {
         value={theme}
       >
         {Object.entries(labels).map(([value, label]) => (
-          <option key={value} value={value} className="theme-text-strong bg-slate-950">
+          <option key={value} value={value} className="theme-text-strong" style={{ background: "var(--panel-background)" }}>
             {label}
           </option>
         ))}

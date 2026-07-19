@@ -10,7 +10,7 @@ export default function CollaborationPage() {
     >
       <Suspense
         fallback={
-          <div className="rounded-[28px] border border-white/10 bg-white/5 p-5 text-sm text-slate-300">
+          <div className="theme-surface rounded-[6px] p-5 text-sm theme-muted">
             Loading collaboration room...
           </div>
         }

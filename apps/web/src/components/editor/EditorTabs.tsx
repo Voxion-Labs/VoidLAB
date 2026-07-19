@@ -22,32 +22,39 @@ export default function EditorTabs({
   onSelectFile,
 }: EditorTabsProps) {
   return (
-    <div className="scrollbar-thin flex gap-2 overflow-x-auto border-b border-white/10 px-3 py-3">
+    <div
+      className="scrollbar-thin flex gap-2 overflow-x-auto px-3 py-3"
+      style={{ borderBottom: "1px solid var(--border)" }}
+    >
       {files.map((file) => {
         const isActive = file.id === activeFileId;
         return (
           <button
-            className={`group flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm transition ${
-              isActive
-                ? "border-sky-300/40 bg-sky-300/10 text-white"
-                : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
-            }`}
+            className="group flex items-center gap-2 rounded-[6px] px-3 py-2 text-sm transition"
             key={file.id}
             onClick={() => onSelectFile(file.id)}
             type="button"
+            style={{
+              background: isActive ? "var(--accent-soft)" : "var(--control-background)",
+              border: isActive
+                ? "1px solid var(--border-strong)"
+                : "1px solid var(--border)",
+              color: isActive ? "var(--accent)" : "var(--text)",
+            }}
           >
             <FileCode2 size={14} />
             <span>{file.name}</span>
             <span
-                  className="rounded-full p-1 text-slate-400 opacity-60 transition hover:bg-white/10 hover:text-white group-hover:opacity-100"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onCloseFile(file.id);
-                  }}
-                  title={file.path || file.name}
-                >
-                  <X size={12} />
-                </span>
+              className="rounded-full p-1 opacity-60 transition hover:opacity-100"
+              onClick={(event) => {
+                event.stopPropagation();
+                onCloseFile(file.id);
+              }}
+              title={file.path || file.name}
+              style={{ color: "var(--muted)" }}
+            >
+              <X size={12} />
+            </span>
           </button>
         );
       })}

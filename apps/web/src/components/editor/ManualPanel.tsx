@@ -31,7 +31,7 @@ const contents = [
 
 const quickFacts = [
   "Browser-based IDE with multi-file workspace and live execution",
-  "Unified black console with Output, Terminal, and Ports tabs",
+  "Unified console with Output, Terminal, and Ports tabs",
   "Inline stdin capture for interactive Judge0-backed runs",
   "Dedicated pages for GitHub, collaboration, AI guidance, profile, and the manual itself",
 ] as const;
@@ -83,8 +83,8 @@ const toolCards = [
 
 const personalizationNotes = [
   "Display picture uploads are optional. Leaving the avatar empty is a valid clean state and does not block profile saves.",
-  "Porcelain is the light theme, optimized for higher contrast with sharper technical-blue borders.",
-  "Cerulean, Midnight, and Ember are dark themes designed to stay deep and immersive without bright surface leaks.",
+  "The off-white theme (Fade white) is the default, designed for higher contrast with a refined cherry-red accent.",
+  "The rich black theme pairs a deep dark background with vivid red highlights for an immersive coding experience.",
   "Workspace data, terminal history, and profile-side activity are stored locally in the browser experience unless synced through dedicated flows such as collaboration or GitHub publishing.",
 ] as const;
 
@@ -105,51 +105,75 @@ function SectionHeader({
 }) {
   return (
     <div>
-      <div className="text-xs uppercase tracking-[0.24em] text-sky-200/80">{eyebrow}</div>
-      <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-white">{title}</h2>
+      <div className="text-xs uppercase tracking-[0.24em] accent-text" style={{ opacity: 0.8 }}>{eyebrow}</div>
+      <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] theme-text-strong">{title}</h2>
     </div>
   );
 }
 
 export default function ManualPanel() {
   return (
-    <section className="overflow-hidden rounded-[32px] border border-sky-300/20 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.12),transparent_28%),linear-gradient(180deg,rgba(2,6,23,0.96),rgba(3,7,18,0.98))] p-1 shadow-[0_30px_90px_rgba(2,6,23,0.45)]">
-      <div className="rounded-[30px] border border-white/10 bg-slate-950/90">
+    <section
+      className="overflow-hidden rounded-[6px] p-1"
+      style={{
+        background: "var(--surface-soft)",
+        border: "1px solid var(--border-strong)",
+        boxShadow: "var(--shadow)",
+      }}
+    >
+      <div
+        className="rounded-[6px]"
+        style={{ border: "1px solid var(--border)", background: "var(--panel-background)" }}
+      >
         <div className="grid xl:grid-cols-[250px_minmax(0,1fr)]">
-          <aside className="border-b border-white/10 px-5 py-6 xl:border-b-0 xl:border-r">
-            <div className="rounded-[24px] border border-sky-300/20 bg-sky-300/10 p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold text-sky-100">
+          <aside
+            className="px-5 py-6"
+            style={{ borderBottom: "1px solid var(--border)", borderRight: "none" }}
+          >
+            <style>{`@media (min-width: 1280px) { .manual-aside-border { border-bottom: none !important; border-right: 1px solid var(--border) !important; } }`}</style>
+            <div
+              className="manual-aside-border rounded-[6px] p-4"
+              style={{ background: "var(--accent-soft)", border: "1px solid var(--border-strong)" }}
+            >
+              <div className="flex items-center gap-2 text-sm font-semibold accent-text">
                 <BookOpenText size={16} />
                 Operator handbook
               </div>
-              <div className="mt-3 text-sm leading-6 text-sky-50/80">
+              <div className="mt-3 text-sm leading-6 theme-text" style={{ opacity: 0.85 }}>
                 An illustrated field guide for the current VoidLAB workspace, execution flow,
                 tool pages, and deploy-ready habits.
               </div>
             </div>
 
             <div className="mt-5">
-              <div className="text-xs uppercase tracking-[0.24em] text-white/45">Contents</div>
+              <div className="text-xs uppercase tracking-[0.24em] theme-muted">Contents</div>
               <nav className="mt-4 space-y-2">
                 {contents.map((item) => (
                   <a
-                    className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/78 transition hover:border-sky-300/30 hover:bg-white/[0.06] hover:text-white"
+                    className="flex items-center justify-between rounded-[6px] px-4 py-3 text-sm theme-text transition hover:opacity-80"
                     href={item.href}
                     key={item.href}
+                    style={{
+                      border: "1px solid var(--border)",
+                      background: "var(--control-background)",
+                    }}
                   >
                     <span>{item.label}</span>
-                    <span className="text-white/30">/</span>
+                    <span className="theme-muted">/</span>
                   </a>
                 ))}
               </nav>
             </div>
 
-            <div className="mt-5 rounded-[24px] border border-white/10 bg-white/[0.03] p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold text-white">
+            <div
+              className="mt-5 rounded-[6px] p-4"
+              style={{ border: "1px solid var(--border)", background: "var(--control-background)" }}
+            >
+              <div className="flex items-center gap-2 text-sm font-semibold theme-text-strong">
                 <ShieldCheck size={16} />
                 Deploy posture
               </div>
-              <div className="mt-3 text-sm leading-6 text-white/65">
+              <div className="mt-3 text-sm leading-6 theme-muted">
                 Current editor flow is centered around clean theme surfaces, a unified console,
                 and buffered stdin handling so interactive runs stay predictable.
               </div>
@@ -159,19 +183,23 @@ export default function ManualPanel() {
           <div className="scrollbar-thin max-h-[900px] overflow-y-auto px-5 py-6 sm:px-6 lg:px-8">
             <div className="space-y-8">
               <section
-                className="rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.92),rgba(2,6,23,0.82))] p-6"
+                className="rounded-[6px] p-6"
                 id="overview"
+                style={{ border: "1px solid var(--border)", background: "var(--surface-soft)" }}
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="max-w-3xl">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-sky-300/20 bg-sky-300/10 px-4 py-2 text-xs uppercase tracking-[0.24em] text-sky-100">
+                    <div
+                      className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs uppercase tracking-[0.24em] accent-text"
+                      style={{ background: "var(--accent-soft)", border: "1px solid var(--border-strong)" }}
+                    >
                       <Compass size={14} />
                       System overview
                     </div>
-                    <h1 className="mt-5 text-4xl font-semibold tracking-[-0.05em] text-white sm:text-5xl">
+                    <h1 className="mt-5 text-4xl font-semibold tracking-[-0.05em] theme-text-strong sm:text-5xl">
                       VoidLAB Operator Handbook
                     </h1>
-                    <p className="mt-4 max-w-2xl text-base leading-8 text-white/68">
+                    <p className="mt-4 max-w-2xl text-base leading-8 theme-muted">
                       VoidLAB is a modern browser-based coding workspace built around an editor,
                       a multi-file project model, a unified execution console, and focused tool
                       pages for publishing, collaboration, AI guidance, and profile management.
@@ -179,13 +207,19 @@ export default function ManualPanel() {
                   </div>
 
                   <div className="grid min-w-[220px] gap-3 sm:grid-cols-2 xl:w-[360px] xl:grid-cols-1">
-                    <div className="rounded-[22px] border border-white/10 bg-white/[0.03] p-4">
-                      <div className="text-xs uppercase tracking-[0.22em] text-white/40">Editor model</div>
-                      <div className="mt-3 text-lg font-semibold text-white">Multi-file local workspace</div>
+                    <div
+                      className="rounded-[6px] p-4"
+                      style={{ border: "1px solid var(--border)", background: "var(--control-background)" }}
+                    >
+                      <div className="text-xs uppercase tracking-[0.22em] theme-muted">Editor model</div>
+                      <div className="mt-3 text-lg font-semibold theme-text-strong">Multi-file local workspace</div>
                     </div>
-                    <div className="rounded-[22px] border border-white/10 bg-white/[0.03] p-4">
-                      <div className="text-xs uppercase tracking-[0.22em] text-white/40">Runtime model</div>
-                      <div className="mt-3 text-lg font-semibold text-white">Judge0-backed execution + preview</div>
+                    <div
+                      className="rounded-[6px] p-4"
+                      style={{ border: "1px solid var(--border)", background: "var(--control-background)" }}
+                    >
+                      <div className="text-xs uppercase tracking-[0.22em] theme-muted">Runtime model</div>
+                      <div className="mt-3 text-lg font-semibold theme-text-strong">Judge0-backed execution + preview</div>
                     </div>
                   </div>
                 </div>
@@ -193,23 +227,27 @@ export default function ManualPanel() {
                 <div className="mt-6 grid gap-3 md:grid-cols-2">
                   {quickFacts.map((fact) => (
                     <div
-                      className="rounded-[20px] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm leading-6 text-white/72"
+                      className="rounded-[6px] px-4 py-3 text-sm leading-6 theme-text"
                       key={fact}
+                      style={{ border: "1px solid var(--border)", background: "var(--control-background)" }}
                     >
                       {fact}
                     </div>
                   ))}
                 </div>
 
-                <div className="mt-6 rounded-[24px] border border-sky-300/20 bg-sky-300/[0.08] p-5">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-sky-100">
+                <div
+                  className="mt-6 rounded-[6px] p-5"
+                  style={{ background: "var(--accent-soft)", border: "1px solid var(--border-strong)" }}
+                >
+                  <div className="flex items-center gap-2 text-sm font-semibold accent-text">
                     <WandSparkles size={16} />
                     Fast start
                   </div>
-                  <div className="mt-4 space-y-3 text-sm leading-7 text-sky-50/88">
+                  <div className="mt-4 space-y-3 text-sm leading-7 theme-text">
                     {startupSteps.map((step, index) => (
                       <p key={step}>
-                        <span className="mr-2 text-sky-200">{index + 1}.</span>
+                        <span className="mr-2 accent-text">{index + 1}.</span>
                         {step}
                       </p>
                     ))}
@@ -220,7 +258,10 @@ export default function ManualPanel() {
               <section className="space-y-5" id="workspace-map">
                 <SectionHeader eyebrow="Figure A" title="Workspace map" />
                 <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_320px]">
-                  <div className="overflow-hidden rounded-[28px] border border-white/10 bg-black/50">
+                  <div
+                    className="overflow-hidden rounded-[6px]"
+                    style={{ border: "1px solid var(--border)", background: "var(--surface-soft)" }}
+                  >
                     <Image
                       alt="Technical blueprint of the VoidLAB workspace showing the editor, unified console, and tool hub."
                       className="h-auto w-full"
@@ -231,24 +272,30 @@ export default function ManualPanel() {
                     />
                   </div>
                   <div className="space-y-4">
-                    <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-5">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                    <div
+                      className="rounded-[6px] p-5"
+                      style={{ border: "1px solid var(--border)", background: "var(--control-background)" }}
+                    >
+                      <div className="flex items-center gap-2 text-sm font-semibold theme-text-strong">
                         <Layers3 size={16} />
                         Core zones
                       </div>
-                      <div className="mt-4 space-y-3 text-sm leading-7 text-white/68">
-                        <p><strong className="text-white">Editor:</strong> write and switch files with language-aware Monaco editing.</p>
-                        <p><strong className="text-white">Unified Console:</strong> one black execution surface for output, workspace terminal commands, and future ports.</p>
-                        <p><strong className="text-white">Tool Hub:</strong> dedicated routes for the manual, GitHub, collaboration, AI guide, and profile.</p>
+                      <div className="mt-4 space-y-3 text-sm leading-7 theme-muted">
+                        <p><strong className="theme-text-strong">Editor:</strong> write and switch files with language-aware Monaco editing.</p>
+                        <p><strong className="theme-text-strong">Unified Console:</strong> one execution surface for output, workspace terminal commands, and future ports.</p>
+                        <p><strong className="theme-text-strong">Tool Hub:</strong> dedicated routes for the manual, GitHub, collaboration, AI guide, and profile.</p>
                       </div>
                     </div>
 
-                    <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-5">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                    <div
+                      className="rounded-[6px] p-5"
+                      style={{ border: "1px solid var(--border)", background: "var(--control-background)" }}
+                    >
+                      <div className="flex items-center gap-2 text-sm font-semibold theme-text-strong">
                         <FolderTree size={16} />
                         Workspace behavior
                       </div>
-                      <div className="mt-4 space-y-3 text-sm leading-7 text-white/68">
+                      <div className="mt-4 space-y-3 text-sm leading-7 theme-muted">
                         <p>Files are tracked inside a local workspace model, not a native filesystem shell.</p>
                         <p>Folders, file paths, and terminal history persist across sessions in the browser state.</p>
                         <p>The active file drives language selection, preview behavior, and GitHub publish targeting.</p>
@@ -260,7 +307,10 @@ export default function ManualPanel() {
 
               <section className="space-y-5" id="execution-flow">
                 <SectionHeader eyebrow="Figure B" title="Interactive execution flow" />
-                <div className="overflow-hidden rounded-[28px] border border-white/10 bg-black/50">
+                <div
+                  className="overflow-hidden rounded-[6px]"
+                  style={{ border: "1px solid var(--border)", background: "var(--surface-soft)" }}
+                >
                   <Image
                     alt="Technical execution diagram showing Run, inline stdin capture, Judge0, and structured results."
                     className="h-auto w-full"
@@ -271,66 +321,68 @@ export default function ManualPanel() {
                 </div>
 
                 <div className="grid gap-4 lg:grid-cols-4">
-                  <div className="rounded-[22px] border border-white/10 bg-white/[0.03] p-4">
-                    <div className="text-xs uppercase tracking-[0.22em] text-white/40">Step 1</div>
-                    <div className="mt-3 text-base font-semibold text-white">Run or Preview</div>
-                    <div className="mt-2 text-sm leading-6 text-white/65">
-                      Runnable files go through Judge0. Previewable browser documents open directly in a new tab.
-                    </div>
-                  </div>
-                  <div className="rounded-[22px] border border-white/10 bg-white/[0.03] p-4">
-                    <div className="text-xs uppercase tracking-[0.22em] text-white/40">Step 2</div>
-                    <div className="mt-3 text-base font-semibold text-white">Inline stdin capture</div>
-                    <div className="mt-2 text-sm leading-6 text-white/65">
-                      If the active program appears input-driven, VoidLAB pauses in Output and buffers stdin lines inline.
-                    </div>
-                  </div>
-                  <div className="rounded-[22px] border border-white/10 bg-white/[0.03] p-4">
-                    <div className="text-xs uppercase tracking-[0.22em] text-white/40">Step 3</div>
-                    <div className="mt-3 text-base font-semibold text-white">Judge0 submission</div>
-                    <div className="mt-2 text-sm leading-6 text-white/65">
-                      Buffered input is encoded into the submission payload together with the active source code and language target.
-                    </div>
-                  </div>
-                  <div className="rounded-[22px] border border-white/10 bg-white/[0.03] p-4">
-                    <div className="text-xs uppercase tracking-[0.22em] text-white/40">Step 4</div>
-                    <div className="mt-3 text-base font-semibold text-white">Structured results</div>
-                    <div className="mt-2 text-sm leading-6 text-white/65">
-                      Output returns with stdout, stderr, compile output, runtime messages, memory, time, and exit metadata.
-                    </div>
-                  </div>
+                  {["Run or Preview", "Inline stdin capture", "Judge0 submission", "Structured results"].map((title, index) => {
+                    const descriptions = [
+                      "Runnable files go through Judge0. Previewable browser documents open directly in a new tab.",
+                      "If the active program appears input-driven, VoidLAB pauses in Output and buffers stdin lines inline.",
+                      "Buffered input is encoded into the submission payload together with the active source code and language target.",
+                      "Output returns with stdout, stderr, compile output, runtime messages, memory, time, and exit metadata.",
+                    ];
+                    return (
+                      <div
+                        className="rounded-[6px] p-4"
+                        key={title}
+                        style={{ border: "1px solid var(--border)", background: "var(--control-background)" }}
+                      >
+                        <div className="text-xs uppercase tracking-[0.22em] theme-muted">Step {index + 1}</div>
+                        <div className="mt-3 text-base font-semibold theme-text-strong">{title}</div>
+                        <div className="mt-2 text-sm leading-6 theme-muted">
+                          {descriptions[index]}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </section>
 
               <section className="space-y-5" id="console-tabs">
                 <SectionHeader eyebrow="Operations" title="Unified console behavior" />
                 <div className="grid gap-4 lg:grid-cols-3">
-                  <div className="rounded-[24px] border border-sky-300/20 bg-sky-300/[0.08] p-5">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-sky-100">
+                  <div
+                    className="rounded-[6px] p-5"
+                    style={{ background: "var(--accent-soft)", border: "1px solid var(--border-strong)" }}
+                  >
+                    <div className="flex items-center gap-2 text-sm font-semibold accent-text">
                       <PlayCircle size={16} />
                       Output
                     </div>
-                    <div className="mt-4 text-sm leading-7 text-sky-50/88">
+                    <div className="mt-4 text-sm leading-7 theme-text">
                       The default tab. It shows execution transcript events, inline stdin prompts,
                       runtime metrics, and all structured Judge0 results in one place.
                     </div>
                   </div>
-                  <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-5">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                  <div
+                    className="rounded-[6px] p-5"
+                    style={{ border: "1px solid var(--border)", background: "var(--control-background)" }}
+                  >
+                    <div className="flex items-center gap-2 text-sm font-semibold theme-text-strong">
                       <TerminalSquare size={16} />
                       Terminal
                     </div>
-                    <div className="mt-4 text-sm leading-7 text-white/68">
+                    <div className="mt-4 text-sm leading-7 theme-muted">
                       This is the local workspace command layer for commands like <code>ls</code>,
                       <code>tree</code>, <code>touch</code>, <code>open</code>, and <code>rm</code>.
                     </div>
                   </div>
-                  <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-5">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                  <div
+                    className="rounded-[6px] p-5"
+                    style={{ border: "1px solid var(--border)", background: "var(--control-background)" }}
+                  >
+                    <div className="flex items-center gap-2 text-sm font-semibold theme-text-strong">
                       <Palette size={16} />
                       Ports
                     </div>
-                    <div className="mt-4 text-sm leading-7 text-white/68">
+                    <div className="mt-4 text-sm leading-7 theme-muted">
                       A reserved operational area for future forwarded runtime ports. For now,
                       browser previews still open directly from the editor toolbar.
                     </div>
@@ -342,12 +394,16 @@ export default function ManualPanel() {
                 <SectionHeader eyebrow="Reference" title="Workspace command sheet" />
                 <div className="grid gap-3 md:grid-cols-2">
                   {commandReference.map((item) => (
-                    <div className="rounded-[22px] border border-white/10 bg-white/[0.03] p-4" key={item.command}>
-                      <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                    <div
+                      className="rounded-[6px] p-4"
+                      key={item.command}
+                      style={{ border: "1px solid var(--border)", background: "var(--control-background)" }}
+                    >
+                      <div className="flex items-center gap-2 text-sm font-semibold theme-text-strong">
                         <Command size={15} />
                         <code>{item.command}</code>
                       </div>
-                      <div className="mt-3 text-sm leading-6 text-white/65">{item.description}</div>
+                      <div className="mt-3 text-sm leading-6 theme-muted">{item.description}</div>
                     </div>
                   ))}
                 </div>
@@ -360,14 +416,21 @@ export default function ManualPanel() {
                     const Icon = tool.icon;
 
                     return (
-                      <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-5" key={tool.title}>
+                      <div
+                        className="rounded-[6px] p-5"
+                        key={tool.title}
+                        style={{ border: "1px solid var(--border)", background: "var(--control-background)" }}
+                      >
                         <div className="flex items-center gap-3">
-                          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-sky-300/20 bg-sky-300/10 text-sky-100">
+                          <div
+                            className="flex h-11 w-11 items-center justify-center rounded-[6px] accent-text"
+                            style={{ background: "var(--accent-soft)", border: "1px solid var(--border-strong)" }}
+                          >
                             <Icon size={18} />
                           </div>
-                          <div className="text-lg font-semibold text-white">{tool.title}</div>
+                          <div className="text-lg font-semibold theme-text-strong">{tool.title}</div>
                         </div>
-                        <div className="mt-4 text-sm leading-7 text-white/68">{tool.description}</div>
+                        <div className="mt-4 text-sm leading-7 theme-muted">{tool.description}</div>
                       </div>
                     );
                   })}
@@ -377,23 +440,29 @@ export default function ManualPanel() {
               <section className="space-y-5" id="personalization">
                 <SectionHeader eyebrow="Preferences" title="Profile and theme notes" />
                 <div className="grid gap-4 lg:grid-cols-2">
-                  <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-5">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                  <div
+                    className="rounded-[6px] p-5"
+                    style={{ border: "1px solid var(--border)", background: "var(--control-background)" }}
+                  >
+                    <div className="flex items-center gap-2 text-sm font-semibold theme-text-strong">
                       <UserCircle2 size={16} />
                       Profile controls
                     </div>
-                    <div className="mt-4 space-y-3 text-sm leading-7 text-white/68">
+                    <div className="mt-4 space-y-3 text-sm leading-7 theme-muted">
                       {personalizationNotes.slice(0, 2).map((note) => (
                         <p key={note}>{note}</p>
                       ))}
                     </div>
                   </div>
-                  <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-5">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                  <div
+                    className="rounded-[6px] p-5"
+                    style={{ border: "1px solid var(--border)", background: "var(--control-background)" }}
+                  >
+                    <div className="flex items-center gap-2 text-sm font-semibold theme-text-strong">
                       <Palette size={16} />
                       Theme system
                     </div>
-                    <div className="mt-4 space-y-3 text-sm leading-7 text-white/68">
+                    <div className="mt-4 space-y-3 text-sm leading-7 theme-muted">
                       {personalizationNotes.slice(2).map((note) => (
                         <p key={note}>{note}</p>
                       ))}
@@ -404,15 +473,21 @@ export default function ManualPanel() {
 
               <section className="space-y-5" id="deployment">
                 <SectionHeader eyebrow="Checklist" title="Deploy-ready habits" />
-                <div className="rounded-[28px] border border-emerald-300/20 bg-emerald-500/[0.08] p-6">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-emerald-100">
+                <div
+                  className="rounded-[6px] p-6"
+                  style={{
+                    background: "rgba(16, 185, 129, 0.06)",
+                    border: "1px solid rgba(16, 185, 129, 0.25)",
+                  }}
+                >
+                  <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: "#10b981" }}>
                     <ShieldCheck size={16} />
                     Final operator pass
                   </div>
-                  <div className="mt-4 space-y-3 text-sm leading-7 text-emerald-50/90">
+                  <div className="mt-4 space-y-3 text-sm leading-7 theme-text">
                     {deploymentChecklist.map((item, index) => (
                       <p key={item}>
-                        <span className="mr-2 text-emerald-200">{index + 1}.</span>
+                        <span className="mr-2" style={{ color: "#10b981" }}>{index + 1}.</span>
                         {item}
                       </p>
                     ))}

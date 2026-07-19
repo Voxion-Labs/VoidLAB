@@ -4,30 +4,15 @@ type BrandProps = {
 };
 
 export default function Brand({ className = "", compact = false }: BrandProps) {
-  if (compact) {
-    return (
-      <div className={`flex items-center gap-3 ${className}`.trim()}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          alt="VoidLAB"
-          className="h-10 w-10 rounded-2xl"
-          src="/assets/logo-icon.svg"
-        />
-        <span className="display-font text-2xl font-semibold tracking-[-0.05em] text-white">
-          VoidLAB
-        </span>
-      </div>
-    );
-  }
-
   return (
-    <div className={className}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        alt="VoidLAB"
-        className="h-12 w-auto sm:h-14"
-        src="/assets/logo-full.svg"
-      />
+    <div className={`flex items-center gap-3 ${className}`.trim()}>
+      <div className={`${compact ? "h-9 w-9" : "h-10 w-10"} flex items-center justify-center rounded-[6px] bg-[var(--accent)] text-sm font-black text-[var(--action-foreground)]`}>
+        VL
+      </div>
+      <div>
+        <div className="display-font text-2xl font-semibold theme-text-strong">VoidLAB</div>
+        {!compact ? <div className="text-xs uppercase tracking-[0.18em] theme-muted">Voxion Labs</div> : null}
+      </div>
     </div>
   );
 }

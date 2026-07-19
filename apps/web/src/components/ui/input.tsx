@@ -18,7 +18,7 @@ export function Input({ className, icon, label, ...props }: InputProps) {
         ) : null}
         <input
           className={cn(
-            "theme-input w-full rounded-2xl px-4 py-3 outline-none transition",
+            "theme-input w-full rounded-[6px] px-4 py-3 outline-none transition",
             icon ? "pl-11" : "",
             className,
           )}
