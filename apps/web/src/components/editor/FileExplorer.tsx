@@ -249,7 +249,6 @@ function MoveModal({
 
 /* ── Context menu ───────────────────────────────────────── */
 function ContextMenu({
-  item,
   onDelete,
   onMove,
   onClose,

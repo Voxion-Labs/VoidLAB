@@ -6,11 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/context/UserContext";
 
-const emptyForm = {
-  email: "",
-  name: "",
-  phone: "",
-  region: "",
+type LoginFormState = {
+  email: string;
+  name: string;
+  phone: string;
+  region: string;
 };
 
 type LoginFormProps = {
@@ -34,7 +34,7 @@ export default function LoginForm({ authError = "" }: LoginFormProps) {
   }, [form]);
 
   const handleField =
-    (field: keyof typeof emptyForm) => (event: ChangeEvent<HTMLInputElement>) => {
+    (field: keyof LoginFormState) => (event: ChangeEvent<HTMLInputElement>) => {
       setForm((current) => ({ ...current, [field]: event.target.value }));
     };
 

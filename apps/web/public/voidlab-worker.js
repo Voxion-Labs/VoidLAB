@@ -1,4 +1,4 @@
-/* eslint-disable no-restricted-globals */
+
 
 const ROUTER_VERSION = "2026.05-client-wasm-router";
 
