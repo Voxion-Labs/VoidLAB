@@ -22,9 +22,6 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Build API
-        run: npm run build -w api
-
       - name: Build Web
         run: npm run build -w web
       
