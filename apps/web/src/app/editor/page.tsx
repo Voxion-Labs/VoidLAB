@@ -667,6 +667,50 @@ export default function EditorPage() {
     setStatusMessage(`Moved folder ${folderName}.`);
   };
 
+  /* ── Rename file ─────────────────────────────────────── */
+  const handleRenameFile = (fileId: string, newName: string) => {
+    if (!workspace) return;
+    
+    const file = workspace.files.find((f) => f.id === fileId);
+    if (!file) return;
+
+    const parentPath = getWorkspaceParentPath(file.path);
+    const newPath = parentPath ? `${parentPath}/${newName}` : newName;
+
+    const nextFiles = workspace.files.map((f) =>
+      f.id === fileId ? { ...f, name: newName, path: newPath } : f
+    );
+
+    persist({ ...workspace, files: nextFiles });
+    setStatusMessage(`Renamed to ${newName}.`);
+  };
+
+  /* ── Rename folder ─────────────────────────────────────── */
+  const handleRenameFolder = (oldPath: string, newName: string) => {
+    if (!workspace) return;
+
+    const parentPath = getWorkspaceParentPath(oldPath);
+    const newPath = parentPath ? `${parentPath}/${newName}` : newName;
+
+    const nextFolders = workspace.folders.map((f) => {
+      if (f === oldPath) return newPath;
+      if (f.startsWith(`${oldPath}/`)) {
+        return `${newPath}${f.slice(oldPath.length)}`;
+      }
+      return f;
+    });
+
+    const nextFiles = workspace.files.map((file) => {
+      if (file.path === oldPath || file.path.startsWith(`${oldPath}/`)) {
+        return { ...file, path: `${newPath}${file.path.slice(oldPath.length)}` };
+      }
+      return file;
+    });
+
+    persist({ ...workspace, files: nextFiles, folders: nextFolders });
+    setStatusMessage(`Renamed folder to ${newName}.`);
+  };
+
   useShortcuts({
     onEscape: () => setIsSidebarOpen(false),
     onNewFile: handleCreateFile,
@@ -820,6 +864,8 @@ export default function EditorPage() {
                     onImportFolder={() => folderImportRef.current?.click()}
                     onMoveFile={handleMoveFile}
                     onMoveFolder={handleMoveFolder}
+                    onRenameFile={handleRenameFile}
+                    onRenameFolder={handleRenameFolder}
                     onSelectFile={handleSelectFile}
                   />
                   <div className="min-h-[420px]">

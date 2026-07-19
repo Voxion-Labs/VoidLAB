@@ -49,6 +49,8 @@ type FileExplorerProps = {
   onImportFolder: () => void;
   onMoveFile: (fileId: string, targetFolder: string) => void;
   onMoveFolder: (srcPath: string, targetFolder: string) => void;
+  onRenameFile: (fileId: string, newName: string) => void;
+  onRenameFolder: (oldPath: string, newName: string) => void;
   onSelectFile: (id: string) => void;
 };
 
@@ -81,22 +83,22 @@ function NewFolderModal({
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="w-full max-w-xs rounded-sm p-5"
+        className="w-full max-w-xs rounded-2xl p-6"
         style={{ background: "var(--panel-background)", border: "1px solid var(--border-strong)", boxShadow: "var(--shadow)" }}
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-5">
           <div className="text-sm font-semibold theme-text-strong flex items-center gap-2">
-            <FolderPlus size={15} style={{ color: "var(--accent)" }} />
+            <FolderPlus size={16} style={{ color: "var(--accent)" }} />
             New Folder
           </div>
-          <button onClick={onClose} className="theme-muted hover:opacity-70" type="button">
-            <X size={15} />
+          <button onClick={onClose} className="theme-muted hover:opacity-70 transition" type="button">
+            <X size={16} />
           </button>
         </div>
 
         <input
           ref={inputRef}
-          className="w-full rounded-sm px-3 py-2 text-sm outline-none mb-4 theme-text"
+          className="w-full rounded-2xl px-4 py-2.5 text-sm outline-none mb-5 theme-text transition hover:border-[var(--border-strong)]"
           style={{ background: "var(--input-background)", border: "1px solid var(--border)" }}
           placeholder="e.g. components"
           value={name}
@@ -109,7 +111,7 @@ function NewFolderModal({
 
         <div className="flex gap-2 justify-end">
           <button
-            className="rounded-sm px-3 py-2 text-sm transition hover:opacity-70"
+            className="rounded-2xl px-4 py-2 text-sm transition hover:opacity-70 hover:bg-[var(--control-hover)]"
             style={{ background: "var(--control-background)", border: "1px solid var(--border)", color: "var(--text)" }}
             onClick={onClose}
             type="button"
@@ -117,13 +119,95 @@ function NewFolderModal({
             Cancel
           </button>
           <button
-            className="rounded-sm px-4 py-2 text-sm font-semibold transition hover:opacity-90 disabled:opacity-40"
+            className="rounded-2xl px-5 py-2 text-sm font-semibold transition hover:scale-105 hover:opacity-90 disabled:opacity-40 disabled:hover:scale-100"
             disabled={!name.trim()}
             style={{ background: "var(--action-background)", color: "var(--action-foreground)" }}
             onClick={handleSubmit}
             type="button"
           >
             Create
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Rename Modal ───────────────────────────────────── */
+function RenameModal({
+  initialName,
+  onConfirm,
+  onClose,
+}: {
+  initialName: string;
+  onConfirm: (name: string) => void;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState(initialName);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+
+  const handleSubmit = () => {
+    const trimmed = name.trim();
+    if (!trimmed || trimmed === initialName) return;
+    onConfirm(trimmed);
+    onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className="w-full max-w-xs rounded-2xl p-6"
+        style={{ background: "var(--panel-background)", border: "1px solid var(--border-strong)", boxShadow: "var(--shadow)" }}
+      >
+        <div className="flex items-center justify-between mb-5">
+          <div className="text-sm font-semibold theme-text-strong flex items-center gap-2">
+            <FileCode2 size={16} style={{ color: "var(--accent)" }} />
+            Rename
+          </div>
+          <button onClick={onClose} className="theme-muted hover:opacity-70 transition" type="button">
+            <X size={16} />
+          </button>
+        </div>
+
+        <input
+          ref={inputRef}
+          className="w-full rounded-2xl px-4 py-2.5 text-sm outline-none mb-5 theme-text transition hover:border-[var(--border-strong)]"
+          style={{ background: "var(--input-background)", border: "1px solid var(--border)" }}
+          placeholder="New name..."
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSubmit();
+            if (e.key === "Escape") onClose();
+          }}
+        />
+
+        <div className="flex gap-2 justify-end">
+          <button
+            className="rounded-2xl px-4 py-2 text-sm transition hover:opacity-70 hover:bg-[var(--control-hover)]"
+            style={{ background: "var(--control-background)", border: "1px solid var(--border)", color: "var(--text)" }}
+            onClick={onClose}
+            type="button"
+          >
+            Cancel
+          </button>
+          <button
+            className="rounded-2xl px-5 py-2 text-sm font-semibold transition hover:scale-105 hover:opacity-90 disabled:opacity-40 disabled:hover:scale-100"
+            disabled={!name.trim() || name.trim() === initialName}
+            style={{ background: "var(--action-background)", color: "var(--action-foreground)" }}
+            onClick={handleSubmit}
+            type="button"
+          >
+            Rename
           </button>
         </div>
       </div>
@@ -190,26 +274,26 @@ function MoveModal({
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="w-full max-w-sm rounded-sm p-5"
+        className="w-full max-w-sm rounded-2xl p-6"
         style={{ background: "var(--panel-background)", border: "1px solid var(--border-strong)", boxShadow: "var(--shadow)" }}
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-5">
           <div className="text-sm font-semibold theme-text-strong flex items-center gap-2">
-            <MoveRight size={15} style={{ color: "var(--accent)" }} />
+            <MoveRight size={16} style={{ color: "var(--accent)" }} />
             Move &quot;{label}&quot;
           </div>
-          <button onClick={onClose} className="theme-muted hover:opacity-70" type="button">
-            <X size={15} />
+          <button onClick={onClose} className="theme-muted hover:opacity-70 transition" type="button">
+            <X size={16} />
           </button>
         </div>
 
-        <div className="text-xs theme-muted mb-3">Select destination folder:</div>
+        <div className="text-sm theme-muted mb-3">Select destination folder:</div>
 
-        <div className="space-y-1 max-h-48 overflow-y-auto scrollbar-thin">
+        <div className="space-y-1.5 max-h-48 overflow-y-auto scrollbar-thin pr-1">
           {availableFolders.map((folder) => (
             <button
               key={folder}
-              className="w-full rounded-sm px-3 py-2 text-left text-sm transition hover:opacity-80"
+              className="w-full rounded-2xl px-4 py-2.5 text-left text-sm transition hover:scale-[1.01]"
               style={{
                 background: selected === folder ? "var(--accent-soft)" : "var(--control-background)",
                 border: selected === folder ? "1px solid var(--accent)" : "1px solid var(--border)",
@@ -223,9 +307,9 @@ function MoveModal({
           ))}
         </div>
 
-        <div className="mt-4 flex gap-2 justify-end">
+        <div className="mt-5 flex gap-2 justify-end">
           <button
-            className="rounded-sm px-3 py-2 text-sm transition hover:opacity-70"
+            className="rounded-2xl px-4 py-2 text-sm transition hover:bg-[var(--control-hover)]"
             style={{ background: "var(--control-background)", border: "1px solid var(--border)", color: "var(--text)" }}
             onClick={onClose}
             type="button"
@@ -233,7 +317,7 @@ function MoveModal({
             Cancel
           </button>
           <button
-            className="rounded-sm px-4 py-2 text-sm font-semibold transition hover:opacity-90 disabled:opacity-40"
+            className="rounded-2xl px-5 py-2 text-sm font-semibold transition hover:scale-105 hover:opacity-90 disabled:opacity-40 disabled:hover:scale-100"
             disabled={!selected}
             style={{ background: "var(--action-background)", color: "var(--action-foreground)" }}
             onClick={() => { if (selected) { onMove(selected === "(root)" ? "" : selected); onClose(); } }}
@@ -249,11 +333,14 @@ function MoveModal({
 
 /* ── Context menu ───────────────────────────────────────── */
 function ContextMenu({
+  item,
+  onRename,
   onDelete,
   onMove,
   onClose,
 }: {
   item: TreeItem;
+  onRename: () => void;
   onDelete: () => void;
   onMove: () => void;
   onClose: () => void;
@@ -271,7 +358,7 @@ function ContextMenu({
   return (
     <div
       ref={ref}
-      className="absolute right-0 top-8 z-20 rounded-sm py-1 min-w-[130px]"
+      className="absolute right-0 top-10 z-20 rounded-2xl py-2 min-w-[150px]"
       style={{
         background: "var(--panel-background)",
         border: "1px solid var(--border-strong)",
@@ -279,20 +366,28 @@ function ContextMenu({
       }}
     >
       <button
-        className="flex w-full items-center gap-2 px-3 py-2 text-xs theme-text transition hover:opacity-70"
+        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm theme-text transition hover:bg-[var(--control-hover)]"
+        onClick={() => { onRename(); onClose(); }}
+        type="button"
+      >
+        <FileCode2 size={15} style={{ color: "var(--accent)" }} />
+        Rename
+      </button>
+      <button
+        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm theme-text transition hover:bg-[var(--control-hover)]"
         onClick={() => { onMove(); onClose(); }}
         type="button"
       >
-        <MoveRight size={13} style={{ color: "var(--accent)" }} />
+        <MoveRight size={15} style={{ color: "var(--accent)" }} />
         Move to…
       </button>
       <button
-        className="flex w-full items-center gap-2 px-3 py-2 text-xs transition hover:opacity-70"
+        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm transition hover:bg-[var(--control-hover)]"
         style={{ color: "#f43f5e" }}
         onClick={() => { onDelete(); onClose(); }}
         type="button"
       >
-        <Trash2 size={13} />
+        <Trash2 size={15} />
         Delete
       </button>
     </div>
@@ -316,12 +411,15 @@ export default function FileExplorer({
   onImportFolder,
   onMoveFile,
   onMoveFolder,
+  onRenameFile,
+  onRenameFolder,
   onSelectFile,
 }: FileExplorerProps) {
   const items = buildTree(folders, files);
   const [storageLabel, setStorageLabel] = useState("mounting local VFS");
   const [contextItem, setContextItem] = useState<TreeItem | null>(null);
   const [moveTarget, setMoveTarget] = useState<MoveTarget>(null);
+  const [renameTarget, setRenameTarget] = useState<TreeItem | null>(null);
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
 
   useEffect(() => {
@@ -358,31 +456,31 @@ export default function FileExplorer({
       style={{ borderRight: "1px solid var(--border)", background: "var(--surface-soft)" }}
     >
       {/* ── Top controls ─────────────────────────────────── */}
-      <div className="p-3" style={{ borderBottom: "1px solid var(--border)" }}>
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest theme-text-strong mb-3">
-          <FolderTree size={13} style={{ color: "var(--accent)" }} />
+      <div className="p-4" style={{ borderBottom: "1px solid var(--border)" }}>
+        <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest theme-text-strong mb-4">
+          <FolderTree size={16} style={{ color: "var(--accent)" }} />
           Explorer
         </div>
 
-        <div className="text-xs theme-muted mb-1">Dir: {formatWorkspacePath(cwd)}</div>
+        <div className="text-xs theme-muted mb-2">Dir: {formatWorkspacePath(cwd)}</div>
         <div
-          className="mb-3 rounded-sm px-2 py-1 text-xs theme-muted"
+          className="mb-4 rounded-2xl px-3 py-1.5 text-xs theme-muted"
           style={{ background: "var(--control-background)", border: "1px solid var(--border)" }}
         >
           Storage: {storageLabel}
         </div>
 
         {/* New file name + language */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           <input
-            className="w-full rounded-sm px-3 py-2 text-xs outline-none theme-text"
+            className="w-full rounded-2xl px-4 py-2.5 text-sm outline-none theme-text transition hover:border-[var(--border-strong)]"
             style={{ background: "var(--input-background)", border: "1px solid var(--border)" }}
             onChange={(e) => onDraftNameChange(e.target.value)}
             placeholder="src/main"
             value={draftName}
           />
           <select
-            className="w-full rounded-sm px-3 py-2 text-xs outline-none theme-text"
+            className="w-full rounded-2xl px-4 py-2.5 text-sm outline-none theme-text transition hover:border-[var(--border-strong)] cursor-pointer"
             style={{ background: "var(--input-background)", border: "1px solid var(--border)" }}
             onChange={(e) => onDraftLanguageChange(e.target.value)}
             value={draftLanguage}
@@ -399,41 +497,41 @@ export default function FileExplorer({
           </select>
 
           {/* Action buttons */}
-          <div className="grid grid-cols-2 gap-1.5">
+          <div className="grid grid-cols-2 gap-2">
             <button
-              className="inline-flex items-center justify-center gap-1.5 rounded-sm py-2 text-xs font-semibold transition hover:opacity-90"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl py-2.5 text-sm font-semibold transition hover:scale-[1.02] hover:opacity-90"
               style={{ background: "var(--action-background)", color: "var(--action-foreground)" }}
               onClick={onCreateFile}
               type="button"
             >
-              <FilePlus2 size={13} />
+              <FilePlus2 size={16} />
               New file
             </button>
             <button
-              className="inline-flex items-center justify-center gap-1.5 rounded-sm py-2 text-xs font-medium transition hover:opacity-70"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl py-2.5 text-sm font-medium transition hover:bg-[var(--control-hover)]"
               style={{ background: "var(--control-background)", border: "1px solid var(--border)", color: "var(--text)" }}
               onClick={() => setShowNewFolderModal(true)}
               type="button"
             >
-              <FolderPlus size={13} />
+              <FolderPlus size={16} />
               New folder
             </button>
             <button
-              className="inline-flex items-center justify-center gap-1.5 rounded-sm py-2 text-xs font-medium transition hover:opacity-70"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl py-2.5 text-sm font-medium transition hover:bg-[var(--control-hover)]"
               style={{ background: "var(--control-background)", border: "1px solid var(--border)", color: "var(--text)" }}
               onClick={onImportFiles}
               type="button"
             >
-              <Upload size={13} />
+              <Upload size={16} />
               Import files
             </button>
             <button
-              className="inline-flex items-center justify-center gap-1.5 rounded-sm py-2 text-xs font-medium transition hover:opacity-70"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl py-2.5 text-sm font-medium transition hover:bg-[var(--control-hover)]"
               style={{ background: "var(--control-background)", border: "1px solid var(--border)", color: "var(--text)" }}
               onClick={onImportFolder}
               type="button"
             >
-              <Upload size={13} />
+              <Upload size={16} />
               Import folder
             </button>
           </div>
@@ -441,27 +539,24 @@ export default function FileExplorer({
       </div>
 
       {/* ── File tree ─────────────────────────────────────── */}
-      <div className="scrollbar-thin flex-1 overflow-y-auto p-2">
-        <div className="space-y-0.5">
+      <div className="scrollbar-thin flex-1 overflow-y-auto p-3">
+        <div className="space-y-1">
           {items.length ? (
             items.map((item) => {
-              const paddingLeft = 8 + item.depth * 14;
+              const paddingLeft = 12 + item.depth * 16;
               const isFolder = item.kind === "folder";
               const isActive = item.kind === "file" && item.id === activeFileId;
               const isCtxOpen = contextItem === item;
 
               return (
                 <div
-                  className="relative flex items-center justify-between rounded-sm px-2 py-2 group transition"
+                  className="relative flex items-center justify-between rounded-2xl px-2 py-2 group transition hover:bg-[var(--control-hover)]"
                   key={isFolder ? item.path : item.id}
                   style={{
                     paddingLeft,
                     background: isActive
                       ? "var(--accent-soft)"
                       : "transparent",
-                    border: isActive
-                      ? "1px solid var(--border-strong)"
-                      : "1px solid transparent",
                   }}
                   onMouseLeave={() => { if (isCtxOpen) setContextItem(null); }}
                 >
@@ -473,27 +568,27 @@ export default function FileExplorer({
                     }}
                     type="button"
                   >
-                    <div className="flex items-center gap-1.5 truncate">
+                    <div className="flex items-center gap-2 truncate">
                       {isFolder ? (
-                        <Folder size={12} style={{ color: "var(--accent)", flexShrink: 0 }} />
+                        <Folder size={16} style={{ color: "var(--accent)", flexShrink: 0 }} />
                       ) : (
-                        <FileCode2 size={12} style={{ color: isActive ? "var(--accent)" : "var(--muted)", flexShrink: 0 }} />
+                        <FileCode2 size={16} style={{ color: isActive ? "var(--accent)" : "var(--muted)", flexShrink: 0 }} />
                       )}
                       <span
-                        className="truncate text-xs font-medium"
+                        className="truncate text-sm font-medium transition"
                         style={{ color: isActive ? "var(--accent)" : "var(--text-strong)" }}
                       >
                         {getWorkspaceBaseName(item.path)}
                       </span>
                     </div>
-                    <div className="truncate pl-4 text-xs theme-muted" style={{ fontSize: "10px" }}>
+                    <div className="truncate pl-6 text-xs theme-muted mt-0.5" style={{ fontSize: "11px" }}>
                       {formatWorkspacePath(item.path)}
                     </div>
                   </button>
 
                   {/* ⋮ menu button */}
                   <button
-                    className="relative shrink-0 rounded-sm p-1 opacity-0 group-hover:opacity-100 transition"
+                    className="relative shrink-0 rounded-xl p-1.5 opacity-0 group-hover:opacity-100 transition hover:bg-[var(--surface-strong)]"
                     style={{ color: "var(--muted)" }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -501,13 +596,14 @@ export default function FileExplorer({
                     }}
                     type="button"
                   >
-                    <MoreHorizontal size={13} />
+                    <MoreHorizontal size={16} />
                   </button>
 
                   {/* Context menu */}
                   {isCtxOpen && (
                     <ContextMenu
                       item={item}
+                      onRename={() => { setRenameTarget(item); setContextItem(null); }}
                       onDelete={() => {
                         if (isFolder) onDeleteFolder(item.path);
                         else onDeleteFile((item as { id: string }).id);
@@ -522,7 +618,7 @@ export default function FileExplorer({
             })
           ) : (
             <div
-              className="rounded-sm px-3 py-4 text-xs theme-muted"
+              className="rounded-2xl px-4 py-6 text-sm theme-muted text-center"
               style={{ border: "1px dashed var(--border)" }}
             >
               Import a folder or create files to populate the workspace tree.
@@ -546,6 +642,18 @@ export default function FileExplorer({
         <NewFolderModal
           onConfirm={(folderName) => onCreateFolder(folderName)}
           onClose={() => setShowNewFolderModal(false)}
+        />
+      )}
+
+      {/* ── Rename modal ──────────────────────────────────── */}
+      {renameTarget && (
+        <RenameModal
+          initialName={getWorkspaceBaseName(renameTarget.path)}
+          onConfirm={(newName) => {
+            if (renameTarget.kind === "folder") onRenameFolder(renameTarget.path, newName);
+            else onRenameFile(renameTarget.id, newName);
+          }}
+          onClose={() => setRenameTarget(null)}
         />
       )}
     </div>

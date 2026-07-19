@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://voidlab.vercel.app/">Live Product</a
+  <a href="https://voidlab.vercel.app/">Live Product</a>
   |
   <a href="https://github.com/Voxion-Labs/VoidLAB">Repository</a>
 </p>
