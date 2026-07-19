@@ -7,11 +7,9 @@
 </p>
 
 <p align="center">
-  <a href="https://void-lab-web.vercel.app/">Live Product</a>
+  <a href="https://voidlab.vercel.app/">Live Product</a
   |
-  <a href="https://voidlab.onrender.com">Backend API</a>
-  |
-  <a href="https://github.com/liambrooks-lab/VoidLAB">Repository</a>
+  <a href="https://github.com/Voxion-Labs/VoidLAB">Repository</a>
 </p>
 
 ---
@@ -63,9 +61,8 @@ VoidLAB is built to solve that by giving users a cleaner end-to-end workflow:
 
 ## 🔗 Links
 
-- **Live Product**: [https://void-lab-web.vercel.app/](https://void-lab-web.vercel.app/)
-- **Backend API**: [https://voidlab.onrender.com](https://voidlab.onrender.com)
-- **GitHub Repository**: [https://github.com/liambrooks-lab/VoidLAB](https://github.com/liambrooks-lab/VoidLAB)
+- **Live Product**: [https://voidlab.vercel.app/](https://void-lab-web.vercel.app/)
+- **GitHub Repository**: [https://github.com/Voxion-Labs/VoidLAB](https://github.com/Voxion-Labs/VoidLAB)
 
 ---
 
@@ -257,16 +254,8 @@ VoidLAB supports many languages and formats for editing, and a broad set of runn
 ```text
 VoidLAB/
 |- apps/
-|  |- api/
-|  |  |- src/
-|  |  |  |- controllers/
-|  |  |  |- middleware/
-|  |  |  |- models/
-|  |  |  |- routes/
-|  |  |  `- index.ts
-|  |  |- package.json
-|  |  `- tsconfig.json
-|  `- web/
+|     |
+|     web/
 |     |- public/
 |     |- src/
 |     |  |- app/
@@ -401,18 +390,7 @@ PORT=5000
 NODE_ENV=development
 API_BASE_URL=http://localhost:5000
 WEB_APP_URL=http://localhost:3000
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/voidlab
-DATABASE_SSL=false
-DATABASE_SSL_REJECT_UNAUTHORIZED=false
-JUDGE0_API_URL=https://ce.judge0.com
-JWT_SECRET=replace_me
-APP_ENCRYPTION_KEY=replace_me
-GOOGLE_CLIENT_ID=replace_me
-GOOGLE_CLIENT_SECRET=replace_me
-GITHUB_CLIENT_ID=replace_me
-GITHUB_CLIENT_SECRET=replace_me
-X_CLIENT_ID=replace_me
-X_CLIENT_SECRET=replace_me
+
 ```
 
 ### Frontend environment
@@ -471,12 +449,6 @@ npm run build -w web
 - hosted on `Render`
 - uses the Express API from `apps/api`
 
-### Required frontend production variable
-
-```env
-NEXT_PUBLIC_API_URL=https://voidlab.onrender.com
-```
-
 ### Required backend production variables
 
 ```env
@@ -484,18 +456,6 @@ PORT=5000
 NODE_ENV=production
 API_BASE_URL=https://voidlab.onrender.com
 WEB_APP_URL=https://void-lab-web.vercel.app
-DATABASE_URL=your_postgres_connection_string
-DATABASE_SSL=true
-DATABASE_SSL_REJECT_UNAUTHORIZED=false
-JUDGE0_API_URL=https://ce.judge0.com
-JWT_SECRET=replace_me
-APP_ENCRYPTION_KEY=replace_me
-GOOGLE_CLIENT_ID=replace_me
-GOOGLE_CLIENT_SECRET=replace_me
-GITHUB_CLIENT_ID=replace_me
-GITHUB_CLIENT_SECRET=replace_me
-X_CLIENT_ID=replace_me
-X_CLIENT_SECRET=replace_me
 ```
 
 ---
