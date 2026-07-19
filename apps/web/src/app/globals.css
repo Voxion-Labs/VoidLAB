@@ -4,8 +4,8 @@
 
 :root,
 :root[data-theme="light-red"] {
-  --font-body: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-  --font-display: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  --font-body: var(--font-inter), ui-sans-serif, -apple-system, sans-serif;
+  --font-display: var(--font-outfit), ui-sans-serif, -apple-system, sans-serif;
   --text: #24191c;
   --text-strong: #130b0e;
   --muted: #6f5a60;
@@ -156,32 +156,41 @@ textarea {
   background: var(--surface-strong);
 }
 
+.theme-button-primary {
+  background: var(--action-background);
+  color: var(--action-foreground);
+  border: none;
+}
+.theme-button-primary:hover {
+  opacity: 0.9;
+  box-shadow: var(--action-shadow);
+}
+.theme-button-secondary {
+  background: var(--action-background);
+  color: var(--action-foreground);
+  border: 1px solid transparent;
+}
+.theme-button-secondary:hover {
+  opacity: 0.9;
+  box-shadow: var(--action-shadow);
+}
+
 .theme-elevated {
   background: var(--surface-elevated);
   border-color: var(--border-strong);
 }
 
-.theme-control,
-.theme-button-secondary {
+.theme-control {
   background: var(--control-background);
   border: 1px solid var(--border);
   color: var(--text);
 }
 
-.theme-control:hover,
-.theme-button-secondary:hover {
+.theme-control:hover {
   background: var(--control-hover);
 }
 
-.theme-button-primary {
-  background: var(--action-background);
-  color: var(--action-foreground);
-  box-shadow: var(--action-shadow);
-}
 
-.theme-button-primary:hover {
-  filter: brightness(1.04);
-}
 
 .theme-chip {
   background: var(--accent-soft);

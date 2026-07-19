@@ -920,9 +920,6 @@ export default function EditorPage() {
           </section>
         </div>
       </div>
-      <footer className="voidlab-footer">
-        © 2025 Voxion Labs. All rights reserved.
-      </footer>
     </main>
   );
 }

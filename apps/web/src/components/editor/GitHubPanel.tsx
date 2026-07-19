@@ -311,11 +311,6 @@ export default function GitHubPanel() {
           ))}
         </div>
       </section>
-
-      {/* Footer */}
-      <div className="voidlab-footer rounded-sm">
-        © 2025 Voxion Labs. All rights reserved.
-      </div>
     </div>
   );
 }

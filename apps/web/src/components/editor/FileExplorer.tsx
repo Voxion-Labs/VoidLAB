@@ -367,7 +367,7 @@ function ContextMenu({
     >
       <button
         className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm theme-text transition hover:bg-[var(--control-hover)]"
-        onClick={() => { onRename(); onClose(); }}
+        onClick={(e) => { e.stopPropagation(); onRename(); onClose(); }}
         type="button"
       >
         <FileCode2 size={15} style={{ color: "var(--accent)" }} />
@@ -375,7 +375,7 @@ function ContextMenu({
       </button>
       <button
         className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm theme-text transition hover:bg-[var(--control-hover)]"
-        onClick={() => { onMove(); onClose(); }}
+        onClick={(e) => { e.stopPropagation(); onMove(); onClose(); }}
         type="button"
       >
         <MoveRight size={15} style={{ color: "var(--accent)" }} />
@@ -384,7 +384,7 @@ function ContextMenu({
       <button
         className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm transition hover:bg-[var(--control-hover)]"
         style={{ color: "#f43f5e" }}
-        onClick={() => { onDelete(); onClose(); }}
+        onClick={(e) => { e.stopPropagation(); onDelete(); onClose(); }}
         type="button"
       >
         <Trash2 size={15} />

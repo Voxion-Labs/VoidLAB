@@ -63,12 +63,7 @@ export default function Sidebar({
               <div className="truncate text-xs theme-muted">{profile.email}</div>
             </div>
           </div>
-          <div
-            className="mt-4 rounded-[6px] p-4 text-sm leading-6 theme-text"
-            style={{ border: "1px solid var(--border)", background: "var(--control-background)" }}
-          >
-            {profile.bio || "Add a bio from your profile setup to personalize this workspace."}
-          </div>
+
           <div className="mt-4 flex flex-wrap gap-2">
             <Link
               className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs theme-text-strong transition hover:opacity-80"

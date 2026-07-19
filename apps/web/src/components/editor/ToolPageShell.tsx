@@ -58,11 +58,6 @@ export default function ToolPageShell({
           <p className="theme-muted mt-3 max-w-3xl text-sm leading-7">{description}</p>
           <div className="mt-6">{children}</div>
         </section>
-
-        {/* Footer */}
-        <footer className="voidlab-footer rounded-sm">
-          © 2025 Voxion Labs. All rights reserved.
-        </footer>
       </div>
     </main>
   );
