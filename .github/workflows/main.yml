@@ -23,5 +23,5 @@ jobs:
         run: npm install
 
       - name: Build Web
-        run: npm run build -w web
+        run: npm run build
       
