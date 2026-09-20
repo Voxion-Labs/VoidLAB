@@ -1,24 +1,40 @@
 {
-  "name": "voidlab-monorepo",
+  "name": "voidlab",
+  "version": "0.1.0",
   "private": true,
   "packageManager": "npm@10.9.0",
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
   "scripts": {
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "lint": "turbo run lint",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
     "format": "prettier --write \"**/*.{ts,tsx,md,js}\""
+  },
+  "dependencies": {
+    "@monaco-editor/react": "^4.6.0",
+    "clsx": "^2.1.0",
+    "framer-motion": "^11.0.8",
+    "lucide-react": "^0.359.0",
+    "next": "16.2.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tailwind-merge": "^2.2.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.0.1",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "16.2.4",
+    "postcss": "^8",
+    "prettier": "^3.0.0",
+    "tailwindcss": "^3.3.0",
+    "typescript": "^5"
   },
   "overrides": {
     "monaco-editor": {
       "dompurify": "^3.3.4"
     }
-  },
-  "devDependencies": {
-    "turbo": "latest",
-    "prettier": "^3.0.0"
   }
 }

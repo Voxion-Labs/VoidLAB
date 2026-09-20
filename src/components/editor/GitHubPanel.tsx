@@ -1,4 +1,4 @@
-`"use client";
+"use client";
 
 import { useState } from "react";
 import { Check, CheckCircle2, Copy, GitBranch, Github, Terminal, UploadCloud } from "lucide-react";
@@ -137,12 +137,15 @@ export default function GitHubPanel() {
   const [branch, setBranch] = useState("main");
   const [copiedAll, setCopiedAll] = useState(false);
 
+  const remoteCommand = repoUrl ? "git remote add origin " + repoUrl : "git remote add origin https://github.com/user/repo.git";
+  const pushCommand = "git push -u origin " + (branch || "main");
+
   const quickCommands = [
-    `git init`,
-    `git add.`,
-    `git commit - m "Initial commit from VoidLAB"`,
-    repoUrl ? `git remote add origin ${ repoUrl } ` : `git remote add origin https://github.com/user/repo.git`,
-`git push -u origin ${branch || "main"}`,
+    "git init",
+    "git add .",
+    "git commit -m \"Initial commit from VoidLAB\"",
+    remoteCommand,
+    pushCommand,
   ].join("\n");
 
 
