@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="apps/web/public/assets/logo-full.svg" alt="VoidLAB logo" width="280" />
+  <img src="public/assets/logo-full.svg" alt="VoidLAB logo" width="280" />
 </p>
 
 <p align="center">
@@ -14,19 +14,20 @@
 
 ---
 
-## ✨ Overview
+## Overview
 
 VoidLAB is a full-stack cloud coding environment designed to feel like a real premium product, not just a code editor running in the browser. It combines a Monaco-powered workspace, multi-file editing, online code execution, inline stdin handling for interactive programs, GitHub publishing, collaboration-ready tools, a built-in AI guide, and a polished high-end interface.
 
-The project is structured as a monorepo and split into:
+The project is structured as a standalone Next.js application and utilizes:
 
 - a `Next.js` frontend for the complete product interface
-- an `Express` API for execution, auth, and integration flows
-- shared configuration packages for cleaner and more scalable project organization
+- client-side execution capabilities via WebAssembly (WASM)
+- Docker-based containerization for secure, isolated environments
+- no traditional backend server or database
 
 ---
 
-## 🧭 What Is VoidLAB?
+## What Is VoidLAB?
 
 VoidLAB is a browser-based coding application for developers, learners, and builders who want one premium workspace for writing, importing, running, debugging, and managing code online.
 
@@ -39,7 +40,7 @@ At the product level, VoidLAB acts as:
 
 ---
 
-## 🩺 Problem It Solves
+## Problem It Solves
 
 Most web-based compilers and lightweight online editors break down in the exact places that matter during real use:
 
@@ -59,27 +60,27 @@ VoidLAB is built to solve that by giving users a cleaner end-to-end workflow:
 
 ---
 
-## 🔗 Links
+## Links
 
 - **Live Product**: [https://voidlab.vercel.app/](https://void-lab-web.vercel.app/)
 - **GitHub Repository**: [https://github.com/Voxion-Labs/VoidLAB](https://github.com/Voxion-Labs/VoidLAB)
 
 ---
 
-## 🚀 Latest Product State
+## Latest Product State
 
 VoidLAB currently ships with:
 
 - a unified console with `Output`, `Terminal`, and `Ports` tabs
 - inline stdin capture for interactive programs instead of a clunky separate flow
-- multi-language execution powered by Judge0 CE
+- multi-language execution powered by WebAssembly and containerized environments
 - dedicated feature pages for `Manual`, `GitHub`, `Collaboration`, `AI Guide`, and `Profile`
 - personalized workspace UI with themes, activity context, and polished controls
 - refreshed product documentation and visual demo assets in this repository
 
 ---
 
-## 🌌 Core Highlights
+## Core Highlights
 
 - Monaco-powered editor with multi-file workspace management
 - support for many runnable and editor-focused languages
@@ -93,7 +94,7 @@ VoidLAB currently ships with:
 
 ---
 
-## 🧩 Product Surface
+## Product Surface
 
 ### Workspace experience
 
@@ -104,7 +105,8 @@ VoidLAB currently ships with:
 
 ### Execution experience
 
-- online code execution through the backend execution gateway
+- client-side code execution through WebAssembly (WASM)
+- isolated execution in containerized Docker environments for complex workloads
 - inline stdin routing for input-based programs
 - structured stdout, stderr, compile output, and runtime messages
 - execution status, timing, and memory feedback
@@ -119,7 +121,7 @@ VoidLAB currently ships with:
 
 ---
 
-## 🖼️ Demo Gallery
+## Demo Gallery
 
 <table>
   <tr>
@@ -167,7 +169,7 @@ VoidLAB currently ships with:
 
 ---
 
-## 💡 Why VoidLAB
+## Why VoidLAB
 
 VoidLAB is built around a simple product promise:
 
@@ -181,7 +183,7 @@ That simplicity drives the architecture, UI design, and execution flow across th
 
 ---
 
-## 🌍 Language Support
+## Language Support
 
 VoidLAB supports many languages and formats for editing, and a broad set of runnable languages through the execution engine.
 
@@ -216,70 +218,53 @@ VoidLAB supports many languages and formats for editing, and a broad set of runn
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
-### Frontend
+### Frontend & Client Execution
 
 - Next.js `16.2.4`
 - React
 - TypeScript
 - Tailwind CSS
 - Monaco Editor
-- Lucide Icons
+- WebAssembly (WASM)
 
-### Backend
+### Environment Infrastructure
 
-- Node.js
-- Express
-- TypeScript
-- Axios
-- PostgreSQL
+- Docker for containerized environments
+- No traditional backend framework (Serverless execution model)
+- No traditional database (Fully client-side state handling)
 
 ### Platform and deployment
 
 - Vercel for frontend hosting
-- Render for backend hosting
-- Judge0 CE for cloud code execution
-
-### Monorepo tooling
-
-- npm workspaces
-- Turborepo
-- shared TypeScript configs
 
 ---
 
-## 🧱 Monorepo Structure
+## Repository Structure
 
 ```text
 VoidLAB/
-|- apps/
-|     |
-|     web/
-|     |- public/
-|     |- src/
-|     |  |- app/
-|     |  |- components/
-|     |  |- context/
-|     |  |- hooks/
-|     |  `- lib/
-|     |- package.json
-|     `- tsconfig.json
+|- public/
+|  |- assets/
+|  `- ...
+|- src/
+|  |- app/
+|  |- components/
+|  |- context/
+|  |- hooks/
+|  `- lib/
 |- docs/
 |  `- readme/
-|- packages/
-|  |- config/
-|  `- tsconfig/
 |- docker-compose.yml
 |- package.json
 |- package-lock.json
-|- turbo.json
 `- README.md
 ```
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ### Frontend responsibilities
 
@@ -289,16 +274,8 @@ VoidLAB/
 - console, output, and terminal presentation
 - GitHub publishing UI
 - collaboration and AI tool pages
-- communication with the backend API
-
-### Backend responsibilities
-
-- exposing execution endpoints
-- forwarding execution requests to Judge0 CE
-- handling auth and user sessions
-- storing users and provider tokens
-- returning normalized compiler and runtime output to the frontend
-- handling GitHub repository creation and file push flows
+- isolated execution logic via WebAssembly
+- managing containerized orchestration for external environments
 
 ### Execution flow
 
@@ -306,23 +283,22 @@ VoidLAB/
 2. User writes code or imports files into the workspace.
 3. User clicks `Run`.
 4. If the program expects input, VoidLAB asks for stdin inline in the output area.
-5. The backend forwards the execution payload to Judge0 CE.
+5. Code is executed natively in the browser using WebAssembly or dispatched to a secure Docker container for isolated execution.
 6. VoidLAB returns normalized output, errors, and status details back to the workspace.
 
 ---
 
-## ✅ Validation Snapshot
+## Validation Snapshot
 
 The latest verified repo state includes:
 
-- `apps/web` lint passing
-- `apps/web` typecheck passing
-- `apps/web` production build passing
-- `apps/api` build passing
+- lint passing
+- typecheck passing
+- production build passing
 
 ---
 
-## 🔐 Authentication and GitHub
+## Authentication and GitHub
 
 - direct entry flow without leaving the app
 - optional Google, GitHub, and X login support
@@ -331,7 +307,7 @@ The latest verified repo state includes:
 
 ---
 
-## 📦 Key Capabilities
+## Key Capabilities
 
 - polished onboarding and workspace personalization
 - shareable public product URL
@@ -342,18 +318,18 @@ The latest verified repo state includes:
 - project tabs and file explorer
 - dedicated tool pages for manual, profile, AI guide, GitHub, and collaboration
 - professional UI suitable for demos, portfolio presentation, and product showcases
-- clean monorepo structure for scaling the platform further
+- clean standalone Next.js structure for optimal deployment
 
 ---
 
-## 🎯 Current Scope
+## Current Scope
 
-VoidLAB is built as a strong production-style MVP with:
+VoidLAB is built as a strong production-style application with:
 
 - multi-language editing
 - broad execution support
 - a modern UI
-- monorepo architecture
+- fully client-side WASM execution architecture
 - real auth options
 - GitHub publish flow
 - live deployment links
@@ -361,13 +337,13 @@ VoidLAB is built as a strong production-style MVP with:
 
 ---
 
-## 🧪 Local Setup
+## Local Setup
 
 ### Prerequisites
 
 - Node.js 18+
 - npm 10+
-- PostgreSQL 15+ or Docker
+- Docker (for executing containerized environments)
 
 ### Install dependencies
 
@@ -375,92 +351,46 @@ VoidLAB is built as a strong production-style MVP with:
 npm install
 ```
 
-### Start local PostgreSQL
+### Environment
 
-```bash
-docker-compose up -d postgres
-```
-
-### Backend environment
-
-Create `apps/api/.env`:
+Create `.env.local`:
 
 ```env
-PORT=5000
-NODE_ENV=development
-API_BASE_URL=http://localhost:5000
-WEB_APP_URL=http://localhost:3000
-
-```
-
-### Frontend environment
-
-Create `apps/web/.env.local`:
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:5000
-```
-
-### Run backend
-
-```bash
-npm run build -w api
-npm run start -w api
+# Optional environment variables
 ```
 
 ### Run frontend
 
 ```bash
-npm run dev -w web
+npm run dev
 ```
 
 ### Local URLs
 
 - Frontend: `http://localhost:3000`
-- Backend: `http://localhost:5000`
 
 ---
 
-## 🏁 Build Commands
-
-### Build API
-
-```bash
-npm run build -w api
-```
+## Build Commands
 
 ### Build web
 
 ```bash
-npm run build -w web
+npm run build
 ```
 
 ---
 
-## 🌐 Deployment
+## Deployment
 
 ### Frontend deployment
 
 - hosted on `Vercel`
-- root directory: `apps/web`
-
-### Backend deployment
-
-- hosted on `Render`
-- uses the Express API from `apps/api`
-
-### Required backend production variables
-
-```env
-PORT=5000
-NODE_ENV=production
-API_BASE_URL=https://voidlab.onrender.com
-WEB_APP_URL=https://void-lab-web.vercel.app
-```
+- root directory: `./` (Root of the repository)
 
 ---
 
-## 📄 License
+## License
 
 VoidLAB is protected under a custom restricted license.
 
@@ -477,22 +407,18 @@ VoidLAB is not released as an open-source project under MIT, Apache, GPL, or any
 
 ---
 
-## 👨‍💻 Author
+## Author
 
 <p align="center">
   <img src="docs/readme/author-rudranarayan-jena.jpg" alt="Rudranarayan Jena" width="180" />
 </p>
 
 <p align="center">
-  <strong>Crafted by MR. Rudranarayan Jena</strong>
+  <strong>Rudranarayan Jena</strong>
 </p>
 
 <p align="center">
-  Product Builder • Full-stack Developer • AI Enthusiast • Creator of VoidLAB
-</p>
-
-<p align="center">
-  Focused on building polished developer products, real-world web applications, execution systems, and modern AI-assisted workflows.
+  Founder @ <a href="http://github.com/Voxion-Labs">Voxion Labs</a>
 </p>
 
 <p align="center">
@@ -500,4 +426,3 @@ VoidLAB is not released as an open-source project under MIT, Apache, GPL, or any
 </p>
 
 ---
-
