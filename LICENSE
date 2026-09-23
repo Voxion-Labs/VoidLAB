@@ -1,34 +1,21 @@
-Custom Restricted License
+# Voxion Labs Proprietary Research License (VL-PRL)
 
-Copyright (c) 2026 Rudranarayan Jena. All rights reserved.
+**Copyright (c) 2026 Rudranarayan Jena. All Rights Reserved.**
+**Organization: Voxion Labs**
 
-1. Ownership
-   This software project, including its source code, architecture, design, documentation, and all associated assets (collectively, the “Project”), is the sole and exclusive intellectual property of the author.
+This software and associated documentation files (the "Software"), specifically the VoidLAB repository and its underlying frontend architecture, UI/UX logic, and design assets, are the proprietary intellectual property of Rudranarayan Jena and Voxion Labs.
 
-2. Grant of rights
-   No rights, licenses, or permissions are granted to any individual or entity, whether expressly or implicitly, except as explicitly stated in this license.
+## 1. Grant of Access
+Access to the source code is provided strictly for academic review, architectural analysis, and transparent security auditing. 
 
-3. Restrictions
-   Without prior written consent from the author, no person or organization may:
+## 2. Restrictions
+By accessing this repository, you agree to the following strict operational parameters:
+* **No Modification:** You may not modify, alter, translate, or create derivative works of the Software or its frontend logic.
+* **No Distribution:** You may not copy, distribute, sublicense, host, or transfer the Software, in whole or in part, to any third party.
+* **No Commercial Use:** You may not use the Software for any commercial, corporate, or production purposes under any circumstances.
+* **No Public Forks:** You may not deploy or publicly host modified or unmodified versions of this Software on any platform.
 
-* copy, reproduce, publish, or distribute the Project in any form
-* modify, adapt, reverse-engineer, or create derivative works
-* use the Project for commercial or non-commercial purposes
-* host, share, or make the Project publicly accessible
+## 3. Enforcement
+Voxion Labs enforces strict intellectual property protection. Any unauthorized usage, commercial exploitation, or codebase cloning will be met with immediate legal action.
 
-Any unauthorized use is strictly prohibited.
-
-4. Permission requirement
-   Any individual or organization wishing to use, study, analyze, or build upon the Project must obtain explicit prior written permission from the author.
-
-5. Enforcement and violations
-   Unauthorized use, reproduction, or distribution of the Project constitutes a violation of intellectual property rights and may result in legal action, including claims for damages and injunctive relief.
-
-6. Disclaimer of warranty
-   The Project is provided “as is”, without warranty of any kind, express or implied, including but not limited to merchantability, fitness for a particular purpose, and non-infringement.
-
-7. Limitation of liability
-   In no event shall the author be liable for any direct, indirect, incidental, special, or consequential damages arising from the use of or inability to use the Project.
-
-8. Governing law
-   This license shall be governed by and construed in accordance with applicable laws.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
