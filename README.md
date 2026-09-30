@@ -407,22 +407,13 @@ VoidLAB is not released as an open-source project under MIT, Apache, GPL, or any
 
 ---
 
-## Author
-
-<p align="center">
-  <img src="docs/readme/author-rudranarayan-jena.jpg" alt="Rudranarayan Jena" width="180" />
-</p>
-
-<p align="center">
-  <strong>Rudranarayan Jena</strong>
-</p>
-
-<p align="center">
-  Founder @ <a href="http://github.com/Voxion-Labs">Voxion Labs</a>
-</p>
-
-<p align="center">
-  <a href="https://github.com/liambrooks-lab">GitHub: @liambrooks-lab</a>
-</p>
+<br>
+<div align="right">
+  <b>Rudranarayan Jena</b><br>
+  <i>Founder @ Voxion Labs</i>
+</div>
 
 ---
+<div align="center">
+  (c) 2026 Voxion Labs & Rudranarayan Jena
+</div>
