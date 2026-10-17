@@ -1,13 +1,18 @@
-<svg width="240" height="56" viewBox="0 0 240 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- V-slash mark -->
-  <g>
+<svg width="280" height="74" viewBox="0 0 280 74" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Crisp white card background so the logo is 100% visible on GitHub dark mode and light mode -->
+  <rect width="280" height="74" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+  
+  <!-- V-slash logo mark -->
+  <g transform="translate(20, 11)">
     <!-- V left leg -->
-    <path d="M8 4 L21 52 L26 42 L17 4 Z" fill="#0d0d0d"/>
+    <path d="M10 6 L22 46 L27 37 L18 6 Z" fill="#0D0D0D"/>
     <!-- V right leg -->
-    <path d="M44 4 L31 52 L26 42 L35 4 Z" fill="#0d0d0d"/>
+    <path d="M42 6 L30 46 L25 37 L33 6 Z" fill="#0D0D0D"/>
     <!-- diagonal slash -->
-    <path d="M36 3 L18 53" stroke="#0d0d0d" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M34 5 L17 47" stroke="#0D0D0D" stroke-width="3.2" stroke-linecap="round"/>
   </g>
+  
   <!-- VoidLAB wordmark -->
-  <text x="58" y="40" fill="#0d0d0d" font-family="Outfit, Arial, sans-serif" font-size="30" font-weight="700" letter-spacing="-1">VoidLAB</text>
+  <text x="78" y="44" fill="#0D0D0D" font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="28" font-weight="700" letter-spacing="-0.8">VoidLAB</text>
+  <text x="79" y="58" fill="#64748B" font-family="'Inter', -apple-system, BlinkMacSystemFont, sans-serif" font-size="9.5" font-weight="600" letter-spacing="1.4">VOXION LABS</text>
 </svg>

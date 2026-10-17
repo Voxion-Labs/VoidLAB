@@ -4,8 +4,9 @@ import ToolPageShell from "@/components/editor/ToolPageShell";
 export default function ProfilePage() {
   return (
     <ToolPageShell
-      description="Review the user profile, personal bio, social links, and recent VoidLAB activities collected across the workspace."
-      title="Profile and activity"
+      eyebrow="Account Settings"
+      title="Developer Profile & Identity"
+      description="Manage your local authentication credentials, profile identity, connected services, and session audit activity."
     >
       <ProfilePanel />
     </ToolPageShell>

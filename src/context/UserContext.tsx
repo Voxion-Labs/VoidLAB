@@ -4,7 +4,22 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
 export type UserSocialLinks = { github: string; instagram: string; linkedin: string; x: string; };
-export type UserProfile = { avatar: string; bio: string; email: string; githubConnected: boolean; githubLogin: string; id: string; name: string; phone: string; providers: { github: boolean; google: boolean; x: boolean; }; region: string; socials: UserSocialLinks; };
+export type UserSocialLinks = { github: string; instagram: string; linkedin: string; x: string; };
+export type UserProfile = {
+  avatar: string;
+  bio: string;
+  email: string;
+  githubConnected: boolean;
+  githubLogin: string;
+  id: string;
+  name: string;
+  password?: string;
+  phone?: string;
+  providers: { github: boolean; google: boolean; x: boolean; };
+  region: string;
+  socials: UserSocialLinks;
+  username: string;
+};
 export type UserActivity = { createdAt: string; detail: string; id: string; title: string; type: "ai" | "command" | "profile" | "run" | "save" | "workspace"; };
 
 type UserContextValue = { 
@@ -25,6 +40,8 @@ const storageLimit = 40;
 const defaultProfile: UserProfile = {
   id: "local-user-1",
   name: "Local Dev",
+  username: "localdev",
+  password: "",
   email: "hacker@voidlab.local",
   avatar: "",
   bio: "Building the future, locally.",

@@ -5,7 +5,7 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import { UserProvider } from "@/context/UserContext";
 
 export const metadata: Metadata = {
-  title: "VoidLAB - Local IDE",
+  title: "VoidLAB",
   description: "Local-first browser IDE, compiler, and workspace by Voxion Labs.",
 };
 
