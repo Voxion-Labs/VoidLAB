@@ -333,7 +333,6 @@ function MoveModal({
 
 /* ── Context menu ───────────────────────────────────────── */
 function ContextMenu({
-  item,
   onRename,
   onDelete,
   onMove,

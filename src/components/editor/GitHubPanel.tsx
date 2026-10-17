@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, CheckCircle2, Copy, GitBranch, Github, Terminal, UploadCloud } from "lucide-react";
+import { Check, Copy, GitBranch, Github, Terminal } from "lucide-react";
 
 type GitCommand = {
   cmd: string;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, Copy, Github, GitBranch, UploadCloud } from "lucide-react";
+import { Check, Copy, Github, GitBranch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   defaultGitState,
@@ -39,7 +39,7 @@ export default function GitHubWorkspacePanel() {
   const [workspace, setWorkspace] = useState<WorkspaceState | null>(() => readInitialWorkspace());
   const [gitState, setGitState] = useState<GitHubState>(() => readInitialWorkspace()?.gitState ?? defaultGitState);
   const [copied, setCopied] = useState("");
-  const [status, setStatus] = useState("GitHub actions are local command helpers in this backend-less build.");
+  const [status] = useState("GitHub actions are local command helpers in this backend-less build.");
 
   const activeFile = useMemo(
     () => workspace?.files.find((file) => file.id === workspace.activeFileId) ?? workspace?.files[0] ?? null,

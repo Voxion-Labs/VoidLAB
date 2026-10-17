@@ -4,7 +4,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
 export type UserSocialLinks = { github: string; instagram: string; linkedin: string; x: string; };
-export type UserSocialLinks = { github: string; instagram: string; linkedin: string; x: string; };
 export type UserProfile = {
   avatar: string;
   bio: string;
