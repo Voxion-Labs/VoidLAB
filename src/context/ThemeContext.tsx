@@ -16,11 +16,10 @@ const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemeName>(() => {
     if (typeof window === "undefined") return "light";
-    const stored = window.localStorage.getItem(storageKey) as ThemeName | null;
+    const stored = window.localStorage.getItem(storageKey);
     // Migrate old theme names
-    if (stored === "black-red") return "dark";
-    if (stored === "light-red") return "light";
-    return stored === "dark" ? "dark" : "light";
+    if (stored === "black-red" || stored === "dark") return "dark";
+    return "light";
   });
 
   useEffect(() => {

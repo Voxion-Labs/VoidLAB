@@ -1,0 +1,125 @@
+name: VoidLAB Bot Assistant
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+
+permissions:
+  issues: write
+  pull-requests: write
+  contents: read
+
+jobs:
+  issue-assistant:
+    name: Issue Bot Assistant
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Triage & Welcome Issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const author = issue.user.login;
+            const title = (issue.title || '').toLowerCase();
+            const body = (issue.body || '').toLowerCase();
+
+            // Auto-label based on keywords
+            const labelsToAdd = [];
+            if (title.includes('bug') || body.includes('error') || body.includes('crash') || body.includes('fail')) {
+              labelsToAdd.push('bug');
+            }
+            if (title.includes('feat') || title.includes('add') || body.includes('feature request') || body.includes('proposal')) {
+              labelsToAdd.push('enhancement');
+            }
+            if (title.includes('ui') || title.includes('style') || title.includes('css') || body.includes('design')) {
+              labelsToAdd.push('ui/ux');
+            }
+            if (title.includes('doc') || body.includes('readme') || body.includes('documentation')) {
+              labelsToAdd.push('documentation');
+            }
+
+            if (labelsToAdd.length > 0) {
+              try {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  labels: labelsToAdd
+                });
+              } catch (e) {
+                console.log('Error adding labels:', e);
+              }
+            }
+
+            // Welcome comment for new issues
+            const welcomeComment = `👋 Thanks for opening this issue, @${author}!\n\n` +
+              `The **VoidLAB** team has received your ticket. ` +
+              (labelsToAdd.length > 0 ? `We have auto-tagged it with: \`${labelsToAdd.join('`, `')}\`.\n\n` : '\n\n') +
+              `Please ensure you've provided all necessary reproduction steps or context. A maintainer will review it shortly! 🚀`;
+
+            try {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: welcomeComment
+              });
+            } catch (e) {
+              console.log('Error posting welcome comment:', e);
+            }
+
+  pr-assistant:
+    name: PR Bot Assistant
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Triage & Welcome Pull Request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const author = pr.user.login;
+            const title = (pr.title || '').toLowerCase();
+
+            const labelsToAdd = [];
+            if (title.startsWith('fix') || title.includes('bug')) {
+              labelsToAdd.push('bugfix');
+            } else if (title.startsWith('feat')) {
+              labelsToAdd.push('feature');
+            } else if (title.startsWith('docs')) {
+              labelsToAdd.push('documentation');
+            } else if (title.startsWith('style') || title.includes('ui')) {
+              labelsToAdd.push('ui/ux');
+            }
+
+            if (labelsToAdd.length > 0) {
+              try {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  labels: labelsToAdd
+                });
+              } catch (e) {
+                console.log('Error adding PR labels:', e);
+              }
+            }
+
+            const welcomeComment = `🎉 Thank you for contributing to **VoidLAB**, @${author}!\n\n` +
+              `Our automated CI checks are currently validating this pull request. ` +
+              `Please verify that your changes adhere to code style guidelines and pass all build checks.\n\n` +
+              `A maintainer will review your pull request soon! ✨`;
+
+            try {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: welcomeComment
+              });
+            } catch (e) {
+              console.log('Error posting PR comment:', e);
+            }
