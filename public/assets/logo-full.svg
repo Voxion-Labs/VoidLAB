@@ -1,58 +1,13 @@
 <svg width="520" height="140" viewBox="0 0 520 140" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="520" height="140" rx="30" fill="#05070D"/>
-  <g transform="translate(34 22)">
-    <path d="M50 0L96 84H4L50 0Z" fill="url(#prismBody)"/>
-    <path d="M50 0L96 84H50V0Z" fill="url(#prismRight)"/>
-    <path d="M50 0L50 84H4L50 0Z" fill="url(#prismLeft)"/>
-    <path d="M18 57L81 57" stroke="url(#beam)" stroke-width="2.6" stroke-linecap="round"/>
-    <path d="M23 53L78 61" stroke="url(#beam2)" stroke-width="1.7" stroke-linecap="round"/>
-    <path d="M27 63L74 51" stroke="url(#beam3)" stroke-width="1.7" stroke-linecap="round"/>
-    <path d="M46 27L63 27L75 66H34L46 27Z" fill="url(#innerGlow)" fill-opacity="0.8"/>
-    <ellipse cx="50" cy="88" rx="34" ry="7" fill="url(#shadow)" fill-opacity="0.85"/>
+  <!-- V mark at left -->
+  <g transform="translate(18, 10) scale(0.88)">
+    <!-- V left leg -->
+    <path d="M18 10 L54 110 L64 90 L36 10 Z" fill="#0a0a0a"/>
+    <!-- V right leg -->
+    <path d="M110 10 L74 110 L64 90 L92 10 Z" fill="#0a0a0a"/>
+    <!-- diagonal slash -->
+    <path d="M80 8 L44 122" stroke="#0a0a0a" stroke-width="7" stroke-linecap="round"/>
   </g>
-  <text x="155" y="79" fill="url(#word)" font-family="Arial, Helvetica, sans-serif" font-size="54" font-weight="700" letter-spacing="-1.8">VoidLAB</text>
-  <text x="157" y="104" fill="#9AA5BA" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="500" letter-spacing="1.6">CLOUD EDITOR AND COMPILER</text>
-  <defs>
-    <linearGradient id="prismBody" x1="50" y1="0" x2="50" y2="84" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#E7EBF4"/>
-      <stop offset="0.45" stop-color="#A7B0C2"/>
-      <stop offset="1" stop-color="#5F6876"/>
-    </linearGradient>
-    <linearGradient id="prismRight" x1="50" y1="7" x2="90" y2="78" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#D7DDE8"/>
-      <stop offset="1" stop-color="#2E333E"/>
-    </linearGradient>
-    <linearGradient id="prismLeft" x1="12" y1="72" x2="50" y2="4" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#C5CCD8"/>
-      <stop offset="1" stop-color="#717A88"/>
-    </linearGradient>
-    <linearGradient id="innerGlow" x1="54.5" y1="27" x2="54.5" y2="66" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFFFFF" stop-opacity="0.95"/>
-      <stop offset="1" stop-color="#A0A7B5" stop-opacity="0.3"/>
-    </linearGradient>
-    <linearGradient id="beam" x1="18" y1="57.5" x2="81" y2="57.5" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#2B7FFF"/>
-      <stop offset="0.33" stop-color="#6D50FF"/>
-      <stop offset="0.66" stop-color="#FF1FA7"/>
-      <stop offset="1" stop-color="#FF7A3D"/>
-    </linearGradient>
-    <linearGradient id="beam2" x1="23" y1="57" x2="78" y2="57" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#00C2FF"/>
-      <stop offset="1" stop-color="#FFE600"/>
-    </linearGradient>
-    <linearGradient id="beam3" x1="27" y1="57" x2="74" y2="57" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FF3D81"/>
-      <stop offset="1" stop-color="#49F2A9"/>
-    </linearGradient>
-    <radialGradient id="shadow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(50 88) rotate(90) scale(7 34)">
-      <stop stop-color="#ABB4C5"/>
-      <stop offset="1" stop-color="#ABB4C5" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="word" x1="155" y1="49" x2="391" y2="91" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#2C87FF"/>
-      <stop offset="0.35" stop-color="#6F55FF"/>
-      <stop offset="0.68" stop-color="#FF23B2"/>
-      <stop offset="1" stop-color="#FF7E43"/>
-    </linearGradient>
-  </defs>
+  <!-- VoidLAB wordmark -->
+  <text x="150" y="88" fill="#0a0a0a" font-family="'Outfit', Arial, sans-serif" font-size="56" font-weight="700" letter-spacing="-2">VoidLAB</text>
 </svg>

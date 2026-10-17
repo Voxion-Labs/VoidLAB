@@ -7,34 +7,50 @@ export default function LoginPage({
   searchParams?: { authError?: string };
 }) {
   return (
-    <main className="hero-grid relative min-h-screen overflow-hidden px-4 pb-8 pt-6 sm:px-6 lg:px-10">
-      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-7xl flex-col">
+    <main className="login-page-bg min-h-screen flex flex-col">
+      {/* Top nav */}
+      <div className="px-5 pt-5 sm:px-8 sm:pt-6">
         <Navbar />
+      </div>
 
-        <section className="grid flex-1 items-center gap-10 py-10 lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="max-w-2xl">
-            <div className="theme-chip mb-6 inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs uppercase tracking-[0.18em]">
-              Local-first browser IDE
+      {/* Hero content */}
+      <div className="flex flex-1 items-center justify-center px-4 py-12 sm:px-6">
+        <div className="w-full max-w-6xl grid gap-14 lg:grid-cols-2 lg:items-center">
+
+          {/* Left — headline */}
+          <div className="max-w-xl">
+            <div className="login-hero-badge mb-6">
+              Browser-native IDE · No install · No cloud
             </div>
-            <h1 className="display-font theme-text-strong text-5xl font-bold leading-tight sm:text-6xl lg:text-7xl">
-              Build inside <span className="accent-text">VoidLAB</span>.
+            <h1 className="login-hero-title">
+              Build fast,<br />
+              <span className="accent-text">stay local.</span>
             </h1>
-            <p className="theme-muted mt-6 max-w-xl text-lg leading-8">
-              A sleek client-side coding workspace with local files, browser runtimes,
-              collaboration tools, Git command guidance, and a professional red-accent interface.
+            <p className="login-hero-body mt-5 max-w-md">
+              VoidLAB is a sleek, client-side coding workspace with local files,
+              browser runtimes, collaboration tools, and Git workflow guidance —
+              all running entirely in your browser.
             </p>
 
-            <div className="mt-8 grid max-w-xl gap-3 sm:grid-cols-2">
-              {["Local storage", "Browser runtime", "Room codes", "Git workflow"].map((item) => (
-                <div className="theme-surface rounded-[6px] px-4 py-3 text-sm theme-text" key={item}>
-                  {item}
-                </div>
+            {/* Feature pills */}
+            <div className="mt-8 flex flex-wrap gap-2">
+              {[
+                "Local storage",
+                "Browser runtime",
+                "Room codes",
+                "Git workflow",
+                "AI guide",
+              ].map((f) => (
+                <span key={f} className="login-feature-pill">{f}</span>
               ))}
             </div>
           </div>
 
-          <LoginForm authError={searchParams?.authError} />
-        </section>
+          {/* Right — login card */}
+          <div className="flex justify-center lg:justify-end">
+            <LoginForm authError={searchParams?.authError} />
+          </div>
+        </div>
       </div>
     </main>
   );

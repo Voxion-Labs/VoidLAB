@@ -333,3 +333,233 @@ textarea {
 .rounded-full {
   border-radius: 999px !important;
 }
+
+/* Brand logo inherits theme text color */
+.brand-logo-fill {
+  color: var(--text-strong);
+}
+
+/* ─── Login page background ─── */
+.login-page-bg {
+  background: var(--background-main);
+  background-image:
+    radial-gradient(ellipse 60% 50% at 10% 80%, color-mix(in srgb, var(--accent) 5%, transparent) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 60% at 90% 20%, color-mix(in srgb, var(--accent) 4%, transparent) 0%, transparent 70%);
+}
+
+/* ─── Login card ─── */
+.login-card {
+  background: var(--glass-background);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 2.25rem 2.25rem;
+  width: 100%;
+  max-width: 480px;
+  transition: box-shadow 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.login-card:hover {
+  box-shadow: var(--shadow-hover);
+}
+
+/* ─── Badge in card header ─── */
+.login-badge {
+  display: inline-flex;
+  align-items: center;
+  background: var(--accent-soft);
+  border: 1px solid var(--border-strong);
+  color: var(--accent);
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  padding: 0.28rem 0.85rem;
+}
+
+/* ─── Card title & subtitle ─── */
+.login-title {
+  font-family: var(--font-display);
+  font-size: 1.65rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+  line-height: 1.2;
+  margin: 0 0 0.4rem;
+}
+.login-subtitle {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* ─── Floating-label input field ─── */
+.login-field-wrap {
+  position: relative;
+}
+.login-field {
+  width: 100%;
+  background: var(--input-background);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.1rem 1rem 0.5rem 2.8rem;
+  font-size: 0.9rem;
+  color: var(--text);
+  font-family: var(--font-body);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  line-height: 1;
+}
+.login-field::placeholder {
+  color: transparent;
+}
+.login-field:focus {
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+.login-field-label {
+  position: absolute;
+  left: 2.8rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.875rem;
+  color: var(--muted);
+  pointer-events: none;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: left top;
+  line-height: 1;
+  white-space: nowrap;
+}
+/* Float label when focused or has value */
+.login-field:focus ~ .login-field-label,
+.login-field:not(:placeholder-shown) ~ .login-field-label {
+  top: 0.55rem;
+  transform: translateY(0) scale(0.78);
+  color: var(--accent);
+}
+.login-field-icon {
+  color: var(--muted);
+  transition: color 0.18s;
+}
+.login-field:focus + .login-field-label,
+.login-field:focus ~ .login-field-icon {
+  color: var(--accent);
+}
+/* Icon color when field is active */
+.login-field-wrap:focus-within .login-field-icon {
+  color: var(--accent);
+}
+
+/* ─── Action row ─── */
+.login-action-row {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.login-action-note {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ─── CTA button ─── */
+.login-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: var(--action-background);
+  color: var(--action-foreground);
+  border: none;
+  border-radius: 10px;
+  padding: 0.65rem 1.35rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: var(--font-body);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.2s, box-shadow 0.2s, transform 0.15s;
+  outline: none;
+  box-shadow: var(--action-shadow);
+  flex-shrink: 0;
+}
+.login-cta-btn:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 16px 36px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.login-cta-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+.login-cta-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ─── Error message ─── */
+.login-error {
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+/* ─── Hero headline (left side) ─── */
+.login-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  background: var(--accent-soft);
+  border: 1px solid var(--border-strong);
+  color: var(--accent);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  padding: 0.3rem 0.9rem;
+  text-transform: uppercase;
+}
+.login-hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-strong);
+  line-height: 1.08;
+  margin: 0;
+}
+.login-hero-body {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* ─── Feature pills ─── */
+.login-feature-pill {
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  color: var(--text);
+  padding: 0.3rem 0.85rem;
+  white-space: nowrap;
+  transition: border-color 0.2s, background 0.2s;
+}
+.login-feature-pill:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-strong);
+}
+
