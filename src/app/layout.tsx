@@ -16,12 +16,11 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${outfit.variable}`}>
+    <html lang="en" data-theme="light" className={`${inter.variable} ${outfit.variable}`}>
       <body>
         <ThemeProvider>
           <UserProvider>
             {children}
-            <footer className="voidlab-footer">© Voxion Labs. All rights reserved.</footer>
           </UserProvider>
         </ThemeProvider>
       </body>

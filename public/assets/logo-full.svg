@@ -1,13 +1,13 @@
-<svg width="520" height="140" viewBox="0 0 520 140" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- V mark at left -->
-  <g transform="translate(18, 10) scale(0.88)">
+<svg width="240" height="56" viewBox="0 0 240 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- V-slash mark -->
+  <g>
     <!-- V left leg -->
-    <path d="M18 10 L54 110 L64 90 L36 10 Z" fill="#0a0a0a"/>
+    <path d="M8 4 L21 52 L26 42 L17 4 Z" fill="#0d0d0d"/>
     <!-- V right leg -->
-    <path d="M110 10 L74 110 L64 90 L92 10 Z" fill="#0a0a0a"/>
+    <path d="M44 4 L31 52 L26 42 L35 4 Z" fill="#0d0d0d"/>
     <!-- diagonal slash -->
-    <path d="M80 8 L44 122" stroke="#0a0a0a" stroke-width="7" stroke-linecap="round"/>
+    <path d="M36 3 L18 53" stroke="#0d0d0d" stroke-width="3.2" stroke-linecap="round"/>
   </g>
   <!-- VoidLAB wordmark -->
-  <text x="150" y="88" fill="#0a0a0a" font-family="'Outfit', Arial, sans-serif" font-size="56" font-weight="700" letter-spacing="-2">VoidLAB</text>
+  <text x="58" y="40" fill="#0d0d0d" font-family="Outfit, Arial, sans-serif" font-size="30" font-weight="700" letter-spacing="-1">VoidLAB</text>
 </svg>

@@ -4,7 +4,7 @@ import { ChangeEvent, FormEvent, useState } from "react";
 import { ArrowRight, Mail, MapPin, Phone, User2 } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 
-type LoginFormState = {
+type FormState = {
   email: string;
   name: string;
   phone: string;
@@ -15,70 +15,71 @@ type LoginFormProps = {
   authError?: string;
 };
 
-function FloatingInput({
+// ── Floating-label input ──────────────────────────────────────
+function Field({
   icon,
   label,
   value,
   onChange,
-  placeholder: _placeholder,
   type = "text",
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   onChange: (e: ChangeEvent<HTMLInputElement>) => void;
-  placeholder?: string;
   type?: string;
 }) {
   return (
-    <div className="login-field-wrap relative">
-      <span className="login-field-icon pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 z-10">
-        {icon}
-      </span>
-      {/* placeholder must be a single space so :not(:placeholder-shown) works */}
+    <div className="lf-wrap">
+      <span className="lf-icon">{icon}</span>
+      {/*
+        placeholder=" " (single space) is required so :not(:placeholder-shown)
+        triggers as soon as the user types anything — floats the label up.
+      */}
       <input
         type={type}
         value={value}
         onChange={onChange}
         placeholder=" "
-        className="login-field peer w-full"
+        className="lf-input"
       />
-      <label className="login-field-label">
-        {label}
-      </label>
+      <label className="lf-label">{label}</label>
     </div>
   );
 }
 
+// ── Main form ─────────────────────────────────────────────────
 export default function LoginForm({ authError = "" }: LoginFormProps) {
   const { profile, saveProfile } = useUser();
-  const [form, setForm] = useState<LoginFormState>(() => ({
-    email: profile?.email ?? "",
-    name: profile?.name ?? "",
-    phone: profile?.phone ?? "",
+
+  const [form, setForm] = useState<FormState>(() => ({
+    email:  profile?.email  ?? "",
+    name:   profile?.name   ?? "",
+    phone:  profile?.phone  ?? "",
     region: profile?.region ?? "",
   }));
-  const [error, setError] = useState("");
+
+  const [error,     setError]     = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const handleField =
-    (field: keyof LoginFormState) => (event: ChangeEvent<HTMLInputElement>) => {
-      setForm((curr) => ({ ...curr, [field]: event.target.value }));
-    };
+  const set = (field: keyof FormState) => (e: ChangeEvent<HTMLInputElement>) =>
+    setForm((f) => ({ ...f, [field]: e.target.value }));
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setError("");
+
     if (!form.name.trim() || !form.email.trim()) {
-      setError("Name and email are required to open the workspace.");
+      setError("Name and email are required.");
       return;
     }
+
     setSubmitting(true);
     await saveProfile({
-      email: form.email.trim(),
-      id: profile?.id ?? `local-${Date.now()}`,
-      name: form.name.trim(),
-      phone: form.phone.trim(),
+      email:  form.email.trim(),
+      id:     profile?.id ?? `local-${Date.now()}`,
+      name:   form.name.trim(),
+      phone:  form.phone.trim(),
       region: form.region.trim() || "Local",
     });
     window.location.href = "/editor";
@@ -86,63 +87,36 @@ export default function LoginForm({ authError = "" }: LoginFormProps) {
 
   return (
     <div className="login-card">
-      {/* Card header */}
-      <div className="mb-8">
-        <div className="login-badge mb-5">LOCAL WORKSPACE</div>
-        <h2 className="login-title">Welcome to VoidLAB</h2>
-        <p className="login-subtitle">
-          Set up your local profile. No account, backend, or network required.
-        </p>
-      </div>
+      <p className="login-card-label">Local workspace</p>
+      <h2 className="login-card-title">Enter VoidLAB</h2>
+      <p className="login-card-subtitle">
+        Create a local profile — no account, OAuth, or backend needed.
+      </p>
 
-      <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FloatingInput
-            icon={<User2 size={15} />}
-            label="Full name"
-            value={form.name}
-            onChange={handleField("name")}
-          />
-          <FloatingInput
-            icon={<Mail size={15} />}
-            label="Email"
-            value={form.email}
-            onChange={handleField("email")}
-            type="email"
-          />
-          <FloatingInput
-            icon={<Phone size={15} />}
-            label="Phone (optional)"
-            value={form.phone}
-            onChange={handleField("phone")}
-          />
-          <FloatingInput
-            icon={<MapPin size={15} />}
-            label="Region"
-            value={form.region}
-            onChange={handleField("region")}
-          />
+      <form onSubmit={(e) => void handleSubmit(e)}>
+        <div className="grid gap-0 sm:grid-cols-2 sm:gap-x-3">
+          <Field icon={<User2 size={14} />} label="Full name"       value={form.name}   onChange={set("name")}   />
+          <Field icon={<Mail   size={14} />} label="Email"           value={form.email}  onChange={set("email")}  type="email" />
+          <Field icon={<Phone  size={14} />} label="Phone (optional)" value={form.phone}  onChange={set("phone")}  />
+          <Field icon={<MapPin size={14} />} label="Region"          value={form.region} onChange={set("region")} />
         </div>
 
-        {/* Info row + CTA */}
-        <div className="login-action-row mt-2">
+        <div className="login-action-bar">
           <p className="login-action-note">
-            Your data lives only in this browser. No cloud sync.
+            Your data stays in this browser only.
           </p>
           <button
             type="submit"
             disabled={submitting}
-            className="login-cta-btn"
+            className="login-submit-btn"
           >
             {submitting ? "Opening…" : "Open IDE"}
-            <ArrowRight size={15} />
+            <ArrowRight size={14} />
           </button>
         </div>
 
         {(error || authError) && (
-          <div className="login-error">
-            {error || authError}
-          </div>
+          <div className="login-error">{error || authError}</div>
         )}
       </form>
     </div>

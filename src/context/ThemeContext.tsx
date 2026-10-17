@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
-export type ThemeName = "light-red" | "black-red";
+export type ThemeName = "light" | "dark";
 
 type ThemeContextValue = {
   editorTheme: "light" | "vs-dark";
@@ -15,15 +15,12 @@ const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemeName>(() => {
-    if (typeof window === "undefined") {
-      return "light-red";
-    }
-
+    if (typeof window === "undefined") return "light";
     const stored = window.localStorage.getItem(storageKey) as ThemeName | null;
-
-    return stored === "black-red" || stored === "light-red"
-      ? stored
-      : "light-red";
+    // Migrate old theme names
+    if (stored === "black-red") return "dark";
+    if (stored === "light-red") return "light";
+    return stored === "dark" ? "dark" : "light";
   });
 
   useEffect(() => {
@@ -39,7 +36,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(
     () => ({
-      editorTheme: theme === "light-red" ? ("light" as const) : ("vs-dark" as const),
+      editorTheme: theme === "light" ? ("light" as const) : ("vs-dark" as const),
       setTheme,
       theme,
     }),
