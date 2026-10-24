@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VoidLAB — Cloud Code Editor</title>
+  
+  <!-- Typography: JetBrains Mono for Code/Terminal & Inter for UI -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- HTMX CDN -->
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            vblack: {
+              DEFAULT: '#000000',
+              panel: '#09090b',
+              surface: '#0e0e11',
+              elevated: '#141418',
+              hover: '#1a1a20',
+            },
+            vborder: {
+              subtle: 'rgba(255, 255, 255, 0.07)',
+              DEFAULT: 'rgba(255, 255, 255, 0.12)',
+              strong: 'rgba(255, 255, 255, 0.22)',
+            },
+            vtext: {
+              primary: '#f4f4f5',
+              secondary: '#a1a1aa',
+              muted: '#71717a',
+              dim: '#52525b',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'Fira Code', 'Consolas', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Ultra-subtle custom thin scrollbar */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.25); }
+
+    /* Vercel-Dark Glassmorphism */
+    .glass-dark {
+      background: rgba(0, 0, 0, 0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    /* Fast, crisp micro-interactions */
+    .fast-transition {
+      transition: all 100ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Code editor ligatures */
+    .font-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-feature-settings: "liga" on, "calt" on;
+      font-variant-ligatures: normal;
+    }
+  </style>
+</head>
+
+<body class="h-screen w-screen overflow-hidden bg-vblack text-vtext-primary flex flex-col font-sans select-none antialiased">
+
+  <!-- ========================================================================= -->
+  <!-- 1. TOP NAVBAR (Slim, Vercel-Dark Glass, 40px Height)                      -->
+  <!-- ========================================================================= -->
+  <header class="h-10 shrink-0 glass-dark border-b border-vborder-subtle px-3 flex items-center justify-between z-30 relative select-none">
+    
+    <!-- Left: Minimalist Brand Logo & Monochrome Controls -->
+    <div class="flex items-center gap-3">
+      <a href="/" class="flex items-center gap-2 group fast-transition opacity-90 hover:opacity-100">
+        <!-- V-Slash Minimalist Monochrome SVG -->
+        <svg width="18" height="18" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-zinc-100 group-hover:text-white fast-transition">
+          <path d="M18 10 L54 110 L64 90 L36 10 Z" fill="currentColor" />
+          <path d="M110 10 L74 110 L64 90 L92 10 Z" fill="currentColor" />
+          <path d="M80 8 L44 122" stroke="currentColor" stroke-width="8" stroke-linecap="round" />
+        </svg>
+        <span class="font-semibold text-xs tracking-tight text-zinc-100 font-code">
+          VoidLAB
+        </span>
+      </a>
+
+      <div class="h-3 w-px bg-zinc-800"></div>
+
+      <!-- Monochrome Action Buttons (Run / Save) -->
+      <div class="flex items-center gap-1">
+        <!-- Sleek Monochrome Run Trigger -->
+        <button 
+          id="btn-run"
+          hx-post="/api/workspace/run" 
+          hx-target="#terminal-output" 
+          hx-swap="beforeend"
+          hx-indicator="#run-spinner"
+          class="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded bg-zinc-100 hover:bg-white text-zinc-950 active:scale-[0.98] fast-transition shadow-sm"
+          title="Execute script (Ctrl+Enter)"
+        >
+          <svg id="run-icon" class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          <svg id="run-spinner" class="animate-spin h-2.5 w-2.5 text-zinc-950 hidden" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+          <span class="font-code font-semibold">Run</span>
+        </button>
+
+        <!-- Monochrome Save Trigger -->
+        <button 
+          hx-post="/api/workspace/save" 
+          hx-target="#status-message" 
+          class="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 border border-transparent hover:border-vborder-subtle fast-transition"
+          title="Save file (Ctrl+S)"
+        >
+          <svg class="w-3 h-3 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          <span class="hidden sm:inline">Save</span>
+        </button>
+
+        <!-- Status Indicator -->
+        <span id="status-message" class="text-[10px] text-vtext-dim font-code pl-1.5 truncate max-w-[160px]">Ready</span>
+      </div>
+    </div>
+
+    <!-- Center: Active Path & Engine (JetBrains Mono) -->
+    <div class="hidden md:flex items-center gap-2 px-2.5 py-0.5 rounded border border-vborder-subtle bg-vblack/70 text-[10px] text-vtext-secondary font-code">
+      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500/80"></span>
+      <span id="active-path-label" class="text-zinc-300">src/main.py</span>
+      <span class="text-zinc-600">/</span>
+      <span id="active-lang-label" class="text-zinc-400">py3.11</span>
+    </div>
+
+    <!-- Right: Minimalist Text-Links & Settings Icon -->
+    <div class="flex items-center gap-3">
+      <!-- Minimal Text-Links (Subtle Fast Hover) -->
+      <nav class="flex items-center gap-3.5 text-xs text-vtext-secondary font-medium">
+        <a 
+          href="/manual" 
+          hx-get="/api/manual/modal" 
+          hx-target="#global-modal-container"
+          class="hover:text-vtext-primary fast-transition"
+        >
+          Manual
+        </a>
+        <a 
+          href="https://github.com/Voxion-Labs/VoidLAB" 
+          target="_blank" 
+          rel="noreferrer"
+          class="hover:text-vtext-primary fast-transition flex items-center gap-1"
+        >
+          GitHub
+          <svg class="w-2.5 h-2.5 text-vtext-dim" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </a>
+        <a 
+          href="/collab" 
+          hx-get="/api/collab/modal" 
+          hx-target="#global-modal-container"
+          class="hover:text-vtext-primary fast-transition flex items-center gap-1.5"
+        >
+          <span class="w-1.5 h-1.5 rounded-full bg-zinc-400"></span>
+          Collab
+        </a>
+      </nav>
+
+      <div class="h-3 w-px bg-zinc-800"></div>
+
+      <!-- Settings Icon Button (Monochrome, replaces bulky button) -->
+      <button 
+        type="button" 
+        onclick="toggleSettingsModal(true)"
+        class="p-1 rounded text-vtext-secondary hover:text-vtext-primary hover:bg-zinc-800/80 fast-transition"
+        title="Settings (Language, Region, Buffers)"
+      >
+        <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="1.75"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+
+      <!-- Minimal User Avatar -->
+      <a href="/editor/profile" class="h-5 w-5 rounded bg-zinc-800 border border-vborder-subtle flex items-center justify-center text-[10px] font-semibold text-zinc-300 hover:border-zinc-500 fast-transition">
+        A
+      </a>
+    </div>
+  </header>
+
+
+  <!-- ========================================================================= -->
+  <!-- 2. MAIN BODY (Ultra-Slim Sidebar + Split-Pane Workspace)                  -->
+  <!-- ========================================================================= -->
+  <div class="flex-1 flex overflow-hidden min-h-0 relative bg-vblack">
+
+    <!-- ======================================================================= -->
+    <!-- 2A. LEFT SIDEBAR: Ultra-Slim File Explorer (w-52, Coder Aesthetic)      -->
+    <!-- ======================================================================= -->
+    <aside 
+      id="sidebar" 
+      class="w-52 shrink-0 border-r border-vborder-subtle bg-vblack-panel flex flex-col h-full overflow-hidden fast-transition"
+    >
+      <!-- Explorer Title & Sleek Monochrome Icon Actions -->
+      <div class="h-8 px-2.5 border-b border-vborder-subtle flex items-center justify-between text-xs text-vtext-muted shrink-0 bg-vblack">
+        <span class="font-semibold tracking-wider text-[10px] uppercase text-vtext-secondary font-code">
+          Explorer
+        </span>
+
+        <!-- Sleek Monochrome Action Icons (New File / New Folder / Settings) -->
+        <div class="flex items-center gap-0.5">
+          <!-- New File (Sleek Icon) -->
+          <button 
+            hx-post="/api/files/new"
+            hx-target="#file-tree"
+            hx-swap="beforeend"
+            class="p-1 text-vtext-muted hover:text-vtext-primary hover:bg-zinc-800/80 rounded fast-transition"
+            title="New File"
+          >
+            <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+          </button>
+
+          <!-- New Folder (Sleek Icon) -->
+          <button 
+            hx-post="/api/folders/new"
+            hx-target="#file-tree"
+            hx-swap="beforeend"
+            class="p-1 text-vtext-muted hover:text-vtext-primary hover:bg-zinc-800/80 rounded fast-transition"
+            title="New Folder"
+          >
+            <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+          </button>
+
+          <!-- Collapse/Refresh -->
+          <button 
+            hx-get="/api/files/refresh"
+            hx-target="#file-tree"
+            class="p-1 text-vtext-muted hover:text-vtext-primary hover:bg-zinc-800/80 rounded fast-transition"
+            title="Refresh Files"
+          >
+            <svg class="w-3.5 h-3.5 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="1.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- File Tree List (JetBrains Mono, Subtle Fast Hover) -->
+      <div id="file-tree" class="flex-1 overflow-y-auto p-1 space-y-0.5 text-xs font-code">
+        
+        <!-- Folder Item -->
+        <div>
+          <button class="w-full flex items-center gap-1.5 px-2 py-1 rounded text-vtext-secondary hover:text-vtext-primary hover:bg-zinc-800/40 fast-transition text-left group">
+            <svg class="w-2.5 h-2.5 text-vtext-dim transition-transform group-hover:text-vtext-secondary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            <svg class="w-3.5 h-3.5 text-zinc-400 group-hover:text-zinc-200 fast-transition" viewBox="0 0 24 24" fill="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            <span class="truncate font-medium text-[11px]">src</span>
+          </button>
+
+          <!-- Nested Files -->
+          <div class="pl-3.5 space-y-0.5 mt-0.5 border-l border-zinc-800/50 ml-2.5">
+            <!-- Active File Item (Vercel Dark Minimalist Highlight) -->
+            <button 
+              hx-get="/api/files/main.py" 
+              hx-target="#editor-content"
+              hx-swap="innerHTML"
+              class="w-full flex items-center justify-between px-2 py-1 rounded bg-zinc-800/60 text-zinc-100 border-l-2 border-zinc-100 font-medium text-left fast-transition group"
+            >
+              <div class="flex items-center gap-1.5 truncate">
+                <span class="text-zinc-400 text-[10px]">py</span>
+                <span class="truncate text-[11px]">main.py</span>
+              </div>
+              <span class="w-1 h-1 rounded-full bg-zinc-300"></span>
+            </button>
+
+            <!-- Inactive File Item (Fast Hover State) -->
+            <button 
+              hx-get="/api/files/utils.ts" 
+              hx-target="#editor-content"
+              hx-swap="innerHTML"
+              class="w-full flex items-center justify-between px-2 py-1 rounded text-vtext-muted hover:text-vtext-primary hover:bg-zinc-800/30 fast-transition text-left group"
+            >
+              <div class="flex items-center gap-1.5 truncate">
+                <span class="text-vtext-dim group-hover:text-zinc-400 text-[10px]">ts</span>
+                <span class="truncate text-[11px]">utils.ts</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Root Files -->
+        <button 
+          hx-get="/api/files/index.html" 
+          hx-target="#editor-content"
+          hx-swap="innerHTML"
+          class="w-full flex items-center justify-between px-2 py-1 rounded text-vtext-muted hover:text-vtext-primary hover:bg-zinc-800/30 fast-transition text-left group"
+        >
+          <div class="flex items-center gap-1.5 truncate">
+            <span class="text-vtext-dim group-hover:text-zinc-400 text-[10px]">html</span>
+            <span class="truncate text-[11px]">index.html</span>
+          </div>
+        </button>
+
+        <button 
+          hx-get="/api/files/README.md" 
+          hx-target="#editor-content"
+          hx-swap="innerHTML"
+          class="w-full flex items-center justify-between px-2 py-1 rounded text-vtext-muted hover:text-vtext-primary hover:bg-zinc-800/30 fast-transition text-left group"
+        >
+          <div class="flex items-center gap-1.5 truncate">
+            <span class="text-vtext-dim group-hover:text-zinc-400 text-[10px]">md</span>
+            <span class="truncate text-[11px]">README.md</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- Left Sidebar Footer: Minimalist Environment Status -->
+      <div class="h-8 px-2.5 border-t border-vborder-subtle bg-vblack flex items-center justify-between text-[10px] text-vtext-muted shrink-0 font-code">
+        <button 
+          type="button" 
+          onclick="toggleSettingsModal(true)"
+          class="flex items-center gap-1.5 hover:text-vtext-primary fast-transition truncate"
+          title="Configure Node / Region"
+        >
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          <span class="truncate">wasm-local</span>
+        </button>
+        <span class="text-zinc-700">|</span>
+        <button 
+          type="button" 
+          onclick="toggleSettingsModal(true)"
+          class="hover:text-vtext-primary fast-transition text-vtext-secondary"
+          title="Configure Language Runtime"
+        >
+          py3.11
+        </button>
+      </div>
+    </aside>
+
+
+    <!-- ======================================================================= -->
+    <!-- 2B. MAIN WORKSPACE: Vertical Split-Pane (Top 75% Editor, Bottom 25% Term) -->
+    <!-- ======================================================================= -->
+    <main class="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative bg-vblack">
+
+      <!-- ===================================================================== -->
+      <!-- TOP PANE: CODE EDITOR (Default Height: 75%, JetBrains Mono)           -->
+      <!-- ===================================================================== -->
+      <section 
+        id="editor-pane" 
+        style="height: 75%;" 
+        class="flex flex-col min-h-[140px] overflow-hidden bg-vblack relative"
+      >
+        <!-- Editor Tabs Bar (Minimalist Vercel Dark Style) -->
+        <div class="h-8 border-b border-vborder-subtle bg-vblack flex items-center justify-between px-1 shrink-0 overflow-x-auto select-none">
+          <div class="flex items-center gap-0.5 h-full">
+            <!-- Active Tab (Crisp white border-top indicator) -->
+            <div class="h-full px-2.5 flex items-center gap-2 border-t border-zinc-200 bg-vblack-surface border-r border-vborder-subtle text-xs font-code text-zinc-100">
+              <span class="text-zinc-400 text-[10px]">py</span>
+              <span class="text-[11px] font-medium">main.py</span>
+              <button class="hover:bg-zinc-800 rounded p-0.5 text-zinc-500 hover:text-zinc-200 fast-transition ml-1">
+                <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+
+            <!-- Inactive Tab -->
+            <div class="h-full px-2.5 flex items-center gap-2 border-r border-vborder-subtle text-xs font-code text-vtext-muted hover:text-vtext-secondary hover:bg-vblack-panel cursor-pointer fast-transition">
+              <span class="text-vtext-dim text-[10px]">ts</span>
+              <span class="text-[11px]">utils.ts</span>
+              <button class="hover:bg-zinc-800 rounded p-0.5 text-zinc-600 hover:text-zinc-400 fast-transition opacity-0 hover:opacity-100 ml-1">
+                <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Editor Actions (Right side) -->
+          <div class="flex items-center gap-2 text-xs text-vtext-muted font-code px-2">
+            <button 
+              hx-post="/api/code/format" 
+              hx-target="#editor-content"
+              class="px-1.5 py-0.5 text-vtext-muted hover:text-vtext-primary hover:bg-zinc-800/80 rounded fast-transition text-[10px]"
+              title="Format Document (Shift+Alt+F)"
+            >
+              Format
+            </button>
+            <span class="text-zinc-800">|</span>
+            <span class="text-[10px] text-vtext-dim">UTF-8</span>
+          </div>
+        </div>
+
+        <!-- Editor Viewport (Line Numbers + Code Canvas) -->
+        <div class="flex-1 flex overflow-hidden relative font-code text-xs">
+          
+          <!-- Line Numbers Gutter -->
+          <div class="w-11 shrink-0 py-3 bg-vblack border-r border-vborder-subtle text-zinc-700 select-none text-right pr-2.5 font-code text-[11px] leading-5 space-y-0">
+            <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div>
+            <div>7</div><div>8</div><div>9</div><div>10</div><div>11</div><div>12</div>
+          </div>
+
+          <!-- Code Content Area (HTMX-swappable target, Vercel/Dracula subtle syntax) -->
+          <div 
+            id="editor-content" 
+            class="flex-1 h-full overflow-auto p-3 text-zinc-200 focus:outline-none leading-5 bg-vblack font-code text-xs"
+            contenteditable="true"
+            spellcheck="false"
+          ><span class="text-zinc-600"># VoidLAB Cloud Code Editor • Phase 2</span>
+<span class="text-zinc-600"># Minimalist Vercel-Dark Theme • JetBrains Mono</span>
+<span class="text-zinc-400">import</span> sys
+<span class="text-zinc-400">import</span> time
+
+<span class="text-zinc-300 font-semibold">def</span> <span class="text-zinc-100">execute_workspace</span>():
+    print(<span class="text-zinc-300">"→ Runtime initialized (0.00s)"</span>)
+    print(<span class="text-zinc-300">"→ Monochrome aesthetic loaded"</span>)
+    print(<span class="text-zinc-300">"→ Terminal fixed & anchored at bottom 25%"</span>)
+    
+<span class="text-zinc-400">if</span> __name__ == <span class="text-zinc-300">"__main__"</span>:
+    execute_workspace()</div>
+
+          <!-- Floating Info Tag at Bottom-Right of Editor -->
+          <div class="absolute bottom-2 right-4 px-2 py-0.5 rounded border border-vborder-subtle bg-vblack-surface/90 text-[10px] text-vtext-dim font-code pointer-events-none">
+            Ln 11, Col 24 • Spaces: 4 • Python
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ===================================================================== -->
+      <!-- RESIZABLE DIVIDER (Drag handle between Editor & Terminal)              -->
+      <!-- ===================================================================== -->
+      <div 
+        id="pane-resizer" 
+        class="h-1 bg-zinc-900 hover:bg-zinc-600 active:bg-zinc-400 cursor-row-resize shrink-0 fast-transition z-20 flex items-center justify-center group"
+        title="Drag up/down to resize terminal (Double click to reset 75/25)"
+      >
+        <!-- Subtle grip pill -->
+        <div class="w-6 h-[1.5px] rounded-full bg-zinc-700 group-hover:bg-zinc-300 fast-transition"></div>
+      </div>
+
+
+      <!-- ===================================================================== -->
+      <!-- BOTTOM PANE: FIXED ANCHORED TERMINAL (Default Height: 25%)             -->
+      <!-- ===================================================================== -->
+      <section 
+        id="terminal-pane" 
+        style="height: 25%;" 
+        class="flex flex-col min-h-[90px] bg-vblack border-t border-vborder-subtle overflow-hidden relative font-code"
+      >
+        <!-- Terminal Header Bar (Monochrome Tabs + Controls) -->
+        <div class="h-7 px-2.5 border-b border-vborder-subtle bg-vblack-surface flex items-center justify-between shrink-0 text-xs font-code">
+          
+          <!-- Terminal Tabs -->
+          <div class="flex items-center gap-3">
+            <button class="font-semibold text-zinc-100 border-b border-zinc-100 pb-0.5 text-[11px] flex items-center gap-1.5">
+              <span>Terminal</span>
+            </button>
+            <button class="text-vtext-muted hover:text-vtext-secondary fast-transition pb-0.5 text-[11px]">
+              <span>Output</span>
+            </button>
+            <button class="text-vtext-muted hover:text-vtext-secondary fast-transition pb-0.5 text-[11px]">
+              <span>Ports</span>
+            </button>
+          </div>
+
+          <!-- Terminal Status & Tools -->
+          <div class="flex items-center gap-1.5">
+            <!-- Active Status Badge -->
+            <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-medium bg-zinc-900 text-zinc-400 border border-vborder-subtle">
+              <span class="w-1 h-1 rounded-full bg-emerald-500"></span>
+              IDLE (0ms)
+            </span>
+
+            <!-- Clear Terminal -->
+            <button 
+              type="button" 
+              onclick="document.getElementById('terminal-output').innerHTML=''" 
+              class="p-0.5 hover:bg-zinc-800 rounded text-vtext-muted hover:text-vtext-primary fast-transition"
+              title="Clear Terminal Output"
+            >
+              <svg class="w-3 h-3 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="1.75"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+
+            <!-- Reset 75/25 Height -->
+            <button 
+              type="button" 
+              onclick="resetSplitPane()" 
+              class="p-0.5 hover:bg-zinc-800 rounded text-vtext-muted hover:text-vtext-primary fast-transition"
+              title="Reset 75/25 Split"
+            >
+              <svg class="w-3 h-3 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="1.75"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Terminal Output Stream (JetBrains Mono, Internal Scrolling Only) -->
+        <div 
+          id="terminal-output" 
+          class="flex-1 p-2.5 overflow-y-auto font-code text-[11px] leading-5 text-zinc-300 space-y-0.5 bg-vblack"
+        >
+          <div class="text-vtext-dim">VoidLAB Sandbox Shell [Version 2.0.4]</div>
+          <div class="text-vtext-dim">Connected to local container session. Type commands or press 'Run'.</div>
+          <div class="text-zinc-400">$ python3 src/main.py</div>
+          <div class="text-zinc-200">→ Runtime initialized (0.00s)</div>
+          <div class="text-zinc-200">→ Monochrome aesthetic loaded</div>
+          <div class="text-zinc-200">→ Terminal fixed & anchored at bottom 25%</div>
+          <div class="text-vtext-dim text-[10px] pt-0.5">Process exited with status code: 0</div>
+        </div>
+
+        <!-- Terminal Command / Stdin Input Bar -->
+        <form 
+          hx-post="/api/terminal/exec" 
+          hx-target="#terminal-output" 
+          hx-swap="beforeend"
+          class="h-8 px-2.5 border-t border-vborder-subtle bg-vblack-surface flex items-center gap-2 shrink-0 font-code text-xs"
+          onsubmit="handleTerminalSubmit(event, this)"
+        >
+          <span class="text-zinc-400 text-xs shrink-0">$</span>
+          <input 
+            type="text" 
+            name="command" 
+            placeholder="Type command or stdin input..."
+            class="flex-1 bg-transparent text-zinc-100 placeholder:text-zinc-700 focus:outline-none text-xs font-code"
+            autocomplete="off"
+          />
+          <button type="submit" class="text-xs text-zinc-600 hover:text-zinc-300 fast-transition">
+            ↵
+          </button>
+        </form>
+      </section>
+    </main>
+  </div>
+
+
+  <!-- ========================================================================= -->
+  <!-- 3. MODAL: AUXILIARY SETTINGS (Language, Region, Buffers)                   -->
+  <!-- ========================================================================= -->
+  <div 
+    id="settings-modal" 
+    class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none fast-transition"
+    onclick="if(event.target === this) toggleSettingsModal(false)"
+  >
+    <div class="w-full max-w-md bg-vblack-panel border border-vborder rounded-lg shadow-2xl p-5 space-y-4 text-zinc-200">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-vborder-subtle pb-3">
+        <div class="flex items-center gap-2">
+          <svg class="w-4 h-4 text-zinc-300 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="1.75"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <h3 class="font-semibold text-sm text-zinc-100 font-sans">Workspace Settings</h3>
+        </div>
+        <button 
+          type="button" 
+          onclick="toggleSettingsModal(false)"
+          class="text-vtext-muted hover:text-white p-1 rounded hover:bg-zinc-800 fast-transition"
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <!-- Settings Form (HTMX compatible) -->
+      <form 
+        hx-post="/api/settings/save" 
+        hx-target="#status-message" 
+        onsubmit="toggleSettingsModal(false)"
+        class="space-y-3.5 text-xs font-sans"
+      >
+        <!-- 1. Language Setting -->
+        <div class="space-y-1">
+          <label class="font-medium text-zinc-300 block text-[11px]">Language Runtime</label>
+          <select 
+            name="language" 
+            class="w-full bg-vblack border border-vborder rounded px-2.5 py-1.5 text-zinc-200 focus:outline-none focus:border-zinc-500 font-code text-xs"
+          >
+            <option value="python" selected>Python 3.11 (WASM + Pyodide)</option>
+            <option value="typescript">TypeScript 5.3 (Node.js)</option>
+            <option value="javascript">JavaScript (V8)</option>
+            <option value="cpp">C++ 20 (Clang)</option>
+            <option value="rust">Rust 1.75 (WASM)</option>
+            <option value="go">Go 1.22</option>
+          </select>
+        </div>
+
+        <!-- 2. Execution Region -->
+        <div class="space-y-1">
+          <label class="font-medium text-zinc-300 block text-[11px]">Execution Region</label>
+          <select 
+            name="region" 
+            class="w-full bg-vblack border border-vborder rounded px-2.5 py-1.5 text-zinc-200 focus:outline-none focus:border-zinc-500 font-code text-xs"
+          >
+            <option value="local" selected>Local Client Sandbox (0ms)</option>
+            <option value="us-east">US East (N. Virginia)</option>
+            <option value="eu-central">EU Central (Frankfurt)</option>
+            <option value="ap-south">AP South (Mumbai)</option>
+          </select>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-vborder-subtle">
+          <button 
+            type="button" 
+            onclick="toggleSettingsModal(false)" 
+            class="px-2.5 py-1 text-xs rounded border border-vborder text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 fast-transition"
+          >
+            Cancel
+          </button>
+          <button 
+            type="submit" 
+            class="px-3 py-1 text-xs rounded bg-zinc-100 hover:bg-white text-zinc-950 font-medium fast-transition shadow-sm"
+          >
+            Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- ========================================================================= -->
+  <!-- 4. RESIZABLE SPLIT-PANE LOGIC & MODAL SCRIPT                               -->
+  <!-- ========================================================================= -->
+  <script>
+    const editorPane = document.getElementById('editor-pane');
+    const terminalPane = document.getElementById('terminal-pane');
+    const resizer = document.getElementById('pane-resizer');
+    const settingsModal = document.getElementById('settings-modal');
+
+    let isResizing = false;
+
+    // Resizer Mouse Drag Logic
+    resizer.addEventListener('mousedown', function(e) {
+      isResizing = true;
+      document.body.style.cursor = 'row-resize';
+      document.body.style.userSelect = 'none';
+    });
+
+    document.addEventListener('mousemove', function(e) {
+      if (!isResizing) return;
+      
+      const containerRect = editorPane.parentElement.getBoundingClientRect();
+      const relativeY = e.clientY - containerRect.top;
+      const totalHeight = containerRect.height;
+      
+      let topPercent = (relativeY / totalHeight) * 100;
+      if (topPercent < 15) topPercent = 15;
+      if (topPercent > 85) topPercent = 85;
+
+      const bottomPercent = 100 - topPercent;
+      editorPane.style.height = `${topPercent}%`;
+      terminalPane.style.height = `${bottomPercent}%`;
+    });
+
+    document.addEventListener('mouseup', function() {
+      if (isResizing) {
+        isResizing = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+    });
+
+    // Double-click resizer to restore default 75% / 25% split
+    resizer.addEventListener('dblclick', resetSplitPane);
+
+    function resetSplitPane() {
+      editorPane.style.height = '75%';
+      terminalPane.style.height = '25%';
+    }
+
+    // Settings Modal Toggle
+    function toggleSettingsModal(show) {
+      if (show) {
+        settingsModal.classList.remove('opacity-0', 'pointer-events-none');
+        settingsModal.classList.add('opacity-100');
+      } else {
+        settingsModal.classList.remove('opacity-100');
+        settingsModal.classList.add('opacity-0', 'pointer-events-none');
+      }
+    }
+
+    // Keyboard Shortcuts (Escape closes modal, Ctrl+Enter runs)
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') toggleSettingsModal(false);
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        document.getElementById('btn-run')?.click();
+      }
+    });
+
+    // Simulated terminal input
+    function handleTerminalSubmit(event, form) {
+      const input = form.querySelector('input[name="command"]');
+      if (input && input.value.trim()) {
+        const output = document.getElementById('terminal-output');
+        const cmdDiv = document.createElement('div');
+        cmdDiv.className = 'text-zinc-400';
+        cmdDiv.textContent = `$ ${input.value}`;
+        output.appendChild(cmdDiv);
+
+        const resDiv = document.createElement('div');
+        resDiv.className = 'text-zinc-300';
+        resDiv.textContent = `[VoidLAB local exec] command recorded: "${input.value}"`;
+        output.appendChild(resDiv);
+
+        output.scrollTop = output.scrollHeight;
+        input.value = '';
+      }
+    }
+  </script>
+</body>
+</html>
