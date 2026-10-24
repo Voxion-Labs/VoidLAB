@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  ChevronDown,
+  ChevronRight,
   FileCode2,
   FilePlus2,
   Folder,
@@ -13,9 +15,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { languageGroups } from "@/lib/languages";
 import {
-  formatWorkspacePath,
   getWorkspaceBaseName,
   getWorkspaceParentPath,
   mountWorkspaceVfs,
@@ -52,7 +52,85 @@ type FileExplorerProps = {
   onRenameFile: (fileId: string, newName: string) => void;
   onRenameFolder: (oldPath: string, newName: string) => void;
   onSelectFile: (id: string) => void;
+  onOpenSettings?: () => void;
+  currentLanguageLabel?: string;
 };
+
+/* ── New File Modal ─────────────────────────────────────── */
+function NewFileModal({
+  initialName,
+  onConfirm,
+  onClose,
+}: {
+  initialName: string;
+  onConfirm: (name: string) => void;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState(initialName || "src/new_file.py");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+
+  const handleSubmit = () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    onConfirm(trimmed);
+    onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="w-full max-w-sm rounded-lg p-5 bg-[#09090b] border border-white/10 shadow-2xl text-zinc-200">
+        <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/10">
+          <div className="text-xs font-semibold uppercase tracking-wider text-zinc-100 flex items-center gap-2 font-mono">
+            <FilePlus2 size={14} className="text-zinc-300" />
+            New File
+          </div>
+          <button onClick={onClose} className="text-zinc-400 hover:text-white p-1 rounded transition-colors" type="button">
+            <X size={14} />
+          </button>
+        </div>
+
+        <div className="text-xs text-zinc-400 mb-2 font-mono">File path (relative to workspace):</div>
+        <input
+          ref={inputRef}
+          className="w-full rounded bg-[#000000] border border-white/10 px-3 py-2 text-xs font-mono text-zinc-100 outline-none mb-4 focus:border-zinc-400 transition-colors"
+          placeholder="e.g. src/index.ts"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSubmit();
+            if (e.key === "Escape") onClose();
+          }}
+        />
+
+        <div className="flex gap-2 justify-end">
+          <button
+            className="rounded px-3 py-1.5 text-xs text-zinc-400 hover:text-white border border-white/10 hover:bg-zinc-800 transition-colors"
+            onClick={onClose}
+            type="button"
+          >
+            Cancel
+          </button>
+          <button
+            className="rounded px-3 py-1.5 text-xs font-medium bg-zinc-100 hover:bg-white text-zinc-950 transition-colors disabled:opacity-40"
+            disabled={!name.trim()}
+            onClick={handleSubmit}
+            type="button"
+          >
+            Create File
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* ── New Folder Modal ───────────────────────────────────── */
 function NewFolderModal({
@@ -78,28 +156,24 @@ function NewFolderModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div
-        className="w-full max-w-xs rounded-2xl p-6"
-        style={{ background: "var(--panel-background)", border: "1px solid var(--border-strong)", boxShadow: "var(--shadow)" }}
-      >
-        <div className="flex items-center justify-between mb-5">
-          <div className="text-sm font-semibold theme-text-strong flex items-center gap-2">
-            <FolderPlus size={16} style={{ color: "var(--accent)" }} />
+      <div className="w-full max-w-sm rounded-lg p-5 bg-[#09090b] border border-white/10 shadow-2xl text-zinc-200">
+        <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/10">
+          <div className="text-xs font-semibold uppercase tracking-wider text-zinc-100 flex items-center gap-2 font-mono">
+            <FolderPlus size={14} className="text-zinc-300" />
             New Folder
           </div>
-          <button onClick={onClose} className="theme-muted hover:opacity-70 transition" type="button">
-            <X size={16} />
+          <button onClick={onClose} className="text-zinc-400 hover:text-white p-1 rounded transition-colors" type="button">
+            <X size={14} />
           </button>
         </div>
 
+        <div className="text-xs text-zinc-400 mb-2 font-mono">Folder name:</div>
         <input
           ref={inputRef}
-          className="w-full rounded-2xl px-4 py-2.5 text-sm outline-none mb-5 theme-text transition hover:border-[var(--border-strong)]"
-          style={{ background: "var(--input-background)", border: "1px solid var(--border)" }}
+          className="w-full rounded bg-[#000000] border border-white/10 px-3 py-2 text-xs font-mono text-zinc-100 outline-none mb-4 focus:border-zinc-400 transition-colors"
           placeholder="e.g. components"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -111,21 +185,19 @@ function NewFolderModal({
 
         <div className="flex gap-2 justify-end">
           <button
-            className="rounded-2xl px-4 py-2 text-sm transition hover:opacity-70 hover:bg-[var(--control-hover)]"
-            style={{ background: "var(--control-background)", border: "1px solid var(--border)", color: "var(--text)" }}
+            className="rounded px-3 py-1.5 text-xs text-zinc-400 hover:text-white border border-white/10 hover:bg-zinc-800 transition-colors"
             onClick={onClose}
             type="button"
           >
             Cancel
           </button>
           <button
-            className="rounded-2xl px-5 py-2 text-sm font-semibold transition hover:scale-105 hover:opacity-90 disabled:opacity-40 disabled:hover:scale-100"
+            className="rounded px-3 py-1.5 text-xs font-medium bg-zinc-100 hover:bg-white text-zinc-950 transition-colors disabled:opacity-40"
             disabled={!name.trim()}
-            style={{ background: "var(--action-background)", color: "var(--action-foreground)" }}
             onClick={handleSubmit}
             type="button"
           >
-            Create
+            Create Folder
           </button>
         </div>
       </div>
@@ -160,28 +232,23 @@ function RenameModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div
-        className="w-full max-w-xs rounded-2xl p-6"
-        style={{ background: "var(--panel-background)", border: "1px solid var(--border-strong)", boxShadow: "var(--shadow)" }}
-      >
-        <div className="flex items-center justify-between mb-5">
-          <div className="text-sm font-semibold theme-text-strong flex items-center gap-2">
-            <FileCode2 size={16} style={{ color: "var(--accent)" }} />
+      <div className="w-full max-w-sm rounded-lg p-5 bg-[#09090b] border border-white/10 shadow-2xl text-zinc-200">
+        <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/10">
+          <div className="text-xs font-semibold uppercase tracking-wider text-zinc-100 flex items-center gap-2 font-mono">
+            <FileCode2 size={14} className="text-zinc-300" />
             Rename
           </div>
-          <button onClick={onClose} className="theme-muted hover:opacity-70 transition" type="button">
-            <X size={16} />
+          <button onClick={onClose} className="text-zinc-400 hover:text-white p-1 rounded transition-colors" type="button">
+            <X size={14} />
           </button>
         </div>
 
         <input
           ref={inputRef}
-          className="w-full rounded-2xl px-4 py-2.5 text-sm outline-none mb-5 theme-text transition hover:border-[var(--border-strong)]"
-          style={{ background: "var(--input-background)", border: "1px solid var(--border)" }}
+          className="w-full rounded bg-[#000000] border border-white/10 px-3 py-2 text-xs font-mono text-zinc-100 outline-none mb-4 focus:border-zinc-400 transition-colors"
           placeholder="New name..."
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -193,17 +260,15 @@ function RenameModal({
 
         <div className="flex gap-2 justify-end">
           <button
-            className="rounded-2xl px-4 py-2 text-sm transition hover:opacity-70 hover:bg-[var(--control-hover)]"
-            style={{ background: "var(--control-background)", border: "1px solid var(--border)", color: "var(--text)" }}
+            className="rounded px-3 py-1.5 text-xs text-zinc-400 hover:text-white border border-white/10 hover:bg-zinc-800 transition-colors"
             onClick={onClose}
             type="button"
           >
             Cancel
           </button>
           <button
-            className="rounded-2xl px-5 py-2 text-sm font-semibold transition hover:scale-105 hover:opacity-90 disabled:opacity-40 disabled:hover:scale-100"
+            className="rounded px-3 py-1.5 text-xs font-medium bg-zinc-100 hover:bg-white text-zinc-950 transition-colors disabled:opacity-40"
             disabled={!name.trim() || name.trim() === initialName}
-            style={{ background: "var(--action-background)", color: "var(--action-foreground)" }}
             onClick={handleSubmit}
             type="button"
           >
@@ -214,32 +279,6 @@ function RenameModal({
     </div>
   );
 }
-
-const buildTree = (folders: string[], files: ExplorerFile[], parent = "", depth = 0): TreeItem[] => {
-  const folderItems = folders
-    .filter((folder) => getWorkspaceParentPath(folder) === parent)
-    .sort((a, b) => a.localeCompare(b))
-    .flatMap((folder) => [
-      { depth, kind: "folder" as const, path: folder },
-      ...buildTree(folders, files, folder, depth + 1),
-    ]);
-
-  const fileItems = files
-    .filter((file) => getWorkspaceParentPath(file.path) === parent)
-    .sort((a, b) => a.path.localeCompare(b.path))
-    .map(
-      (file) =>
-        ({
-          depth,
-          id: file.id,
-          kind: "file" as const,
-          languageId: file.languageId,
-          path: file.path,
-        }) satisfies TreeItem,
-    );
-
-  return [...folderItems, ...fileItems];
-};
 
 /* ── Move modal ─────────────────────────────────────────── */
 type MoveTarget = { kind: "file"; id: string; path: string } | { kind: "folder"; path: string } | null;
@@ -259,46 +298,38 @@ function MoveModal({
 
   if (!target) return null;
 
-  const label = target.kind === "file"
-    ? getWorkspaceBaseName(target.path)
-    : getWorkspaceBaseName(target.path);
-
+  const label = getWorkspaceBaseName(target.path);
   const availableFolders = ["(root)", ...folders.filter((f) =>
     f !== target.path && !f.startsWith(`${target.path}/`)
   )];
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div
-        className="w-full max-w-sm rounded-2xl p-6"
-        style={{ background: "var(--panel-background)", border: "1px solid var(--border-strong)", boxShadow: "var(--shadow)" }}
-      >
-        <div className="flex items-center justify-between mb-5">
-          <div className="text-sm font-semibold theme-text-strong flex items-center gap-2">
-            <MoveRight size={16} style={{ color: "var(--accent)" }} />
+      <div className="w-full max-w-sm rounded-lg p-5 bg-[#09090b] border border-white/10 shadow-2xl text-zinc-200">
+        <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/10">
+          <div className="text-xs font-semibold uppercase tracking-wider text-zinc-100 flex items-center gap-2 font-mono">
+            <MoveRight size={14} className="text-zinc-300" />
             Move &quot;{label}&quot;
           </div>
-          <button onClick={onClose} className="theme-muted hover:opacity-70 transition" type="button">
-            <X size={16} />
+          <button onClick={onClose} className="text-zinc-400 hover:text-white p-1 rounded transition-colors" type="button">
+            <X size={14} />
           </button>
         </div>
 
-        <div className="text-sm theme-muted mb-3">Select destination folder:</div>
+        <div className="text-xs text-zinc-400 mb-2 font-mono">Select destination folder:</div>
 
-        <div className="space-y-1.5 max-h-48 overflow-y-auto scrollbar-thin pr-1">
+        <div className="space-y-1 max-h-48 overflow-y-auto scrollbar-thin pr-1 mb-4">
           {availableFolders.map((folder) => (
             <button
               key={folder}
-              className="w-full rounded-2xl px-4 py-2.5 text-left text-sm transition hover:scale-[1.01]"
-              style={{
-                background: selected === folder ? "var(--accent-soft)" : "var(--control-background)",
-                border: selected === folder ? "1px solid var(--accent)" : "1px solid var(--border)",
-                color: selected === folder ? "var(--accent)" : "var(--text)",
-              }}
+              className={`w-full rounded px-3 py-1.5 text-left text-xs font-mono transition-colors ${
+                selected === folder
+                  ? "bg-zinc-800 text-zinc-100 border border-zinc-500"
+                  : "bg-black/50 text-zinc-400 border border-white/5 hover:bg-zinc-900 hover:text-zinc-200"
+              }`}
               onClick={() => setSelected(folder)}
               type="button"
             >
@@ -307,23 +338,21 @@ function MoveModal({
           ))}
         </div>
 
-        <div className="mt-5 flex gap-2 justify-end">
+        <div className="flex gap-2 justify-end">
           <button
-            className="rounded-2xl px-4 py-2 text-sm transition hover:bg-[var(--control-hover)]"
-            style={{ background: "var(--control-background)", border: "1px solid var(--border)", color: "var(--text)" }}
+            className="rounded px-3 py-1.5 text-xs text-zinc-400 hover:text-white border border-white/10 hover:bg-zinc-800 transition-colors"
             onClick={onClose}
             type="button"
           >
             Cancel
           </button>
           <button
-            className="rounded-2xl px-5 py-2 text-sm font-semibold transition hover:scale-105 hover:opacity-90 disabled:opacity-40 disabled:hover:scale-100"
+            className="rounded px-3 py-1.5 text-xs font-medium bg-zinc-100 hover:bg-white text-zinc-950 transition-colors disabled:opacity-40"
             disabled={!selected}
-            style={{ background: "var(--action-background)", color: "var(--action-foreground)" }}
             onClick={() => { if (selected) { onMove(selected === "(root)" ? "" : selected); onClose(); } }}
             type="button"
           >
-            Move here
+            Move Here
           </button>
         </div>
       </div>
@@ -357,46 +386,64 @@ function ContextMenu({
   return (
     <div
       ref={ref}
-      className="absolute right-0 top-10 z-20 rounded-2xl py-2 min-w-[150px]"
-      style={{
-        background: "var(--panel-background)",
-        border: "1px solid var(--border-strong)",
-        boxShadow: "var(--shadow)",
-      }}
+      className="absolute right-1 top-6 z-30 rounded border border-white/10 bg-[#09090b] shadow-xl py-1 min-w-[130px] font-mono text-xs"
     >
       <button
-        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm theme-text transition hover:bg-[var(--control-hover)]"
+        className="flex w-full items-center gap-2 px-3 py-1.5 text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors text-left"
         onClick={(e) => { e.stopPropagation(); onRename(); onClose(); }}
         type="button"
       >
-        <FileCode2 size={15} style={{ color: "var(--accent)" }} />
+        <FileCode2 size={13} className="text-zinc-400" />
         Rename
       </button>
       <button
-        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm theme-text transition hover:bg-[var(--control-hover)]"
+        className="flex w-full items-center gap-2 px-3 py-1.5 text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors text-left"
         onClick={(e) => { e.stopPropagation(); onMove(); onClose(); }}
         type="button"
       >
-        <MoveRight size={15} style={{ color: "var(--accent)" }} />
+        <MoveRight size={13} className="text-zinc-400" />
         Move to…
       </button>
       <button
-        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm transition hover:bg-[var(--control-hover)]"
-        style={{ color: "#f43f5e" }}
+        className="flex w-full items-center gap-2 px-3 py-1.5 text-rose-400 hover:text-rose-300 hover:bg-zinc-800 transition-colors text-left"
         onClick={(e) => { e.stopPropagation(); onDelete(); onClose(); }}
         type="button"
       >
-        <Trash2 size={15} />
+        <Trash2 size={13} />
         Delete
       </button>
     </div>
   );
 }
 
+const buildTree = (folders: string[], files: ExplorerFile[], parent = "", depth = 0): TreeItem[] => {
+  const folderItems = folders
+    .filter((folder) => getWorkspaceParentPath(folder) === parent)
+    .sort((a, b) => a.localeCompare(b))
+    .flatMap((folder) => [
+      { depth, kind: "folder" as const, path: folder },
+      ...buildTree(folders, files, folder, depth + 1),
+    ]);
+
+  const fileItems = files
+    .filter((file) => getWorkspaceParentPath(file.path) === parent)
+    .sort((a, b) => a.path.localeCompare(b.path))
+    .map(
+      (file) =>
+        ({
+          depth,
+          id: file.id,
+          kind: "file" as const,
+          languageId: file.languageId,
+          path: file.path,
+        }) satisfies TreeItem,
+    );
+
+  return [...folderItems, ...fileItems];
+};
+
 export default function FileExplorer({
   activeFileId,
-  cwd,
-  draftLanguage,
   draftName,
   files,
   folders,
@@ -404,7 +451,6 @@ export default function FileExplorer({
   onCreateFolder,
   onDeleteFile,
   onDeleteFolder,
-  onDraftLanguageChange,
   onDraftNameChange,
   onImportFiles,
   onImportFolder,
@@ -413,13 +459,17 @@ export default function FileExplorer({
   onRenameFile,
   onRenameFolder,
   onSelectFile,
+  onOpenSettings,
+  currentLanguageLabel,
 }: FileExplorerProps) {
   const items = buildTree(folders, files);
-  const [storageLabel, setStorageLabel] = useState("mounting local VFS");
+  const [storageLabel, setStorageLabel] = useState("local");
   const [contextItem, setContextItem] = useState<TreeItem | null>(null);
   const [moveTarget, setMoveTarget] = useState<MoveTarget>(null);
   const [renameTarget, setRenameTarget] = useState<TreeItem | null>(null);
+  const [showNewFileModal, setShowNewFileModal] = useState(false);
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
+  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let mounted = true;
@@ -431,6 +481,15 @@ export default function FileExplorer({
       .catch(() => { if (!mounted) return; setStorageLabel("local"); });
     return () => { mounted = false; };
   }, []);
+
+  const toggleFolder = (folderPath: string) => {
+    setCollapsedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderPath)) next.delete(folderPath);
+      else next.add(folderPath);
+      return next;
+    });
+  };
 
   const openMove = (item: TreeItem) => {
     if (item.kind === "file") {
@@ -449,191 +508,185 @@ export default function FileExplorer({
     }
   };
 
+  // Filter items based on collapsed folders
+  const visibleItems = items.filter((item) => {
+    let parent = getWorkspaceParentPath(item.path);
+    while (parent) {
+      if (collapsedFolders.has(parent)) return false;
+      parent = getWorkspaceParentPath(parent);
+    }
+    return true;
+  });
+
   return (
-    <div
-      className="flex h-full flex-col"
-      style={{ borderRight: "1px solid var(--border)", background: "var(--surface-soft)" }}
-    >
-      {/* ── Top controls ─────────────────────────────────── */}
-      <div className="p-4" style={{ borderBottom: "1px solid var(--border)" }}>
-        <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest theme-text-strong mb-4">
-          <FolderTree size={16} style={{ color: "var(--accent)" }} />
+    <aside className="w-56 shrink-0 border-r border-white/10 bg-[#09090b] flex flex-col h-full overflow-hidden select-none font-mono">
+      {/* ── Explorer Header: Sleek Monochrome Action Bar ── */}
+      <div className="h-8 px-2.5 border-b border-white/10 flex items-center justify-between text-xs text-zinc-400 shrink-0 bg-[#000000]">
+        <span className="font-semibold tracking-wider text-[10px] uppercase text-zinc-400 font-mono">
           Explorer
-        </div>
+        </span>
 
-        <div className="text-xs theme-muted mb-2">Dir: {formatWorkspacePath(cwd)}</div>
-        <div
-          className="mb-4 rounded-2xl px-3 py-1.5 text-xs theme-muted"
-          style={{ background: "var(--control-background)", border: "1px solid var(--border)" }}
-        >
-          Storage: {storageLabel}
-        </div>
-
-        {/* New file name + language */}
-        <div className="space-y-3">
-          <input
-            className="w-full rounded-2xl px-4 py-2.5 text-sm outline-none theme-text transition hover:border-[var(--border-strong)]"
-            style={{ background: "var(--input-background)", border: "1px solid var(--border)" }}
-            onChange={(e) => onDraftNameChange(e.target.value)}
-            placeholder="src/main"
-            value={draftName}
-          />
-          <select
-            className="w-full rounded-2xl px-4 py-2.5 text-sm outline-none theme-text transition hover:border-[var(--border-strong)] cursor-pointer"
-            style={{ background: "var(--input-background)", border: "1px solid var(--border)" }}
-            onChange={(e) => onDraftLanguageChange(e.target.value)}
-            value={draftLanguage}
+        {/* Sleek Monochrome Icon Actions */}
+        <div className="flex items-center gap-0.5">
+          {/* New File */}
+          <button
+            onClick={() => setShowNewFileModal(true)}
+            className="p-1 text-zinc-400 hover:text-white hover:bg-zinc-800/80 rounded transition-colors duration-100"
+            title="New File"
+            type="button"
           >
-            {languageGroups.map((group) => (
-              <optgroup key={group.label} label={group.label}>
-                {group.items.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.label}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
+            <FilePlus2 size={13} strokeWidth={1.75} />
+          </button>
 
-          {/* Action buttons */}
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              className="inline-flex items-center justify-center gap-2 rounded-2xl py-2.5 text-sm font-semibold transition hover:scale-[1.02] hover:opacity-90"
-              style={{ background: "var(--action-background)", color: "var(--action-foreground)" }}
-              onClick={onCreateFile}
-              type="button"
-            >
-              <FilePlus2 size={16} />
-              New file
-            </button>
-            <button
-              className="inline-flex items-center justify-center gap-2 rounded-2xl py-2.5 text-sm font-medium transition hover:scale-[1.02] hover:opacity-90"
-              style={{ background: "var(--action-background)", color: "var(--action-foreground)" }}
-              onClick={() => setShowNewFolderModal(true)}
-              type="button"
-            >
-              <FolderPlus size={16} />
-              New folder
-            </button>
-            <button
-              className="inline-flex items-center justify-center gap-2 rounded-2xl py-2.5 text-sm font-medium transition hover:scale-[1.02] hover:opacity-90"
-              style={{ background: "var(--action-background)", color: "var(--action-foreground)" }}
-              onClick={onImportFiles}
-              type="button"
-            >
-              <Upload size={16} />
-              Import files
-            </button>
-            <button
-              className="inline-flex items-center justify-center gap-2 rounded-2xl py-2.5 text-sm font-medium transition hover:scale-[1.02] hover:opacity-90"
-              style={{ background: "var(--action-background)", color: "var(--action-foreground)" }}
-              onClick={onImportFolder}
-              type="button"
-            >
-              <Upload size={16} />
-              Import folder
-            </button>
-          </div>
+          {/* New Folder */}
+          <button
+            onClick={() => setShowNewFolderModal(true)}
+            className="p-1 text-zinc-400 hover:text-white hover:bg-zinc-800/80 rounded transition-colors duration-100"
+            title="New Folder"
+            type="button"
+          >
+            <FolderPlus size={13} strokeWidth={1.75} />
+          </button>
+
+          {/* Import Files */}
+          <button
+            onClick={onImportFiles}
+            className="p-1 text-zinc-400 hover:text-white hover:bg-zinc-800/80 rounded transition-colors duration-100"
+            title="Import Files"
+            type="button"
+          >
+            <Upload size={13} strokeWidth={1.75} />
+          </button>
+
+          {/* Import Folder */}
+          <button
+            onClick={onImportFolder}
+            className="p-1 text-zinc-400 hover:text-white hover:bg-zinc-800/80 rounded transition-colors duration-100"
+            title="Import Folder"
+            type="button"
+          >
+            <FolderTree size={13} strokeWidth={1.75} />
+          </button>
         </div>
       </div>
 
-      {/* ── File tree ─────────────────────────────────────── */}
-      <div className="scrollbar-thin flex-1 overflow-y-auto p-3">
-        <div className="space-y-1">
-          {items.length ? (
-            items.map((item) => {
-              const paddingLeft = 12 + item.depth * 16;
-              const isFolder = item.kind === "folder";
-              const isActive = item.kind === "file" && item.id === activeFileId;
-              const isCtxOpen = contextItem === item;
+      {/* ── File Tree (Compact, JetBrains Mono, Fast Hover) ── */}
+      <div className="scrollbar-thin flex-1 overflow-y-auto p-1 space-y-0.5 text-xs">
+        {visibleItems.length ? (
+          visibleItems.map((item) => {
+            const isFolder = item.kind === "folder";
+            const isActive = item.kind === "file" && item.id === activeFileId;
+            const isCollapsed = isFolder && collapsedFolders.has(item.path);
+            const isCtxOpen = contextItem === item;
+            const paddingLeft = 6 + item.depth * 12;
 
-              return (
-                <div
-                  className="relative flex items-center justify-between rounded-2xl px-2 py-2 group transition hover:bg-[var(--control-hover)]"
-                  key={isFolder ? item.path : item.id}
-                  style={{
-                    paddingLeft,
-                    background: isActive ? "var(--control-hover)" : "transparent",
+            return (
+              <div
+                className={`relative flex items-center justify-between rounded group text-left transition-colors duration-100 ${
+                  isActive
+                    ? "bg-zinc-800/70 text-zinc-100 border-l-2 border-zinc-200 font-medium"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/30"
+                }`}
+                key={isFolder ? item.path : item.id}
+                style={{ paddingLeft }}
+              >
+                {/* Main clickable button */}
+                <button
+                  className="min-w-0 flex-1 py-1 pr-1 flex items-center gap-1.5 truncate text-left"
+                  onClick={() => {
+                    if (isFolder) toggleFolder(item.path);
+                    else onSelectFile((item as { id: string }).id);
                   }}
+                  type="button"
                 >
-                  {/* Main clickable area */}
-                  <button
-                    className="min-w-0 flex-1 text-left"
-                    onClick={() => {
-                      if (!isFolder) onSelectFile((item as { id: string }).id);
-                    }}
-                    type="button"
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      {isFolder ? (
-                        <Folder size={16} style={{ color: "var(--accent)", flexShrink: 0 }} />
+                  {isFolder ? (
+                    <>
+                      {isCollapsed ? (
+                        <ChevronRight size={11} className="text-zinc-500 shrink-0" />
                       ) : (
-                        <FileCode2 size={16} style={{ color: isActive ? "var(--accent)" : "var(--muted)", flexShrink: 0 }} />
+                        <ChevronDown size={11} className="text-zinc-500 shrink-0" />
                       )}
-                      <span
-                        className="truncate text-sm font-medium transition"
-                        style={{ color: isActive ? "var(--accent)" : "var(--text-strong)" }}
-                      >
-                        {getWorkspaceBaseName(item.path)}
-                      </span>
-                    </div>
-                    <div className="truncate pl-6 text-xs theme-muted mt-0.5" style={{ fontSize: "11px" }}>
-                      {formatWorkspacePath(item.path)}
-                    </div>
-                  </button>
-
-                  {/* ⋮ menu button */}
-                  <button
-                    className="relative shrink-0 rounded-xl p-1.5 opacity-0 group-hover:opacity-100 transition hover:bg-[var(--surface-strong)]"
-                    style={{ color: "var(--muted)" }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setContextItem(isCtxOpen ? null : item);
-                    }}
-                    type="button"
-                  >
-                    <MoreHorizontal size={16} />
-                  </button>
-
-                  {/* Context menu */}
-                  {isCtxOpen && (
-                    <ContextMenu
-                      item={item}
-                      onRename={() => { setRenameTarget(item); setContextItem(null); }}
-                      onDelete={() => {
-                        if (isFolder) onDeleteFolder(item.path);
-                        else onDeleteFile((item as { id: string }).id);
-                        setContextItem(null);
-                      }}
-                      onMove={() => { openMove(item); setContextItem(null); }}
-                      onClose={() => setContextItem(null)}
-                    />
+                      <Folder size={13} className="text-zinc-400 shrink-0 group-hover:text-zinc-200 transition-colors" />
+                    </>
+                  ) : (
+                    <FileCode2 size={13} className={`shrink-0 ${isActive ? "text-zinc-200" : "text-zinc-500"}`} />
                   )}
-                </div>
-              );
-            })
-          ) : (
-            <div
-              className="rounded-2xl px-4 py-6 text-sm theme-muted text-center"
-              style={{ border: "1px dashed var(--border)" }}
-            >
-              Import a folder or create files to populate the workspace tree.
-            </div>
-          )}
-        </div>
+                  <span className="truncate text-[11px]">
+                    {getWorkspaceBaseName(item.path)}
+                  </span>
+                </button>
+
+                {/* Context Menu Trigger */}
+                <button
+                  className="p-1 opacity-0 group-hover:opacity-100 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white transition-opacity duration-100 shrink-0 mr-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setContextItem(isCtxOpen ? null : item);
+                  }}
+                  title="Options"
+                  type="button"
+                >
+                  <MoreHorizontal size={12} />
+                </button>
+
+                {/* Context menu popup */}
+                {isCtxOpen && (
+                  <ContextMenu
+                    item={item}
+                    onRename={() => { setRenameTarget(item); setContextItem(null); }}
+                    onDelete={() => {
+                      if (isFolder) onDeleteFolder(item.path);
+                      else onDeleteFile((item as { id: string }).id);
+                      setContextItem(null);
+                    }}
+                    onMove={() => { openMove(item); setContextItem(null); }}
+                    onClose={() => setContextItem(null)}
+                  />
+                )}
+              </div>
+            );
+          })
+        ) : (
+          <div className="py-6 px-3 text-center text-[10px] text-zinc-600 font-mono">
+            Empty workspace. Create a file or folder above.
+          </div>
+        )}
       </div>
 
-      {/* ── Move modal ────────────────────────────────────── */}
-      {moveTarget && (
-        <MoveModal
-          target={moveTarget}
-          folders={folders}
-          onMove={handleMove}
-          onClose={() => setMoveTarget(null)}
+      {/* ── Sidebar Footer: Status & Runtime Pill ── */}
+      <div className="h-8 px-2.5 border-t border-white/10 bg-[#000000] flex items-center justify-between text-[10px] text-zinc-500 shrink-0 font-mono">
+        <button
+          onClick={onOpenSettings}
+          className="flex items-center gap-1.5 hover:text-zinc-300 transition-colors truncate"
+          title="Storage Backend & Settings"
+          type="button"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/80" />
+          <span className="truncate">{storageLabel}</span>
+        </button>
+        <span className="text-zinc-700">|</span>
+        <button
+          onClick={onOpenSettings}
+          className="hover:text-zinc-300 transition-colors text-zinc-400 truncate max-w-[80px]"
+          title="Runtime Settings"
+          type="button"
+        >
+          {currentLanguageLabel || "Runtime"}
+        </button>
+      </div>
+
+      {/* ── Modals ── */}
+      {showNewFileModal && (
+        <NewFileModal
+          initialName={draftName}
+          onConfirm={(name) => {
+            onDraftNameChange(name);
+            onCreateFile();
+          }}
+          onClose={() => setShowNewFileModal(false)}
         />
       )}
 
-      {/* ── New Folder modal ──────────────────────────────── */}
       {showNewFolderModal && (
         <NewFolderModal
           onConfirm={(folderName) => onCreateFolder(folderName)}
@@ -641,7 +694,6 @@ export default function FileExplorer({
         />
       )}
 
-      {/* ── Rename modal ──────────────────────────────────── */}
       {renameTarget && (
         <RenameModal
           initialName={getWorkspaceBaseName(renameTarget.path)}
@@ -652,6 +704,15 @@ export default function FileExplorer({
           onClose={() => setRenameTarget(null)}
         />
       )}
-    </div>
+
+      {moveTarget && (
+        <MoveModal
+          target={moveTarget}
+          folders={folders}
+          onMove={handleMove}
+          onClose={() => setMoveTarget(null)}
+        />
+      )}
+    </aside>
   );
 }

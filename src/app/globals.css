@@ -294,7 +294,7 @@ textarea {
 }
 
 /* ─── Tailwind overrides for theme compatibility ─── */
-:root[data-theme="light"] .text-white,
+:root[data-theme="light"] .text-disabled-white,
 :root[data-theme="light"] .text-slate-100,
 :root[data-theme="light"] .text-slate-200,
 :root[data-theme="light"] .text-slate-300,
@@ -312,7 +312,7 @@ textarea {
 }
 
 /* Legacy aliases for old class names still used in editor */
-:root[data-theme="light-red"] .text-white,
+:root[data-theme="light-red"] .text-disabled-white,
 :root[data-theme="light-red"] .text-slate-100,
 :root[data-theme="light-red"] .text-slate-200,
 :root[data-theme="light-red"] .text-slate-300,

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -5,15 +6,14 @@ import {
   AlertTriangle,
   Clock,
   Globe,
-  Play,
   RotateCcw,
-  TerminalSquare,
+  Trash2,
 } from "lucide-react";
 import { type ExecutionDetails } from "@/hooks/useCompiler";
 import { countBufferedStdinLines } from "@/lib/execution";
 import { formatWorkspacePath, type TerminalHistoryEntry } from "@/lib/workspace";
 
-type TerminalTab = "output" | "terminal" | "ports";
+type TerminalTab = "terminal" | "output" | "ports";
 
 export type OutputTranscriptEntry = {
   id: string;
@@ -44,6 +44,8 @@ type TerminalBoxProps = {
   pendingInteractiveInput: string;
   stdin: string;
   transcript: OutputTranscriptEntry[];
+  onClearOutput?: () => void;
+  onResetSplit?: () => void;
 };
 
 type RuntimeStdinPrompt = {
@@ -54,21 +56,11 @@ type RuntimeStdinPrompt = {
   sharedBuffer: SharedArrayBuffer;
 };
 
-type OutputSectionProps = {
-  label: string;
-  tone?: "danger" | "default" | "success";
-  value: string;
-};
-
 const tabs: Array<{ id: TerminalTab; label: string }> = [
-  { id: "output", label: "Output" },
   { id: "terminal", label: "Terminal" },
+  { id: "output", label: "Output" },
   { id: "ports", label: "Ports" },
 ];
-
-/* ── Button styles using CSS vars ─────────────────────────── */
-const terminalButtonBase =
-  "inline-flex items-center justify-center gap-2 rounded-sm border px-4 py-2 text-sm font-medium transition outline-none disabled:cursor-not-allowed disabled:opacity-50";
 
 const stdinHeaderBytes = 32;
 const stdinState = 0;
@@ -79,56 +71,26 @@ const stdinResponseReady = 2;
 const stdinReadyEventName = "voidlab:stdin-response";
 const stdinRequestEventName = "voidlab:stdin-request";
 
-function OutputSection({ label, tone = "default", value }: OutputSectionProps) {
-  if (!value) return null;
-
-  const style =
-    tone === "danger"
-      ? { background: "rgba(225,29,72,0.06)", border: "1px solid rgba(225,29,72,0.25)", color: "var(--text)" }
-      : tone === "success"
-        ? { background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.25)", color: "var(--text)" }
-        : { background: "var(--surface-soft)", border: "1px solid var(--border)", color: "var(--text)" };
-
-  return (
-    <div className="rounded-sm p-4" style={style}>
-      <div className="mb-2 text-xs uppercase tracking-widest theme-muted">{label}</div>
-      <pre className="whitespace-pre-wrap break-words font-mono text-sm leading-7 theme-text">{value}</pre>
-    </div>
-  );
-}
-
-function MetricCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div
-      className="rounded-sm p-3"
-      style={{ background: "var(--surface-soft)", border: "1px solid var(--border)" }}
-    >
-      <div className="text-xs uppercase tracking-widest theme-muted">{label}</div>
-      <div className="mt-2 text-sm font-semibold theme-text-strong">{value}</div>
-    </div>
-  );
-}
-
 function TranscriptLine({ entry }: { entry: OutputTranscriptEntry }) {
   const colorMap: Record<string, string> = {
-    error: "#f43f5e",
-    timeout: "#f59e0b",
-    input: "var(--accent)",
-    prompt: "#f59e0b",
-    success: "#10b981",
-    stdout: "var(--text)",
-    status: "var(--muted)",
+    error: "#f87171",
+    timeout: "#fbbf24",
+    input: "#60a5fa",
+    prompt: "#fbbf24",
+    success: "#34d399",
+    stdout: "#e4e4e7",
+    status: "#71717a",
   };
 
-  const color = colorMap[entry.tone] ?? "var(--muted)";
+  const color = colorMap[entry.tone] ?? "#a1a1aa";
   const Icon = entry.tone === "timeout" ? Clock : null;
 
   return (
     <div
-      className="flex items-start gap-2 whitespace-pre-wrap break-words font-mono text-sm leading-7"
+      className="flex items-start gap-1.5 whitespace-pre-wrap break-words font-mono text-[11px] leading-5"
       style={{ color }}
     >
-      {Icon && <Icon className="mt-1 shrink-0 opacity-80" size={13} />}
+      {Icon && <Icon className="mt-0.5 shrink-0 opacity-80" size={11} />}
       <span>{entry.text}</span>
     </div>
   );
@@ -151,8 +113,10 @@ export default function TerminalBox({
   pendingInteractiveInput,
   stdin,
   transcript,
+  onClearOutput,
+  onResetSplit,
 }: TerminalBoxProps) {
-  const [activeTab, setActiveTab] = useState<TerminalTab>("output");
+  const [activeTab, setActiveTab] = useState<TerminalTab>("terminal");
   const [runtimeStdinInput, setRuntimeStdinInput] = useState("");
   const [runtimeStdinPrompt, setRuntimeStdinPrompt] = useState<RuntimeStdinPrompt | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
@@ -171,6 +135,13 @@ export default function TerminalBox({
     runtimeStdinPrompt
       ? "Input required"
       : execution?.status.description ?? (interactiveSession.active ? "Input required" : loading ? "Running" : "Idle");
+
+  // When execution starts or produces output, automatically switch to Output if there's error or execution
+  useEffect(() => {
+    if (loading || execution || error) {
+      setActiveTab("output");
+    }
+  }, [loading, execution, error]);
 
   const submitRuntimeStdin = () => {
     if (!runtimeStdinPrompt) return;
@@ -235,362 +206,254 @@ export default function TerminalBox({
   }, []);
 
   return (
-    <section
-      className="overflow-hidden rounded-sm panel"
-    >
-      {/* ── Header ─────────────────────────────────────────── */}
-      <div
-        className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
-        style={{ borderBottom: "1px solid var(--border)" }}
-      >
+    <section className="h-full flex flex-col bg-[#000000] border-t border-white/10 overflow-hidden font-mono select-none">
+      {/* ── Terminal Header: Slim Tabs & Controls ── */}
+      <div className="h-7 px-2.5 border-b border-white/10 bg-[#0e0e11] flex items-center justify-between shrink-0 text-xs font-mono">
+        {/* Left: Tab Switchers */}
         <div className="flex items-center gap-3">
-          <TerminalSquare size={15} style={{ color: "var(--accent)" }} />
-          <span className="text-sm font-semibold theme-text-strong">Unified console</span>
-          <span className="hidden text-xs uppercase tracking-widest theme-muted sm:block">
-            {latestStatus}
-          </span>
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`pb-0.5 text-[11px] font-mono transition-colors duration-100 ${
+                activeTab === tab.id
+                  ? "font-semibold text-zinc-100 border-b border-zinc-100"
+                  : "text-zinc-500 hover:text-zinc-300"
+              }`}
+              type="button"
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Tab switcher */}
-          <div
-            className="inline-flex rounded-sm p-0.5"
-            style={{ background: "var(--control-background)", border: "1px solid var(--border)" }}
-          >
-            {tabs.map((tab) => (
-              <button
-                className="rounded-sm px-3 py-1.5 text-xs font-medium uppercase tracking-widest transition"
-                style={
-                  activeTab === tab.id
-                    ? {
-                        background: "var(--action-background)",
-                        color: "var(--action-foreground)",
-                      }
-                    : { color: "var(--muted)" }
-                }
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                type="button"
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+        {/* Right: Status & Tools */}
+        <div className="flex items-center gap-2">
+          {/* Active Status Badge */}
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-zinc-900 text-zinc-400 border border-white/10">
+            <span
+              className={`w-1 h-1 rounded-full ${
+                loading ? "bg-amber-400 animate-ping" : "bg-emerald-500"
+              }`}
+            />
+            {loading ? "RUNNING" : "IDLE"}
+          </span>
 
-          {/* Run button */}
-          <button
-            className={terminalButtonBase}
-            style={{
-              background: "var(--action-background)",
-              borderColor: "var(--action-background)",
-              color: "var(--action-foreground)",
-              boxShadow: "var(--action-shadow)",
-            }}
-            disabled={loading && !runtimeStdinPrompt}
-            onClick={runtimeStdinPrompt ? submitRuntimeStdin : onRun}
-            type="button"
-          >
-            <Play size={14} />
-            {runtimeStdinPrompt
-              ? "Send input"
-              : loading
-                ? "Running"
-                : interactiveSession.active
-                  ? "Run with input"
-                  : "Run"}
-          </button>
+          {/* Clear Terminal / Output */}
+          {onClearOutput && (
+            <button
+              onClick={onClearOutput}
+              className="p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-zinc-200 transition-colors"
+              title="Clear Terminal / Output"
+              type="button"
+            >
+              <Trash2 size={11} />
+            </button>
+          )}
+
+          {/* Reset 75/25 Split */}
+          {onResetSplit && (
+            <button
+              onClick={onResetSplit}
+              className="p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-zinc-200 transition-colors"
+              title="Reset 75/25 Split"
+              type="button"
+            >
+              <RotateCcw size={11} />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* ── Output tab ─────────────────────────────────────── */}
-      {activeTab === "output" ? (
-        <div className="p-4">
-          {/* Metrics */}
-          <div className="grid gap-2 md:grid-cols-4">
-            <MetricCard label="Status" value={latestStatus} />
-            <MetricCard
-              label="Input lines"
-              value={stagedInputLines ? `${stagedInputLines} line${stagedInputLines === 1 ? "" : "s"}` : "none"}
-            />
-            <MetricCard label="Time" value={execution?.time ? `${execution.time} sec` : loading ? "running" : "n/a"} />
-            <MetricCard
-              label="Memory"
-              value={
-                execution?.memory !== null && execution?.memory !== undefined
-                  ? `${execution.memory} KB`
-                  : "n/a"
-              }
-            />
-          </div>
-
-          {/* Transcript */}
-          <div
-            className="mt-3 rounded-sm p-4"
-            style={{ background: "var(--terminal-bg)", border: "1px solid var(--border)" }}
-          >
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <div className="text-xs uppercase tracking-widest theme-muted">Execution stream</div>
-              <div className="truncate text-xs theme-muted">{formatWorkspacePath(activeFilePath)}</div>
+      {/* ── Terminal Content Stream ── */}
+      <div className="flex-1 overflow-y-auto p-2.5 space-y-1 font-mono text-[11px] leading-5 text-zinc-300 bg-[#000000] scrollbar-thin">
+        {/* TAB 1: Terminal Command History */}
+        {activeTab === "terminal" && (
+          <div>
+            <div className="text-zinc-600 pb-1">
+              VoidLAB Sandbox Shell [Local Client VFS: {formatWorkspacePath(cwd)}]
             </div>
-
-            <div className="scrollbar-thin h-[240px] space-y-3 overflow-y-auto pr-2">
-              {transcript.length ? (
-                <>
-                  {transcript.map((entry) => <TranscriptLine entry={entry} key={entry.id} />)}
-                  <div ref={transcriptEndRef} />
-                </>
-              ) : (
-                <div className="font-mono text-sm leading-7 theme-muted">
-                  [system] Run the active file and VoidLAB will stream status, stdin prompts, stdout, and diagnostics here.
+            {commandHistory.length ? (
+              commandHistory.map((entry) => (
+                <div key={entry.id} className="space-y-0.5 pb-1">
+                  <div className="text-zinc-400">
+                    <span className="text-zinc-600">{formatWorkspacePath(entry.cwd)}</span> $ {entry.command}
+                  </div>
+                  <pre
+                    className={`whitespace-pre-wrap break-words pl-2 text-[11px] ${
+                      entry.status === "error"
+                        ? "text-rose-400"
+                        : entry.status === "success"
+                          ? "text-zinc-300"
+                          : "text-zinc-500"
+                    }`}
+                  >
+                    {entry.output}
+                  </pre>
                 </div>
+              ))
+            ) : (
+              <div className="text-zinc-600">
+                Connected to container session. Type commands below (e.g. <code>ls</code>, <code>mkdir</code>, <code>touch</code>) or click Run.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 2: Output Transcript & Execution Results */}
+        {activeTab === "output" && (
+          <div className="space-y-2">
+            {/* Minimal Metric Strip */}
+            <div className="flex items-center gap-3 text-[10px] text-zinc-500 border-b border-white/5 pb-1">
+              <span>STATUS: <strong className="text-zinc-300">{latestStatus}</strong></span>
+              <span>TIME: <strong className="text-zinc-300">{execution?.time ? `${execution.time}s` : "0.00s"}</strong></span>
+              <span>MEMORY: <strong className="text-zinc-300">{execution?.memory ? `${execution.memory}KB` : "0KB"}</strong></span>
+              {stagedInputLines > 0 && <span>STDIN: <strong className="text-zinc-300">{stagedInputLines} lines</strong></span>}
+              {execution?.exitCode !== null && execution?.exitCode !== undefined && (
+                <span>EXIT: <strong className="text-zinc-300">{execution.exitCode}</strong></span>
               )}
             </div>
 
-            {/* stdin capture */}
-            {stdinCaptureActive ? (
-              <div
-                className="mt-4 rounded-sm p-4"
-                style={{
-                  background: "var(--accent-soft)",
-                  border: "1px solid var(--border-strong)",
-                }}
-              >
-                <div className="flex items-center gap-2 text-xs uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>
-                  <span className="relative flex h-2 w-2">
-                    <span
-                      className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
-                      style={{ background: "var(--accent)" }}
-                    />
-                    <span
-                      className="relative inline-flex h-2 w-2 rounded-full"
-                      style={{ background: "var(--accent)" }}
-                    />
-                  </span>
-                  Input required
+            {/* Execution Stream Lines */}
+            {transcript.length ? (
+              <div className="space-y-0.5">
+                {transcript.map((entry) => (
+                  <TranscriptLine entry={entry} key={entry.id} />
+                ))}
+                <div ref={transcriptEndRef} />
+              </div>
+            ) : (
+              <div className="text-zinc-600">
+                [system] Run the active file to stream compiler logs, stdout, diagnostics, and metrics.
+              </div>
+            )}
+
+            {/* Stdin Interactive Session Box */}
+            {stdinCaptureActive && (
+              <div className="p-2 rounded bg-zinc-900/80 border border-white/10 space-y-2 mt-2">
+                <div className="text-[10px] uppercase font-semibold text-amber-400 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+                  {runtimeStdinPrompt ? "Program blocked on stdin" : "Input Required"}
                 </div>
-                <div className="text-sm leading-6 theme-text mb-3">
+                <div className="text-zinc-400 text-[10px]">
                   {runtimeStdinPrompt
-                    ? "The running program is blocked on stdin. Press Enter to resume execution."
+                    ? "Enter line input to resume worker:"
                     : interactiveSession.helperText}
                 </div>
-                <div
-                  className="rounded-sm px-3 py-2 font-mono text-sm mb-3"
-                  style={{
-                    background: "var(--panel-background)",
-                    border: "1px solid var(--border)",
-                    color: "var(--accent)",
-                  }}
-                >
-                  {runtimeStdinPrompt?.prompt ?? interactiveSession.promptLabel}
-                </div>
                 <textarea
-                  className="min-h-[100px] w-full resize-y rounded-sm px-4 py-3 font-mono text-sm outline-none transition"
-                  style={{
-                    background: "var(--input-background)",
-                    border: "1px solid var(--border)",
-                    color: "var(--text)",
-                    caretColor: "var(--accent)",
-                  }}
-                  onChange={(event) =>
+                  ref={stdinInputRef}
+                  className="w-full bg-[#000000] border border-white/10 rounded p-1.5 text-zinc-100 font-mono text-[11px] outline-none focus:border-zinc-500 resize-none h-16"
+                  placeholder={runtimeStdinPrompt ? "Type stdin line and hit Enter" : "Enter stdin values..."}
+                  value={runtimeStdinPrompt ? runtimeStdinInput : pendingInteractiveInput}
+                  onChange={(e) =>
                     runtimeStdinPrompt
-                      ? setRuntimeStdinInput(event.target.value)
-                      : onInteractiveInputChange(event.target.value)
+                      ? setRuntimeStdinInput(e.target.value)
+                      : onInteractiveInputChange(e.target.value)
                   }
-                  onKeyDown={(event) => {
-                    if (runtimeStdinPrompt && event.key === "Enter" && !event.shiftKey) {
-                      event.preventDefault();
+                  onKeyDown={(e) => {
+                    if (runtimeStdinPrompt && e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
                       submitRuntimeStdin();
                     }
                   }}
-                  placeholder={
-                    runtimeStdinPrompt
-                      ? "Type one stdin line and press Enter."
-                      : "Enter stdin exactly as your program expects it.\nUse a new line for each value."
-                  }
-                  ref={stdinInputRef}
-                  spellCheck={false}
-                  value={runtimeStdinPrompt ? runtimeStdinInput : pendingInteractiveInput}
                 />
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="flex gap-2 justify-end">
                   <button
-                    className={terminalButtonBase}
-                    style={{
-                      background: "var(--control-background)",
-                      borderColor: "var(--border)",
-                      color: "var(--text)",
-                    }}
                     onClick={runtimeStdinPrompt ? () => setRuntimeStdinInput("") : onResetBufferedInput}
+                    className="px-2 py-0.5 text-[10px] rounded border border-white/10 text-zinc-400 hover:text-white"
                     type="button"
                   >
-                    <RotateCcw size={14} />
-                    Clear input
+                    Clear
                   </button>
                   <button
-                    className={terminalButtonBase}
-                    style={{
-                      background: "var(--action-background)",
-                      borderColor: "var(--action-background)",
-                      color: "var(--action-foreground)",
-                    }}
-                    disabled={runtimeStdinPrompt ? false : !pendingInteractiveInput.length || loading}
                     onClick={runtimeStdinPrompt ? submitRuntimeStdin : onRun}
+                    className="px-2.5 py-0.5 text-[10px] rounded bg-zinc-100 hover:bg-white text-zinc-950 font-medium"
                     type="button"
                   >
-                    <Play size={14} />
-                    {runtimeStdinPrompt ? "Send line" : "Run program"}
+                    {runtimeStdinPrompt ? "Send Line" : "Run With Input"}
                   </button>
                 </div>
               </div>
-            ) : null}
-          </div>
+            )}
 
-          <div className="mt-3 space-y-3">
-            {error ? (
-              <div
-                className="rounded-sm p-4"
-                style={
-                  timedOut
-                    ? { background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.28)", color: "#f59e0b" }
-                    : { background: "rgba(225,29,72,0.07)", border: "1px solid rgba(225,29,72,0.28)", color: "#f43f5e" }
-                }
-              >
-                <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
-                  {timedOut ? <Clock size={15} /> : <AlertTriangle size={15} />}
-                  {timedOut ? "Execution timed out" : "Execution gateway error"}
+            {/* Error Banner */}
+            {error && (
+              <div className="p-2 rounded bg-rose-950/40 border border-rose-800/40 text-rose-300 space-y-1">
+                <div className="flex items-center gap-1.5 font-semibold text-[11px]">
+                  <AlertTriangle size={12} />
+                  {timedOut ? "Execution timed out" : "Execution error"}
                 </div>
-                <pre className="whitespace-pre-wrap break-words font-mono text-sm leading-7">{error}</pre>
+                <pre className="whitespace-pre-wrap text-[10px] leading-4">{error}</pre>
               </div>
-            ) : null}
+            )}
 
-            {execution ? (
-              <>
-                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-                  <MetricCard label="Runtime status" value={execution.status.description} />
-                  <MetricCard label="Exit code" value={execution.exitCode !== null ? String(execution.exitCode) : "n/a"} />
-                  <MetricCard label="Exit signal" value={execution.exitSignal !== null ? String(execution.exitSignal) : "n/a"} />
-                  <MetricCard label="Token" value={execution.token ?? "n/a"} />
-                </div>
-                <OutputSection label="Stdout" tone="success" value={execution.stdout} />
-                <OutputSection label="Stderr" tone="danger" value={execution.stderr} />
-                <OutputSection label="Compile output" tone="danger" value={execution.compileOutput} />
-                <OutputSection label="Runtime message" value={execution.message} />
-                {!execution.stdout && !execution.stderr && !execution.compileOutput && !execution.message ? (
-                  <div
-                    className="rounded-sm p-4 text-sm leading-7 theme-muted"
-                    style={{ background: "var(--surface-soft)", border: "1px solid var(--border)" }}
-                  >
-                    The program finished without producing visible output.
+            {/* Detailed Execution Output (if present) */}
+            {execution && (
+              <div className="space-y-1 pt-1">
+                {execution.stdout && (
+                  <div>
+                    <div className="text-[10px] text-emerald-500 font-semibold uppercase">Stdout:</div>
+                    <pre className="text-zinc-200 whitespace-pre-wrap pl-2">{execution.stdout}</pre>
                   </div>
-                ) : null}
-              </>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-
-      {/* ── Terminal tab ────────────────────────────────────── */}
-      {activeTab === "terminal" ? (
-        <div className="p-4">
-          <div
-            className="rounded-sm p-4"
-            style={{ background: "var(--terminal-bg)", border: "1px solid var(--border)" }}
-          >
-            <div className="mb-2 text-xs uppercase tracking-widest theme-muted">Workspace terminal</div>
-            <div className="mb-3 text-xs theme-muted">Current directory {formatWorkspacePath(cwd)}</div>
-
-            <div className="scrollbar-thin h-[280px] space-y-4 overflow-y-auto pr-2 font-mono text-sm leading-7">
-              {commandHistory.length ? (
-                commandHistory.map((entry) => (
-                  <div key={entry.id}>
-                    <div style={{ color: "var(--accent)" }}>
-                      {formatWorkspacePath(entry.cwd)} $ {entry.command}
-                    </div>
-                    <pre
-                      className="mt-1 whitespace-pre-wrap break-words"
-                      style={{
-                        color:
-                          entry.status === "error"
-                            ? "#f43f5e"
-                            : entry.status === "success"
-                              ? "var(--text)"
-                              : "var(--muted)",
-                      }}
-                    >
-                      {entry.output}
-                    </pre>
+                )}
+                {execution.stderr && (
+                  <div>
+                    <div className="text-[10px] text-rose-400 font-semibold uppercase">Stderr:</div>
+                    <pre className="text-rose-300 whitespace-pre-wrap pl-2">{execution.stderr}</pre>
                   </div>
-                ))
-              ) : (
-                <div className="theme-muted">
-                  Run commands like <code className="theme-text-strong">ls</code>,{" "}
-                  <code className="theme-text-strong">tree</code>,{" "}
-                  <code className="theme-text-strong">mkdir src</code>,{" "}
-                  <code className="theme-text-strong">touch src/main.py</code>, or{" "}
-                  <code className="theme-text-strong">help</code>.
-                </div>
-              )}
-            </div>
+                )}
+                {execution.compileOutput && (
+                  <div>
+                    <div className="text-[10px] text-amber-400 font-semibold uppercase">Compile Output:</div>
+                    <pre className="text-amber-200 whitespace-pre-wrap pl-2">{execution.compileOutput}</pre>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
-            <div className="mt-4 flex flex-col gap-2 lg:flex-row">
-              <input
-                className="flex-1 rounded-sm px-4 py-2.5 font-mono text-sm outline-none transition"
-                style={{
-                  background: "var(--input-background)",
-                  border: "1px solid var(--border)",
-                  color: "var(--text)",
-                  caretColor: "var(--accent)",
-                }}
-                onChange={(event) => onCommandChange(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    onCommandRun();
-                  }
-                }}
-                placeholder="touch src/main.py"
-                value={commandInput}
-              />
-              <button
-                className={terminalButtonBase}
-                style={{
-                  background: "var(--control-background)",
-                  borderColor: "var(--border)",
-                  color: "var(--text)",
-                }}
-                onClick={onCommandRun}
-                type="button"
-              >
-                Run command
-              </button>
+        {/* TAB 3: Ports */}
+        {activeTab === "ports" && (
+          <div className="py-4 px-2 space-y-2 text-zinc-500 text-xs">
+            <div className="flex items-center gap-1.5 text-zinc-300 font-semibold">
+              <Globe size={13} />
+              Forwarded Ports & Sockets
+            </div>
+            <div className="text-[11px] leading-5 text-zinc-500 max-w-md">
+              Process-bound ports will be forwarded here in multi-node containers. Local client sandbox uses browser preview directly.
+            </div>
+            <div className="text-[10px] text-zinc-600 font-mono">
+              Active File: {formatWorkspacePath(activeFilePath)}
             </div>
           </div>
-        </div>
-      ) : null}
+        )}
+      </div>
 
-      {/* ── Ports tab ───────────────────────────────────────── */}
-      {activeTab === "ports" ? (
-        <div className="p-4">
-          <div
-            className="flex min-h-[300px] flex-col items-start justify-center rounded-sm p-6"
-            style={{ background: "var(--terminal-bg)", border: "1px solid var(--border)" }}
-          >
-            <div className="flex items-center gap-2 text-sm font-semibold theme-text-strong">
-              <Globe size={15} style={{ color: "var(--accent)" }} />
-              Ports
-            </div>
-            <div className="mt-3 max-w-xl text-sm leading-7 theme-muted">
-              Runtime-exposed ports will appear here once VoidLAB adds forwarded process sessions.
-              For now, browser-preview files still open directly in a new tab from the editor toolbar.
-            </div>
-            <div
-              className="mt-5 rounded-sm px-4 py-2.5 text-sm theme-muted"
-              style={{ background: "var(--surface-soft)", border: "1px solid var(--border)" }}
-            >
-              Active file: {formatWorkspacePath(activeFilePath)}
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {/* ── Terminal Command / Stdin Input Bar (Fixed Bottom) ── */}
+      <div className="h-8 px-2.5 border-t border-white/10 bg-[#09090b] flex items-center gap-2 shrink-0 font-mono text-xs">
+        <span className="text-zinc-500 select-none text-xs">$</span>
+        <input
+          className="flex-1 bg-transparent text-zinc-100 placeholder:text-zinc-700 outline-none text-xs font-mono"
+          onChange={(e) => onCommandChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              onCommandRun();
+            }
+          }}
+          placeholder="Type workspace command (e.g. ls, mkdir src, touch app.py)..."
+          value={commandInput}
+        />
+        <button
+          onClick={onCommandRun}
+          className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors p-1"
+          type="button"
+          title="Run Command (Enter)"
+        >
+          ↵
+        </button>
+      </div>
     </section>
   );
 }
