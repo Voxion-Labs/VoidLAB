@@ -13,6 +13,7 @@ node_modules/
 out/
 build/
 dist/
+bin/
 .vercel/
 .turbo/
 *.tsbuildinfo
@@ -51,6 +52,7 @@ logs/
 .nyc_output/
 test-results/
 playwright-report/
+*.out
 
 # ── OS-generated files ────────────────────────────────────────
 .DS_Store
