@@ -1,0 +1,84 @@
+name: VoidLAB Go CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+# Enforce least-privilege security posture at root workflow level
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: true
+
+      - name: Download Go modules
+        run: go mod download
+
+      - name: Compile binary
+        run: make build
+
+      - name: Run unit test suite
+        run: make test
+
+      - name: Run contract regression suite
+        run: make regression
+
+  benchmark-bot:
+    name: Benchmark Bot
+    runs-on: ubuntu-latest
+    needs: [build-and-test]
+    # Strict security barrier: run strictly on push to main within origin repo, never on forks/PRs
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !github.event.repository.fork
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: true
+
+      - name: Download Go modules
+        run: go mod download
+
+      - name: Run performance benchmarks
+        run: make bench
+
+      - name: Commit and push benchmark results
+        run: |
+          git config --global user.name "voxion-bot[bot]"
+          git config --global user.email "voxion-bot[bot]@users.noreply.github.com"
+
+          git add benchmarks.txt
+          if git diff --staged --quiet; then
+            echo "Benchmark metrics unchanged. Skipping commit."
+          else
+            git commit -m "chore: update benchmark metrics [skip ci]"
+            git pull --rebase origin main
+            git push origin main
+          fi
