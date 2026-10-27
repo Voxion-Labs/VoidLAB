@@ -75,14 +75,14 @@ function TranscriptLine({ entry }: { entry: OutputTranscriptEntry }) {
   const colorMap: Record<string, string> = {
     error: "#f87171",
     timeout: "#fbbf24",
-    input: "#60a5fa",
+    input: "var(--accent)",
     prompt: "#fbbf24",
-    success: "#34d399",
-    stdout: "#e4e4e7",
-    status: "#71717a",
+    success: "#10b981",
+    stdout: "var(--terminal-text)",
+    status: "var(--terminal-muted)",
   };
 
-  const color = colorMap[entry.tone] ?? "#a1a1aa";
+  const color = colorMap[entry.tone] ?? "var(--terminal-muted)";
   const Icon = entry.tone === "timeout" ? Clock : null;
 
   return (
@@ -136,7 +136,6 @@ export default function TerminalBox({
       ? "Input required"
       : execution?.status.description ?? (interactiveSession.active ? "Input required" : loading ? "Running" : "Idle");
 
-  // When execution starts or produces output, automatically switch to Output if there's error or execution
   useEffect(() => {
     if (loading || execution || error) {
       setActiveTab("output");
@@ -206,33 +205,57 @@ export default function TerminalBox({
   }, []);
 
   return (
-    <section className="h-full flex flex-col bg-[#000000] border-t border-white/10 overflow-hidden font-mono select-none">
+    <section
+      className="h-full flex flex-col overflow-hidden font-mono select-none transition-colors"
+      style={{
+        background: "var(--panel-background)",
+        color: "var(--text)",
+      }}
+    >
       {/* ── Terminal Header: Slim Tabs & Controls ── */}
-      <div className="h-7 px-2.5 border-b border-white/10 bg-[#0e0e11] flex items-center justify-between shrink-0 text-xs font-mono">
+      <div
+        className="h-8 px-2.5 flex items-center justify-between shrink-0 text-xs font-mono transition-colors"
+        style={{
+          background: "var(--surface-soft)",
+          borderBottom: "1px solid var(--border)",
+        }}
+      >
         {/* Left: Tab Switchers */}
         <div className="flex items-center gap-3">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`pb-0.5 text-[11px] font-mono transition-colors duration-100 ${
-                activeTab === tab.id
-                  ? "font-semibold text-zinc-100 border-b border-zinc-100"
-                  : "text-zinc-500 hover:text-zinc-300"
-              }`}
-              type="button"
-            >
-              {tab.label}
-            </button>
-          ))}
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`pb-1 text-[11px] font-mono transition-colors duration-100 ${
+                  isActive ? "font-semibold" : "opacity-70 hover:opacity-100"
+                }`}
+                style={{
+                  color: isActive ? "var(--text-strong)" : "var(--muted)",
+                  borderBottom: isActive ? "2px solid var(--accent)" : "2px solid transparent",
+                }}
+                type="button"
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Right: Status & Tools */}
         <div className="flex items-center gap-2">
           {/* Active Status Badge */}
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-zinc-900 text-zinc-400 border border-white/10">
+          <span
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium"
+            style={{
+              background: "var(--control-background)",
+              border: "1px solid var(--border)",
+              color: "var(--muted-strong)",
+            }}
+          >
             <span
-              className={`w-1 h-1 rounded-full ${
+              className={`w-1.5 h-1.5 rounded-full ${
                 loading ? "bg-amber-400 animate-ping" : "bg-emerald-500"
               }`}
             />
@@ -243,49 +266,57 @@ export default function TerminalBox({
           {onClearOutput && (
             <button
               onClick={onClearOutput}
-              className="p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-zinc-200 transition-colors"
-              title="Clear Terminal / Output"
+              className="p-1 rounded opacity-70 hover:opacity-100 hover:bg-[var(--control-hover)] transition-all"
+              style={{ color: "var(--muted)" }}
+              title="Clear Output"
               type="button"
             >
-              <Trash2 size={11} />
+              <Trash2 size={12} />
             </button>
           )}
 
-          {/* Reset 75/25 Split */}
+          {/* Reset Column Width */}
           {onResetSplit && (
             <button
               onClick={onResetSplit}
-              className="p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-zinc-200 transition-colors"
-              title="Reset 75/25 Split"
+              className="p-1 rounded opacity-70 hover:opacity-100 hover:bg-[var(--control-hover)] transition-all"
+              style={{ color: "var(--muted)" }}
+              title="Reset Column Width"
               type="button"
             >
-              <RotateCcw size={11} />
+              <RotateCcw size={12} />
             </button>
           )}
         </div>
       </div>
 
       {/* ── Terminal Content Stream ── */}
-      <div className="flex-1 overflow-y-auto p-2.5 space-y-1 font-mono text-[11px] leading-5 text-zinc-300 bg-[#000000] scrollbar-thin">
+      <div
+        className="flex-1 overflow-y-auto p-2.5 space-y-1 font-mono text-[11px] leading-5 scrollbar-thin transition-colors"
+        style={{
+          background: "var(--terminal-bg)",
+          color: "var(--terminal-text)",
+        }}
+      >
         {/* TAB 1: Terminal Command History */}
         {activeTab === "terminal" && (
           <div>
-            <div className="text-zinc-600 pb-1">
+            <div className="opacity-60 pb-1 text-[10px]">
               VoidLAB Sandbox Shell [Local Client VFS: {formatWorkspacePath(cwd)}]
             </div>
             {commandHistory.length ? (
               commandHistory.map((entry) => (
                 <div key={entry.id} className="space-y-0.5 pb-1">
-                  <div className="text-zinc-400">
-                    <span className="text-zinc-600">{formatWorkspacePath(entry.cwd)}</span> $ {entry.command}
+                  <div className="opacity-80">
+                    <span className="opacity-50">{formatWorkspacePath(entry.cwd)}</span> $ {entry.command}
                   </div>
                   <pre
                     className={`whitespace-pre-wrap break-words pl-2 text-[11px] ${
                       entry.status === "error"
-                        ? "text-rose-400"
+                        ? "text-rose-500"
                         : entry.status === "success"
-                          ? "text-zinc-300"
-                          : "text-zinc-500"
+                          ? "opacity-90"
+                          : "opacity-60"
                     }`}
                   >
                     {entry.output}
@@ -293,8 +324,8 @@ export default function TerminalBox({
                 </div>
               ))
             ) : (
-              <div className="text-zinc-600">
-                Connected to container session. Type commands below (e.g. <code>ls</code>, <code>mkdir</code>, <code>touch</code>) or click Run.
+              <div className="opacity-60 text-[10px]">
+                Connected to sandbox session. Type commands below (e.g. <code>ls</code>, <code>mkdir</code>, <code>touch</code>) or click Run.
               </div>
             )}
           </div>
@@ -304,13 +335,16 @@ export default function TerminalBox({
         {activeTab === "output" && (
           <div className="space-y-2">
             {/* Minimal Metric Strip */}
-            <div className="flex items-center gap-3 text-[10px] text-zinc-500 border-b border-white/5 pb-1">
-              <span>STATUS: <strong className="text-zinc-300">{latestStatus}</strong></span>
-              <span>TIME: <strong className="text-zinc-300">{execution?.time ? `${execution.time}s` : "0.00s"}</strong></span>
-              <span>MEMORY: <strong className="text-zinc-300">{execution?.memory ? `${execution.memory}KB` : "0KB"}</strong></span>
-              {stagedInputLines > 0 && <span>STDIN: <strong className="text-zinc-300">{stagedInputLines} lines</strong></span>}
+            <div
+              className="flex flex-wrap items-center gap-3 text-[10px] pb-1"
+              style={{ borderBottom: "1px solid var(--border)", color: "var(--muted)" }}
+            >
+              <span>STATUS: <strong className="theme-text-strong">{latestStatus}</strong></span>
+              <span>TIME: <strong className="theme-text-strong">{execution?.time ? `${execution.time}s` : "0.00s"}</strong></span>
+              <span>MEMORY: <strong className="theme-text-strong">{execution?.memory ? `${execution.memory}KB` : "0KB"}</strong></span>
+              {stagedInputLines > 0 && <span>STDIN: <strong className="theme-text-strong">{stagedInputLines} lines</strong></span>}
               {execution?.exitCode !== null && execution?.exitCode !== undefined && (
-                <span>EXIT: <strong className="text-zinc-300">{execution.exitCode}</strong></span>
+                <span>EXIT: <strong className="theme-text-strong">{execution.exitCode}</strong></span>
               )}
             </div>
 
@@ -323,26 +357,40 @@ export default function TerminalBox({
                 <div ref={transcriptEndRef} />
               </div>
             ) : (
-              <div className="text-zinc-600">
+              <div className="opacity-60 text-[10px]">
                 [system] Run the active file to stream compiler logs, stdout, diagnostics, and metrics.
               </div>
             )}
 
             {/* Stdin Interactive Session Box */}
             {stdinCaptureActive && (
-              <div className="p-2 rounded bg-zinc-900/80 border border-white/10 space-y-2 mt-2">
-                <div className="text-[10px] uppercase font-semibold text-amber-400 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+              <div
+                className="p-2.5 rounded-[6px] space-y-2 mt-2"
+                style={{
+                  background: "var(--surface-soft)",
+                  border: "1px solid var(--border-strong)",
+                }}
+              >
+                <div
+                  className="text-[10px] uppercase font-semibold flex items-center gap-1.5"
+                  style={{ color: "var(--accent)" }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full animate-ping" style={{ background: "var(--accent)" }} />
                   {runtimeStdinPrompt ? "Program blocked on stdin" : "Input Required"}
                 </div>
-                <div className="text-zinc-400 text-[10px]">
+                <div className="theme-muted text-[10px]">
                   {runtimeStdinPrompt
                     ? "Enter line input to resume worker:"
                     : interactiveSession.helperText}
                 </div>
                 <textarea
                   ref={stdinInputRef}
-                  className="w-full bg-[#000000] border border-white/10 rounded p-1.5 text-zinc-100 font-mono text-[11px] outline-none focus:border-zinc-500 resize-none h-16"
+                  className="w-full rounded-[6px] p-2 text-xs font-mono outline-none resize-none h-16"
+                  style={{
+                    background: "var(--input-background)",
+                    border: "1px solid var(--border)",
+                    color: "var(--text)",
+                  }}
                   placeholder={runtimeStdinPrompt ? "Type stdin line and hit Enter" : "Enter stdin values..."}
                   value={runtimeStdinPrompt ? runtimeStdinInput : pendingInteractiveInput}
                   onChange={(e) =>
@@ -360,14 +408,23 @@ export default function TerminalBox({
                 <div className="flex gap-2 justify-end">
                   <button
                     onClick={runtimeStdinPrompt ? () => setRuntimeStdinInput("") : onResetBufferedInput}
-                    className="px-2 py-0.5 text-[10px] rounded border border-white/10 text-zinc-400 hover:text-white"
+                    className="px-2.5 py-1 text-[10px] rounded-[6px] transition-colors"
+                    style={{
+                      background: "var(--control-background)",
+                      border: "1px solid var(--border)",
+                      color: "var(--text)",
+                    }}
                     type="button"
                   >
                     Clear
                   </button>
                   <button
                     onClick={runtimeStdinPrompt ? submitRuntimeStdin : onRun}
-                    className="px-2.5 py-0.5 text-[10px] rounded bg-zinc-100 hover:bg-white text-zinc-950 font-medium"
+                    className="px-3 py-1 text-[10px] rounded-[6px] font-semibold transition-all shadow-sm"
+                    style={{
+                      background: "var(--action-background)",
+                      color: "var(--action-foreground)",
+                    }}
                     type="button"
                   >
                     {runtimeStdinPrompt ? "Send Line" : "Run With Input"}
@@ -378,9 +435,16 @@ export default function TerminalBox({
 
             {/* Error Banner */}
             {error && (
-              <div className="p-2 rounded bg-rose-950/40 border border-rose-800/40 text-rose-300 space-y-1">
+              <div
+                className="p-2.5 rounded-[6px] space-y-1"
+                style={{
+                  background: "rgba(239, 68, 68, 0.08)",
+                  border: "1px solid rgba(239, 68, 68, 0.25)",
+                  color: "#ef4444",
+                }}
+              >
                 <div className="flex items-center gap-1.5 font-semibold text-[11px]">
-                  <AlertTriangle size={12} />
+                  <AlertTriangle size={13} />
                   {timedOut ? "Execution timed out" : "Execution error"}
                 </div>
                 <pre className="whitespace-pre-wrap text-[10px] leading-4">{error}</pre>
@@ -389,23 +453,23 @@ export default function TerminalBox({
 
             {/* Detailed Execution Output (if present) */}
             {execution && (
-              <div className="space-y-1 pt-1">
+              <div className="space-y-1.5 pt-1">
                 {execution.stdout && (
                   <div>
-                    <div className="text-[10px] text-emerald-500 font-semibold uppercase">Stdout:</div>
-                    <pre className="text-zinc-200 whitespace-pre-wrap pl-2">{execution.stdout}</pre>
+                    <div className="text-[10px] font-semibold uppercase text-emerald-500">Stdout:</div>
+                    <pre className="whitespace-pre-wrap pl-2 theme-text">{execution.stdout}</pre>
                   </div>
                 )}
                 {execution.stderr && (
                   <div>
-                    <div className="text-[10px] text-rose-400 font-semibold uppercase">Stderr:</div>
-                    <pre className="text-rose-300 whitespace-pre-wrap pl-2">{execution.stderr}</pre>
+                    <div className="text-[10px] font-semibold uppercase text-rose-500">Stderr:</div>
+                    <pre className="whitespace-pre-wrap pl-2 text-rose-400">{execution.stderr}</pre>
                   </div>
                 )}
                 {execution.compileOutput && (
                   <div>
-                    <div className="text-[10px] text-amber-400 font-semibold uppercase">Compile Output:</div>
-                    <pre className="text-amber-200 whitespace-pre-wrap pl-2">{execution.compileOutput}</pre>
+                    <div className="text-[10px] font-semibold uppercase text-amber-500">Compile Output:</div>
+                    <pre className="whitespace-pre-wrap pl-2 text-amber-400">{execution.compileOutput}</pre>
                   </div>
                 )}
               </div>
@@ -415,26 +479,33 @@ export default function TerminalBox({
 
         {/* TAB 3: Ports */}
         {activeTab === "ports" && (
-          <div className="py-4 px-2 space-y-2 text-zinc-500 text-xs">
-            <div className="flex items-center gap-1.5 text-zinc-300 font-semibold">
-              <Globe size={13} />
+          <div className="py-4 px-2 space-y-2 text-xs theme-muted">
+            <div className="flex items-center gap-1.5 font-semibold theme-text-strong">
+              <Globe size={14} style={{ color: "var(--accent)" }} />
               Forwarded Ports & Sockets
             </div>
-            <div className="text-[11px] leading-5 text-zinc-500 max-w-md">
-              Process-bound ports will be forwarded here in multi-node containers. Local client sandbox uses browser preview directly.
+            <div className="text-[11px] leading-5 max-w-md">
+              Process-bound ports will appear here in container sessions. Browser preview runs directly in client tabs.
             </div>
-            <div className="text-[10px] text-zinc-600 font-mono">
+            <div className="text-[10px] opacity-70 font-mono">
               Active File: {formatWorkspacePath(activeFilePath)}
             </div>
           </div>
         )}
       </div>
 
-      {/* ── Terminal Command / Stdin Input Bar (Fixed Bottom) ── */}
-      <div className="h-8 px-2.5 border-t border-white/10 bg-[#09090b] flex items-center gap-2 shrink-0 font-mono text-xs">
-        <span className="text-zinc-500 select-none text-xs">$</span>
+      {/* ── Terminal Command Input Bar (Fixed Bottom) ── */}
+      <div
+        className="h-8 px-2.5 flex items-center gap-2 shrink-0 font-mono text-xs transition-colors"
+        style={{
+          background: "var(--surface-soft)",
+          borderTop: "1px solid var(--border)",
+        }}
+      >
+        <span className="opacity-60 select-none text-xs">$</span>
         <input
-          className="flex-1 bg-transparent text-zinc-100 placeholder:text-zinc-700 outline-none text-xs font-mono"
+          className="flex-1 bg-transparent outline-none text-xs font-mono"
+          style={{ color: "var(--text)" }}
           onChange={(e) => onCommandChange(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -447,7 +518,8 @@ export default function TerminalBox({
         />
         <button
           onClick={onCommandRun}
-          className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors p-1"
+          className="text-xs opacity-60 hover:opacity-100 transition-opacity p-1"
+          style={{ color: "var(--text)" }}
           type="button"
           title="Run Command (Enter)"
         >

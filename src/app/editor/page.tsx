@@ -14,6 +14,9 @@ import EditorTabs from "@/components/editor/EditorTabs";
 import FileExplorer from "@/components/editor/FileExplorer";
 import MonacoEditor from "@/components/editor/MonacoEditor";
 import TerminalBox, { type OutputTranscriptEntry } from "@/components/editor/TerminalBox";
+import Brand from "@/components/layout/Brand";
+import ThemeSwitcher from "@/components/layout/ThemeSwitcher";
+import { useTheme } from "@/context/ThemeContext";
 import { useUser } from "@/context/UserContext";
 import { useCompiler } from "@/hooks/useCompiler";
 import { useShortcuts } from "@/hooks/useShortcuts";
@@ -21,6 +24,7 @@ import { DEFAULT_LANGUAGE, getLanguageByExtension, getLanguageById, languageGrou
 import { openPreview } from "@/lib/preview";
 import {
   appendTerminalHistory,
+  buildStarterFile,
   createFolderPath,
   createWorkspaceFile,
   executeWorkspaceCommand,
@@ -59,6 +63,8 @@ const createTranscriptEntry = (
 
 export default function EditorPage() {
   const { profile, recordActivity, saveProfile } = useUser();
+  const { editorTheme } = useTheme();
+
   const [workspace, setWorkspace] = useState<WorkspaceState | null>(() =>
     typeof window === "undefined" ? null : readWorkspace(),
   );
@@ -72,9 +78,10 @@ export default function EditorPage() {
   const [commandInput, setCommandInput] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Resizable split-pane state (Default 75% editor, 25% terminal)
-  const [editorHeightPercent, setEditorHeightPercent] = useState(75);
-  const isDraggingRef = useRef(false);
+  // 3-Column Resizable Widths (Explorer: 230px, Output: 380px, Middle: flex-1)
+  const [explorerWidth, setExplorerWidth] = useState(230);
+  const [outputWidth, setOutputWidth] = useState(380);
+  const activeDragRef = useRef<"left" | "right" | null>(null);
 
   const { error, execution, loading, runCode, cancelExecution, resetExecutionState } = useCompiler();
   const fileImportRef = useRef<HTMLInputElement>(null);
@@ -91,21 +98,27 @@ export default function EditorPage() {
     };
   }, [cancelExecution]);
 
-  // Mouse drag handler for vertical resizer
+  // Horizontal mouse drag handler for both column dividers
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isDraggingRef.current) return;
-      const totalHeight = window.innerHeight - 40; // minus 40px top navbar
-      const relativeY = e.clientY - 40;
-      let percent = (relativeY / totalHeight) * 100;
-      if (percent < 15) percent = 15;
-      if (percent > 85) percent = 85;
-      setEditorHeightPercent(percent);
+      if (!activeDragRef.current) return;
+
+      if (activeDragRef.current === "left") {
+        let nextW = e.clientX;
+        if (nextW < 160) nextW = 160;
+        if (nextW > 450) nextW = 450;
+        setExplorerWidth(nextW);
+      } else if (activeDragRef.current === "right") {
+        let nextW = window.innerWidth - e.clientX;
+        if (nextW < 240) nextW = 240;
+        if (nextW > 750) nextW = 750;
+        setOutputWidth(nextW);
+      }
     };
 
     const handleMouseUp = () => {
-      if (isDraggingRef.current) {
-        isDraggingRef.current = false;
+      if (activeDragRef.current) {
+        activeDragRef.current = null;
         document.body.style.cursor = "";
         document.body.style.userSelect = "";
       }
@@ -159,18 +172,24 @@ export default function EditorPage() {
     });
   };
 
-  const handleCreateFile = () => {
+  const handleCreateFile = (filePath?: string, customLang?: string) => {
     if (!workspace) return;
+    const targetPath = filePath || draftName || "main";
+    const detectedLang = filePath ? getLanguageByExtension(filePath) : null;
+    const langId = customLang || (detectedLang ? detectedLang.id : draftLanguage);
+
     const nextFile = createWorkspaceFile(
-      draftName || "main",
-      draftLanguage,
+      targetPath,
+      langId,
       workspace.files,
       workspace.terminal.cwd,
     );
+
     const parentPath = getWorkspaceParentPath(nextFile.path);
     const nextFolders = parentPath && !workspace.folders.includes(parentPath)
       ? [...workspace.folders, parentPath]
       : workspace.folders;
+
     const nextWorkspace = {
       ...workspace,
       activeFileId: nextFile.id,
@@ -178,7 +197,7 @@ export default function EditorPage() {
       folders: nextFolders,
     };
     persist(nextWorkspace);
-    setStatusMessage(`Created ${formatWorkspacePath(nextFile.path)}.`);
+    setStatusMessage(`Created ${formatWorkspacePath(nextFile.path)}`);
     recordActivity({
       detail: `Created ${formatWorkspacePath(nextFile.path)}.`,
       title: "File created",
@@ -213,11 +232,17 @@ export default function EditorPage() {
 
   const handleDeleteFile = (id: string) => {
     if (!workspace) return;
-    if (workspace.files.length <= 1) {
-      setStatusMessage("Cannot delete the last remaining file.");
+    const nextFiles = workspace.files.filter((f) => f.id !== id);
+    if (nextFiles.length === 0) {
+      const starter = buildStarterFile(DEFAULT_LANGUAGE);
+      persist({
+        ...workspace,
+        activeFileId: starter.id,
+        files: [starter],
+      });
+      setStatusMessage("Workspace reset to starter file.");
       return;
     }
-    const nextFiles = workspace.files.filter((f) => f.id !== id);
     const nextActiveId = id === workspace.activeFileId ? nextFiles[0].id : workspace.activeFileId;
     persist({ ...workspace, activeFileId: nextActiveId, files: nextFiles });
     setStatusMessage("File deleted.");
@@ -226,10 +251,10 @@ export default function EditorPage() {
   const handleDeleteFolder = (path: string) => {
     if (!workspace) return;
     const nextFolders = workspace.folders.filter((f) => f !== path && !f.startsWith(`${path}/`));
-    const nextFiles = workspace.files.filter((f) => !f.path.startsWith(`${path}/`));
-    if (!nextFiles.length) {
-      setStatusMessage("Cannot delete folder containing all files.");
-      return;
+    let nextFiles = workspace.files.filter((f) => !f.path.startsWith(`${path}/`) && f.path !== path);
+    if (nextFiles.length === 0) {
+      const starter = buildStarterFile(DEFAULT_LANGUAGE);
+      nextFiles = [starter];
     }
     const nextActiveId = nextFiles.some((f) => f.id === workspace.activeFileId)
       ? workspace.activeFileId
@@ -243,66 +268,131 @@ export default function EditorPage() {
     const file = workspace.files.find((f) => f.id === fileId);
     if (!file) return;
     const baseName = getWorkspaceBaseName(file.path);
-    const newPath = targetFolder ? `${targetFolder}/${baseName}` : baseName;
+    const targetParent = normalizeWorkspacePath(targetFolder);
+    const newPath = targetParent ? `${targetParent}/${baseName}` : baseName;
+
+    if (newPath === file.path) return;
+
     const nextFiles = workspace.files.map((f) =>
       f.id === fileId ? { ...f, path: newPath, name: baseName } : f,
     );
     const nextFolders = new Set(workspace.folders);
-    if (targetFolder) nextFolders.add(targetFolder);
+    if (targetParent) {
+      const parts = targetParent.split("/");
+      let accumulated = "";
+      for (const part of parts) {
+        accumulated = accumulated ? `${accumulated}/${part}` : part;
+        nextFolders.add(accumulated);
+      }
+    }
     persist({ ...workspace, files: nextFiles, folders: Array.from(nextFolders) });
-    setStatusMessage(`Moved ${baseName} to ${targetFolder || "root"}.`);
+    setStatusMessage(`Moved ${baseName} to ${targetParent ? `/${targetParent}` : "root"}.`);
   };
 
   const handleMoveFolder = (srcPath: string, targetFolder: string) => {
     if (!workspace) return;
-    const folderName = getWorkspaceBaseName(srcPath);
-    const newFolderPath = targetFolder ? `${targetFolder}/${folderName}` : folderName;
+    const normSrc = normalizeWorkspacePath(srcPath);
+    const normTarget = normalizeWorkspacePath(targetFolder);
+
+    if (normTarget === normSrc || normTarget.startsWith(`${normSrc}/`)) {
+      setStatusMessage("Cannot move a folder into itself or its subfolder.");
+      return;
+    }
+
+    const folderName = getWorkspaceBaseName(normSrc);
+    const newFolderPath = normTarget ? `${normTarget}/${folderName}` : folderName;
+
+    if (newFolderPath === normSrc) return;
+
     const nextFolders = workspace.folders
-      .filter((f) => f !== srcPath && !f.startsWith(`${srcPath}/`))
+      .filter((f) => f !== normSrc && !f.startsWith(`${normSrc}/`))
       .concat([newFolderPath]);
+
+    if (normTarget) {
+      const parts = normTarget.split("/");
+      let acc = "";
+      for (const p of parts) {
+        acc = acc ? `${acc}/${p}` : p;
+        if (!nextFolders.includes(acc)) nextFolders.push(acc);
+      }
+    }
+
     const nextFiles = workspace.files.map((file) => {
-      if (file.path === srcPath || file.path.startsWith(`${srcPath}/`)) {
-        const relative = file.path.slice(srcPath.length);
-        return { ...file, path: `${newFolderPath}${relative}` };
+      if (file.path === normSrc || file.path.startsWith(`${normSrc}/`)) {
+        const relative = file.path.slice(normSrc.length);
+        const updatedPath = `${newFolderPath}${relative}`;
+        return {
+          ...file,
+          path: updatedPath,
+          name: getWorkspaceBaseName(updatedPath),
+        };
       }
       return file;
     });
+
     persist({ ...workspace, files: nextFiles, folders: nextFolders });
-    setStatusMessage(`Moved folder ${folderName}.`);
+    setStatusMessage(`Moved folder ${folderName} to ${normTarget ? `/${normTarget}` : "root"}.`);
   };
 
   const handleRenameFile = (fileId: string, newName: string) => {
     if (!workspace) return;
     const file = workspace.files.find((f) => f.id === fileId);
     if (!file) return;
+    const cleanName = getWorkspaceBaseName(newName.trim());
+    if (!cleanName || cleanName === file.name) return;
+
     const parentPath = getWorkspaceParentPath(file.path);
-    const newPath = parentPath ? `${parentPath}/${newName}` : newName;
+    const newPath = parentPath ? `${parentPath}/${cleanName}` : cleanName;
+    const nextLang = getLanguageByExtension(newPath);
+
     const nextFiles = workspace.files.map((f) =>
-      f.id === fileId ? { ...f, name: newName, path: newPath } : f,
+      f.id === fileId
+        ? {
+            ...f,
+            languageId: nextLang.id,
+            name: cleanName,
+            path: newPath,
+          }
+        : f,
     );
     persist({ ...workspace, files: nextFiles });
-    setStatusMessage(`Renamed to ${newName}.`);
+    setStatusMessage(`Renamed to ${cleanName}.`);
   };
 
   const handleRenameFolder = (oldPath: string, newName: string) => {
     if (!workspace) return;
-    const parentPath = getWorkspaceParentPath(oldPath);
-    const newPath = parentPath ? `${parentPath}/${newName}` : newName;
+    const cleanName = getWorkspaceBaseName(newName.trim());
+    if (!cleanName) return;
+
+    const normOld = normalizeWorkspacePath(oldPath);
+    const parentPath = getWorkspaceParentPath(normOld);
+    const newPath = parentPath ? `${parentPath}/${cleanName}` : cleanName;
+
+    if (newPath === normOld) return;
+
     const nextFolders = workspace.folders.map((f) => {
-      if (f === oldPath) return newPath;
-      if (f.startsWith(`${oldPath}/`)) {
-        return `${newPath}${f.slice(oldPath.length)}`;
+      if (f === normOld) return newPath;
+      if (f.startsWith(`${normOld}/`)) {
+        return `${newPath}${f.slice(normOld.length)}`;
       }
       return f;
     });
+
     const nextFiles = workspace.files.map((file) => {
-      if (file.path === oldPath || file.path.startsWith(`${oldPath}/`)) {
-        return { ...file, path: `${newPath}${file.path.slice(oldPath.length)}` };
+      if (file.path === normOld || file.path.startsWith(`${normOld}/`)) {
+        const relative = file.path.slice(normOld.length);
+        const updatedPath = `${newPath}${relative}`;
+        return {
+          ...file,
+          path: updatedPath,
+          name: getWorkspaceBaseName(updatedPath),
+        };
       }
       return file;
     });
+
     persist({ ...workspace, files: nextFiles, folders: nextFolders });
-    setStatusMessage(`Renamed folder to ${newName}.`);
+    setStatusMessage(`Renamed folder to ${cleanName}.`);
   };
 
   const handleRun = async () => {
@@ -424,7 +514,7 @@ export default function EditorPage() {
 
   useShortcuts({
     onEscape: () => setIsSettingsOpen(false),
-    onNewFile: handleCreateFile,
+    onNewFile: () => handleCreateFile(),
     onRun: handleRun,
     onSave: handleSave,
   });
@@ -434,7 +524,13 @@ export default function EditorPage() {
   const firstName = profile.name.trim().split(/\s+/)[0] || "User";
 
   return (
-    <main className="h-screen w-screen overflow-hidden bg-[#000000] text-[#f4f4f5] flex flex-col font-sans select-none antialiased">
+    <main
+      className="h-screen w-screen overflow-hidden flex flex-col font-sans select-none antialiased transition-colors"
+      style={{
+        background: "var(--background-main)",
+        color: "var(--text)",
+      }}
+    >
       {/* Hidden File Import Inputs */}
       <input
         className="hidden"
@@ -452,105 +548,151 @@ export default function EditorPage() {
       />
 
       {/* ========================================================================= */}
-      {/* 1. TOP NAVBAR (Slim, Glassmorphism, 40px Height)                          */}
+      {/* 1. TOP NAVBAR (Clean, Premium Aesthetic, Matching Login & Manual)          */}
       {/* ========================================================================= */}
-      <header className="h-10 shrink-0 bg-black/85 backdrop-blur-md border-b border-white/10 px-3 flex items-center justify-between z-30 relative select-none">
-        {/* Left: Brand Logo & Monochrome Run/Save Controls */}
+      <header
+        className="h-11 shrink-0 px-4 flex items-center justify-between z-30 relative select-none transition-colors"
+        style={{
+          background: "var(--panel-background)",
+          borderBottom: "1px solid var(--border)",
+        }}
+      >
+        {/* Left: Brand Logo & File Path & Run Trigger */}
         <div className="flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-2 group transition-opacity duration-100 opacity-90 hover:opacity-100">
-            <svg width="18" height="18" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-zinc-100 group-hover:text-white">
-              <path d="M18 10 L54 110 L64 90 L36 10 Z" fill="currentColor" />
-              <path d="M110 10 L74 110 L64 90 L92 10 Z" fill="currentColor" />
-              <path d="M80 8 L44 122" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
-            </svg>
-            <span className="font-semibold text-xs tracking-tight text-zinc-100 font-mono">
-              VoidLAB
-            </span>
+          <Link
+            href="/"
+            className="flex items-center gap-2 group transition-opacity opacity-90 hover:opacity-100"
+            title="VoidLAB Home"
+          >
+            <Brand compact />
           </Link>
 
-          <div className="h-3 w-px bg-zinc-800" />
+          <div className="h-3.5 w-px" style={{ background: "var(--border)" }} />
 
-          {/* Monochrome Run Pill Button */}
+          {/* Active File Path Tag (JetBrains Mono) */}
+          <div
+            className="flex items-center gap-2 px-2.5 py-1 rounded-md text-[11px] font-mono transition-colors"
+            style={{
+              background: "var(--surface-soft)",
+              border: "1px solid var(--border)",
+              color: "var(--muted)",
+            }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+            <span className="font-medium" style={{ color: "var(--text-strong)" }}>
+              {formatWorkspacePath(activeFile.path)}
+            </span>
+            <span style={{ color: "var(--border)" }}>/</span>
+            <span style={{ color: "var(--muted)" }}>{currentLanguage.label}</span>
+          </div>
+
+          {/* Action Run Pill Button */}
           <button
             onClick={() => void handleRun()}
             disabled={loading || (!currentLanguage.runnable && !currentLanguage.previewable) || Boolean(interactiveSession)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded bg-zinc-100 hover:bg-white text-zinc-950 active:scale-[0.98] transition-all duration-100 shadow-sm disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md shadow-sm active:scale-[0.98] transition-all disabled:opacity-40 ml-1"
+            style={{
+              background: "var(--action-background)",
+              color: "var(--action-foreground)",
+            }}
             title="Execute script (Ctrl+Enter)"
             type="button"
           >
             {loading ? (
-              <Loader2 className="w-2.5 h-2.5 animate-spin text-zinc-950" />
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (
-              <Play className="w-2.5 h-2.5 fill-current" />
+              <Play className="w-3.5 h-3.5 fill-current" />
             )}
-            <span className="font-mono font-semibold">Run</span>
+            <span className="font-mono">Run</span>
           </button>
 
-          {/* Monochrome Save Trigger */}
+          {/* Save Trigger */}
           <button
             onClick={handleSave}
-            className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 border border-transparent hover:border-white/10 transition-colors duration-100"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-colors"
+            style={{
+              background: "var(--surface-soft)",
+              border: "1px solid var(--border)",
+              color: "var(--text)",
+            }}
             title="Save file (Ctrl+S)"
             type="button"
           >
-            <Save className="w-3 h-3 stroke-current" />
+            <Save className="w-3.5 h-3.5 stroke-current" />
             <span className="hidden sm:inline">Save</span>
           </button>
 
           {/* Status Message */}
-          <span className="text-[10px] text-zinc-500 font-mono pl-1.5 truncate max-w-[140px]">
+          <span
+            className="text-[10px] font-mono pl-1 truncate max-w-[130px]"
+            style={{ color: "var(--muted)" }}
+          >
             {statusMessage}
           </span>
         </div>
 
-        {/* Center: Active Path & Engine (JetBrains Mono) */}
-        <div className="hidden md:flex items-center gap-2 px-2.5 py-0.5 rounded border border-white/10 bg-zinc-900/60 text-[10px] text-zinc-400 font-mono">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/80" />
-          <span className="text-zinc-200">{formatWorkspacePath(activeFile.path)}</span>
-          <span className="text-zinc-600">/</span>
-          <span className="text-zinc-400">{currentLanguage.label}</span>
-        </div>
-
-        {/* Right: Minimalist Text-Links & Settings Icon */}
-        <div className="flex items-center gap-3">
-          <nav className="flex items-center gap-3.5 text-xs text-zinc-400 font-medium">
-            <Link href="/editor/manual" className="hover:text-zinc-100 transition-colors duration-100">
+        {/* Right: Minimal Text Buttons (Manual, GitHub, Collab, AI Guide) & Switcher */}
+        <div className="flex items-center gap-2.5">
+          <nav className="flex items-center gap-1 text-xs font-medium">
+            <Link
+              href="/editor/manual"
+              className="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)]"
+              style={{ color: "var(--muted)" }}
+            >
               Manual
             </Link>
             <a
               href="https://github.com/Voxion-Labs/VoidLAB"
               target="_blank"
               rel="noreferrer"
-              className="hover:text-zinc-100 transition-colors duration-100 flex items-center gap-1"
+              className="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)] flex items-center gap-1"
+              style={{ color: "var(--muted)" }}
             >
               GitHub
-              <ExternalLink size={10} className="text-zinc-500" />
+              <ExternalLink size={10} style={{ opacity: 0.7 }} />
             </a>
-            <Link href="/editor/collaboration" className="hover:text-zinc-100 transition-colors duration-100 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-zinc-500" />
+            <Link
+              href="/editor/collaboration"
+              className="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)] flex items-center gap-1.5"
+              style={{ color: "var(--muted)" }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--accent)" }} />
               Collab
             </Link>
-            <Link href="/editor/ai" className="hover:text-zinc-100 transition-colors duration-100">
+            <Link
+              href="/editor/ai"
+              className="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)]"
+              style={{ color: "var(--muted)" }}
+            >
               AI Guide
             </Link>
           </nav>
 
-          <div className="h-3 w-px bg-zinc-800" />
+          <div className="h-3.5 w-px" style={{ background: "var(--border)" }} />
+
+          {/* Dual Theme Switcher (Light / Dark) */}
+          <ThemeSwitcher />
 
           {/* Settings Trigger */}
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className="p-1 rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/80 transition-colors duration-100"
+            className="p-1.5 rounded-md transition-colors hover:bg-[var(--surface-soft)]"
+            style={{ color: "var(--muted)" }}
             title="Workspace Settings (Language, Region, Shortcuts)"
             type="button"
           >
-            <Settings size={14} />
+            <Settings size={15} />
           </button>
 
           {/* User Profile Avatar */}
           <Link
             href="/editor/profile"
-            className="h-5 w-5 rounded bg-zinc-800 border border-white/10 flex items-center justify-center text-[10px] font-semibold text-zinc-300 hover:border-zinc-500 transition-colors duration-100"
+            className="h-6 w-6 rounded-md flex items-center justify-center text-[10px] font-semibold transition-all hover:scale-105"
+            style={{
+              background: "var(--surface-soft)",
+              border: "1px solid var(--border)",
+              color: "var(--text-strong)",
+            }}
             title="Profile & Activity"
           >
             {firstName.charAt(0).toUpperCase()}
@@ -559,10 +701,13 @@ export default function EditorPage() {
       </header>
 
       {/* ========================================================================= */}
-      {/* 2. MAIN BODY (Ultra-Slim Sidebar + Split-Pane Workspace)                  */}
+      {/* 2. MAIN WORKSPACE (3-Column Flex: Left, Middle Editor, Right Output)       */}
       {/* ========================================================================= */}
-      <div className="flex-1 flex overflow-hidden min-h-0 relative bg-[#000000]">
-        {/* ── Left: Ultra-Slim File Explorer ── */}
+      <div
+        className="flex-1 flex overflow-hidden min-h-0 relative"
+        style={{ background: "var(--background-main)" }}
+      >
+        {/* ── Left Column: File Explorer Sidebar ── */}
         <FileExplorer
           activeFileId={activeFile.id}
           cwd={workspace.terminal.cwd}
@@ -585,89 +730,113 @@ export default function EditorPage() {
           onRenameFile={handleRenameFile}
           onRenameFolder={handleRenameFolder}
           onSelectFile={handleSelectFile}
+          width={explorerWidth}
         />
 
-        {/* ── Right: Split-Pane Workspace ── */}
-        <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative bg-[#000000]">
-          {/* Top Pane: Monaco Code Editor */}
-          <section
-            style={{ height: `${editorHeightPercent}%` }}
-            className="flex flex-col min-h-[140px] overflow-hidden bg-[#000000] relative"
-          >
-            <EditorTabs
-              activeFileId={activeFile.id}
-              files={workspace.files.map((file) => ({ id: file.id, name: file.name, path: file.path }))}
-              languageLabel={currentLanguage.label}
-              onCloseFile={handleDeleteFile}
-              onDownload={handleDownload}
-              onInsertBoilerplate={handleInsertBoilerplate}
-              onSelectFile={handleSelectFile}
-            />
-
-            <div className="flex-1 h-full min-h-0 relative">
-              <MonacoEditor
-                language={currentLanguage.monacoLanguage}
-                onChange={handleCodeChange}
-                path={activeFile.path}
-                theme="vs-dark"
-                value={activeFile.content}
-              />
-            </div>
-          </section>
-
-          {/* Resizable Divider Drag Handle */}
+        {/* ── Divider 1: Left Resizable Splitter (between Explorer & Editor) ── */}
+        <div
+          onMouseDown={() => {
+            activeDragRef.current = "left";
+            document.body.style.cursor = "col-resize";
+            document.body.style.userSelect = "none";
+          }}
+          onDoubleClick={() => setExplorerWidth(230)}
+          className="w-1 hover:w-1.5 cursor-col-resize transition-all duration-100 z-20 flex flex-col items-center justify-center group shrink-0"
+          style={{ background: "var(--border)" }}
+          title="Drag to resize sidebar (Double click to reset 230px)"
+        >
           <div
-            onMouseDown={() => {
-              isDraggingRef.current = true;
-              document.body.style.cursor = "row-resize";
-              document.body.style.userSelect = "none";
-            }}
-            onDoubleClick={() => setEditorHeightPercent(75)}
-            className="h-1 bg-zinc-900 hover:bg-zinc-600 active:bg-zinc-400 cursor-row-resize transition-all duration-100 z-20 flex items-center justify-center group shrink-0"
-            title="Drag up/down to resize terminal (Double click to reset 75/25 split)"
-          >
-            <div className="w-6 h-[1.5px] rounded-full bg-zinc-700 group-hover:bg-zinc-300 transition-colors" />
-          </div>
-
-          {/* Bottom Pane: Fixed Anchored Terminal */}
-          <section
-            style={{ height: `${100 - editorHeightPercent}%` }}
-            className="min-h-[90px] overflow-hidden relative"
-          >
-            <TerminalBox
-              activeFilePath={activeFile.path}
-              commandHistory={workspace.terminal.history}
-              commandInput={commandInput}
-              cwd={workspace.terminal.cwd}
-              error={error}
-              execution={execution}
-              interactiveSession={{
-                active: Boolean(interactiveSession),
-                helperText:
-                  interactiveSession?.helperText ??
-                  "VoidLAB will request stdin here before sending the execution payload.",
-                promptLabel: interactiveSession?.promptLabel ?? "stdin",
-              }}
-              loading={loading}
-              onClearOutput={() => {
-                setTranscript([]);
-                resetExecutionState();
-              }}
-              onCommandChange={setCommandInput}
-              onCommandRun={handleCommandRun}
-              onInteractiveInputChange={setPendingInteractiveInput}
-              onResetBufferedInput={() => {
-                setPendingInteractiveInput("");
-                setStdin("");
-              }}
-              onResetSplit={() => setEditorHeightPercent(75)}
-              onRun={() => void handleRun()}
-              pendingInteractiveInput={pendingInteractiveInput}
-              stdin={stdin}
-              transcript={transcript}
-            />
-          </section>
+            className="h-6 w-[1.5px] rounded-full group-hover:scale-125 transition-transform"
+            style={{ background: "var(--muted)" }}
+          />
         </div>
+
+        {/* ── Middle Column: Main Code Editor (Takes Majority Width) ── */}
+        <div
+          className="flex-1 min-w-[320px] flex flex-col h-full overflow-hidden relative"
+          style={{ background: "var(--background-main)" }}
+        >
+          <EditorTabs
+            activeFileId={activeFile.id}
+            files={workspace.files.map((file) => ({ id: file.id, name: file.name, path: file.path }))}
+            languageLabel={currentLanguage.label}
+            onCloseFile={handleDeleteFile}
+            onDownload={handleDownload}
+            onInsertBoilerplate={handleInsertBoilerplate}
+            onSelectFile={handleSelectFile}
+          />
+
+          <div className="flex-1 h-full min-h-0 relative">
+            <MonacoEditor
+              language={currentLanguage.monacoLanguage}
+              onChange={handleCodeChange}
+              path={activeFile.path}
+              theme={editorTheme}
+              value={activeFile.content}
+            />
+          </div>
+        </div>
+
+        {/* ── Divider 2: Right Resizable Splitter (between Editor & Output) ── */}
+        <div
+          onMouseDown={() => {
+            activeDragRef.current = "right";
+            document.body.style.cursor = "col-resize";
+            document.body.style.userSelect = "none";
+          }}
+          onDoubleClick={() => setOutputWidth(380)}
+          className="w-1 hover:w-1.5 cursor-col-resize transition-all duration-100 z-20 flex flex-col items-center justify-center group shrink-0"
+          style={{ background: "var(--border)" }}
+          title="Drag to resize output panel (Double click to reset 380px)"
+        >
+          <div
+            className="h-6 w-[1.5px] rounded-full group-hover:scale-125 transition-transform"
+            style={{ background: "var(--muted)" }}
+          />
+        </div>
+
+        {/* ── Right Column: Output Panel (Terminal, Output, Ports Tabs) ── */}
+        <aside
+          style={{
+            width: `${outputWidth}px`,
+            background: "var(--panel-background)",
+            borderLeft: "1px solid var(--border)",
+          }}
+          className="shrink-0 flex flex-col h-full overflow-hidden relative"
+        >
+          <TerminalBox
+            activeFilePath={activeFile.path}
+            commandHistory={workspace.terminal.history}
+            commandInput={commandInput}
+            cwd={workspace.terminal.cwd}
+            error={error}
+            execution={execution}
+            interactiveSession={{
+              active: Boolean(interactiveSession),
+              helperText:
+                interactiveSession?.helperText ??
+                "VoidLAB will request stdin here before sending the execution payload.",
+              promptLabel: interactiveSession?.promptLabel ?? "stdin",
+            }}
+            loading={loading}
+            onClearOutput={() => {
+              setTranscript([]);
+              resetExecutionState();
+            }}
+            onCommandChange={setCommandInput}
+            onCommandRun={handleCommandRun}
+            onInteractiveInputChange={setPendingInteractiveInput}
+            onResetBufferedInput={() => {
+              setPendingInteractiveInput("");
+              setStdin("");
+            }}
+            onResetSplit={() => setOutputWidth(380)}
+            onRun={() => void handleRun()}
+            pendingInteractiveInput={pendingInteractiveInput}
+            stdin={stdin}
+            transcript={transcript}
+          />
+        </aside>
       </div>
 
       {/* ========================================================================= */}
@@ -675,22 +844,35 @@ export default function EditorPage() {
       {/* ========================================================================= */}
       {isSettingsOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) setIsSettingsOpen(false);
           }}
         >
-          <div className="w-full max-w-md bg-[#09090b] border border-white/10 rounded-lg shadow-2xl p-5 space-y-4 text-zinc-200 font-sans">
+          <div
+            className="w-full max-w-md rounded-lg shadow-2xl p-5 space-y-4 font-sans transition-colors"
+            style={{
+              background: "var(--panel-background)",
+              border: "1px solid var(--border-strong)",
+              color: "var(--text)",
+            }}
+          >
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <div
+              className="flex items-center justify-between pb-3"
+              style={{ borderBottom: "1px solid var(--border)" }}
+            >
               <div className="flex items-center gap-2">
-                <Settings size={16} className="text-zinc-300" />
-                <h3 className="font-semibold text-sm text-zinc-100">Workspace Settings</h3>
+                <Settings size={16} style={{ color: "var(--accent)" }} />
+                <h3 className="font-semibold text-sm" style={{ color: "var(--text-strong)" }}>
+                  Workspace Settings
+                </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsSettingsOpen(false)}
-                className="text-zinc-400 hover:text-white p-1 rounded hover:bg-zinc-800 transition-colors"
+                className="p-1 rounded transition-colors hover:bg-[var(--surface-soft)]"
+                style={{ color: "var(--muted)" }}
               >
                 <X size={15} />
               </button>
@@ -699,9 +881,16 @@ export default function EditorPage() {
             <div className="space-y-4 text-xs">
               {/* Language Runtime Selection */}
               <div className="space-y-1.5">
-                <label className="font-medium text-zinc-300 block text-[11px]">Active Language Runtime</label>
+                <label className="font-medium block text-[11px]" style={{ color: "var(--text-strong)" }}>
+                  Active Language Runtime
+                </label>
                 <select
-                  className="w-full bg-[#000000] border border-white/10 rounded px-3 py-2 text-zinc-200 outline-none focus:border-zinc-500 font-mono text-xs cursor-pointer"
+                  className="w-full rounded px-3 py-2 outline-none font-mono text-xs cursor-pointer transition-colors"
+                  style={{
+                    background: "var(--input-background)",
+                    border: "1px solid var(--border)",
+                    color: "var(--text)",
+                  }}
                   value={currentLanguage.id}
                   onChange={(e) => {
                     const nextLangId = e.target.value;
@@ -731,9 +920,16 @@ export default function EditorPage() {
 
               {/* Execution Region Selection */}
               <div className="space-y-1.5">
-                <label className="font-medium text-zinc-300 block text-[11px]">Execution Sandbox Region</label>
+                <label className="font-medium block text-[11px]" style={{ color: "var(--text-strong)" }}>
+                  Execution Sandbox Region
+                </label>
                 <select
-                  className="w-full bg-[#000000] border border-white/10 rounded px-3 py-2 text-zinc-200 outline-none focus:border-zinc-500 font-mono text-xs cursor-pointer"
+                  className="w-full rounded px-3 py-2 outline-none font-mono text-xs cursor-pointer transition-colors"
+                  style={{
+                    background: "var(--input-background)",
+                    border: "1px solid var(--border)",
+                    color: "var(--text)",
+                  }}
                   value={profile.region || "Local Sandbox"}
                   onChange={(e) => {
                     void saveProfile({ region: e.target.value });
@@ -748,35 +944,59 @@ export default function EditorPage() {
               </div>
 
               {/* Keyboard Shortcuts Summary */}
-              <div className="space-y-1.5 pt-2 border-t border-white/10">
-                <span className="font-medium text-zinc-400 block text-[11px]">Shortcuts Cheatsheet</span>
-                <div className="grid grid-cols-2 gap-1.5 text-[10px] font-mono text-zinc-400">
-                  <div className="flex justify-between bg-zinc-950 p-1.5 rounded border border-white/5">
-                    <span>Run script:</span>
-                    <kbd className="text-zinc-200">Ctrl+Enter</kbd>
+              <div
+                className="space-y-1.5 pt-2"
+                style={{ borderTop: "1px solid var(--border)" }}
+              >
+                <span className="font-medium block text-[11px]" style={{ color: "var(--muted)" }}>
+                  Shortcuts Cheatsheet
+                </span>
+                <div className="grid grid-cols-2 gap-1.5 text-[10px] font-mono">
+                  <div
+                    className="flex justify-between p-1.5 rounded"
+                    style={{ background: "var(--surface-soft)", border: "1px solid var(--border)" }}
+                  >
+                    <span style={{ color: "var(--muted)" }}>Run script:</span>
+                    <kbd className="font-semibold" style={{ color: "var(--text-strong)" }}>Ctrl+Enter</kbd>
                   </div>
-                  <div className="flex justify-between bg-zinc-950 p-1.5 rounded border border-white/5">
-                    <span>Save workspace:</span>
-                    <kbd className="text-zinc-200">Ctrl+S</kbd>
+                  <div
+                    className="flex justify-between p-1.5 rounded"
+                    style={{ background: "var(--surface-soft)", border: "1px solid var(--border)" }}
+                  >
+                    <span style={{ color: "var(--muted)" }}>Save workspace:</span>
+                    <kbd className="font-semibold" style={{ color: "var(--text-strong)" }}>Ctrl+S</kbd>
                   </div>
-                  <div className="flex justify-between bg-zinc-950 p-1.5 rounded border border-white/5">
-                    <span>New file:</span>
-                    <kbd className="text-zinc-200">Ctrl+Shift+N</kbd>
+                  <div
+                    className="flex justify-between p-1.5 rounded"
+                    style={{ background: "var(--surface-soft)", border: "1px solid var(--border)" }}
+                  >
+                    <span style={{ color: "var(--muted)" }}>New file:</span>
+                    <kbd className="font-semibold" style={{ color: "var(--text-strong)" }}>Ctrl+Shift+N</kbd>
                   </div>
-                  <div className="flex justify-between bg-zinc-950 p-1.5 rounded border border-white/5">
-                    <span>Close modal:</span>
-                    <kbd className="text-zinc-200">Escape</kbd>
+                  <div
+                    className="flex justify-between p-1.5 rounded"
+                    style={{ background: "var(--surface-soft)", border: "1px solid var(--border)" }}
+                  >
+                    <span style={{ color: "var(--muted)" }}>Close modal:</span>
+                    <kbd className="font-semibold" style={{ color: "var(--text-strong)" }}>Escape</kbd>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Modal Actions */}
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/10">
+            <div
+              className="flex items-center justify-end gap-2 pt-3"
+              style={{ borderTop: "1px solid var(--border)" }}
+            >
               <button
                 type="button"
                 onClick={() => setIsSettingsOpen(false)}
-                className="px-3 py-1.5 text-xs rounded bg-zinc-100 hover:bg-white text-zinc-950 font-medium transition-colors"
+                className="px-3 py-1.5 text-xs rounded font-medium transition-opacity hover:opacity-90 shadow-sm"
+                style={{
+                  background: "var(--action-background)",
+                  color: "var(--action-foreground)",
+                }}
               >
                 Done
               </button>

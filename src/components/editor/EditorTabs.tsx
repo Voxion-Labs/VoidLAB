@@ -28,7 +28,13 @@ export default function EditorTabs({
   languageLabel,
 }: EditorTabsProps) {
   return (
-    <div className="h-8 border-b border-white/10 bg-[#000000] flex items-center justify-between px-1 shrink-0 select-none font-mono text-xs overflow-x-auto scrollbar-thin">
+    <div
+      className="h-8 flex items-center justify-between px-1 shrink-0 select-none font-mono text-xs overflow-x-auto scrollbar-thin transition-colors"
+      style={{
+        background: "var(--surface-soft)",
+        borderBottom: "1px solid var(--border)",
+      }}
+    >
       {/* ── Left: Tab List ── */}
       <div className="flex items-center gap-0.5 h-full">
         {files.map((file) => {
@@ -37,16 +43,20 @@ export default function EditorTabs({
             <div
               key={file.id}
               onClick={() => onSelectFile(file.id)}
-              className={`h-full px-2.5 flex items-center gap-2 border-r border-white/10 text-xs cursor-pointer transition-colors duration-100 ${
-                isActive
-                  ? "border-t border-zinc-200 bg-[#0e0e11] text-zinc-100 font-medium"
-                  : "text-zinc-500 hover:text-zinc-300 hover:bg-[#09090b]"
+              className={`h-full px-2.5 flex items-center gap-2 text-xs cursor-pointer transition-colors duration-100 ${
+                isActive ? "font-medium" : "opacity-75 hover:opacity-100"
               }`}
+              style={{
+                background: isActive ? "var(--panel-background)" : "transparent",
+                borderRight: "1px solid var(--border)",
+                borderTop: isActive ? "2px solid var(--accent)" : "2px solid transparent",
+                color: isActive ? "var(--text-strong)" : "var(--muted)",
+              }}
             >
-              <FileCode2 size={13} className={isActive ? "text-zinc-300" : "text-zinc-600"} />
+              <FileCode2 size={13} style={{ color: isActive ? "var(--accent)" : "var(--muted)" }} />
               <span className="truncate text-[11px] max-w-[140px]">{file.name}</span>
               <button
-                className="hover:bg-zinc-800 rounded p-0.5 text-zinc-500 hover:text-zinc-200 transition-colors ml-0.5"
+                className="rounded p-0.5 opacity-60 hover:opacity-100 hover:bg-[var(--control-hover)] transition-all ml-0.5"
                 onClick={(e) => {
                   e.stopPropagation();
                   onCloseFile(file.id);
@@ -62,11 +72,11 @@ export default function EditorTabs({
       </div>
 
       {/* ── Right: Quick Editor Actions & Encoding ── */}
-      <div className="flex items-center gap-1.5 text-[10px] text-zinc-500 font-mono px-2 shrink-0">
+      <div className="flex items-center gap-1.5 text-[10px] theme-muted font-mono px-2 shrink-0">
         {onInsertBoilerplate && (
           <button
             onClick={onInsertBoilerplate}
-            className="px-1.5 py-0.5 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/80 rounded transition-colors flex items-center gap-1"
+            className="px-1.5 py-0.5 hover:text-[var(--text-strong)] hover:bg-[var(--control-hover)] rounded transition-colors flex items-center gap-1"
             title="Insert fresh boilerplate for active language"
             type="button"
           >
@@ -77,7 +87,7 @@ export default function EditorTabs({
         {onDownload && (
           <button
             onClick={onDownload}
-            className="px-1.5 py-0.5 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/80 rounded transition-colors flex items-center gap-1"
+            className="px-1.5 py-0.5 hover:text-[var(--text-strong)] hover:bg-[var(--control-hover)] rounded transition-colors flex items-center gap-1"
             title="Download active file"
             type="button"
           >
@@ -85,10 +95,10 @@ export default function EditorTabs({
             <span className="hidden sm:inline">Export</span>
           </button>
         )}
-        <span className="text-zinc-700">|</span>
-        <span className="text-zinc-500">{languageLabel || "Plain"}</span>
-        <span className="text-zinc-700">|</span>
-        <span className="text-zinc-600">UTF-8</span>
+        <span className="opacity-40">|</span>
+        <span>{languageLabel || "Plain"}</span>
+        <span className="opacity-40">|</span>
+        <span>UTF-8</span>
       </div>
     </div>
   );
