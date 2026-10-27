@@ -29,7 +29,7 @@ export default function EditorTabs({
 }: EditorTabsProps) {
   return (
     <div
-      className="h-8 flex items-center justify-between px-1 shrink-0 select-none font-mono text-xs overflow-x-auto scrollbar-thin transition-colors"
+      className="h-9 flex items-center justify-between px-1 shrink-0 select-none font-sans text-xs overflow-x-auto scrollbar-thin transition-colors"
       style={{
         background: "var(--surface-soft)",
         borderBottom: "1px solid var(--border)",
@@ -43,8 +43,8 @@ export default function EditorTabs({
             <div
               key={file.id}
               onClick={() => onSelectFile(file.id)}
-              className={`h-full px-2.5 flex items-center gap-2 text-xs cursor-pointer transition-colors duration-100 ${
-                isActive ? "font-medium" : "opacity-75 hover:opacity-100"
+              className={`h-full px-3 flex items-center gap-2 text-xs cursor-pointer transition-colors duration-100 ${
+                isActive ? "font-semibold" : "opacity-75 hover:opacity-100 hover:bg-[var(--control-hover)]"
               }`}
               style={{
                 background: isActive ? "var(--panel-background)" : "transparent",
@@ -54,9 +54,9 @@ export default function EditorTabs({
               }}
             >
               <FileCode2 size={13} style={{ color: isActive ? "var(--accent)" : "var(--muted)" }} />
-              <span className="truncate text-[11px] max-w-[140px]">{file.name}</span>
+              <span className="truncate max-w-[150px]">{file.name}</span>
               <button
-                className="rounded p-0.5 opacity-60 hover:opacity-100 hover:bg-[var(--control-hover)] transition-all ml-0.5"
+                className="rounded p-0.5 opacity-50 hover:opacity-100 hover:bg-[var(--control-hover)] transition-all ml-0.5"
                 onClick={(e) => {
                   e.stopPropagation();
                   onCloseFile(file.id);
@@ -64,7 +64,7 @@ export default function EditorTabs({
                 title={`Close ${file.name}`}
                 type="button"
               >
-                <X size={11} />
+                <X size={12} />
               </button>
             </div>
           );
@@ -72,33 +72,33 @@ export default function EditorTabs({
       </div>
 
       {/* ── Right: Quick Editor Actions & Encoding ── */}
-      <div className="flex items-center gap-1.5 text-[10px] theme-muted font-mono px-2 shrink-0">
+      <div className="flex items-center gap-2 text-xs font-sans px-2 shrink-0" style={{ color: "var(--muted)" }}>
         {onInsertBoilerplate && (
           <button
             onClick={onInsertBoilerplate}
-            className="px-1.5 py-0.5 hover:text-[var(--text-strong)] hover:bg-[var(--control-hover)] rounded transition-colors flex items-center gap-1"
+            className="px-2 py-0.5 hover:text-[var(--text-strong)] hover:bg-[var(--control-hover)] rounded transition-colors flex items-center gap-1.5"
             title="Insert fresh boilerplate for active language"
             type="button"
           >
-            <Sparkles size={11} />
+            <Sparkles size={12} />
             <span className="hidden sm:inline">Boilerplate</span>
           </button>
         )}
         {onDownload && (
           <button
             onClick={onDownload}
-            className="px-1.5 py-0.5 hover:text-[var(--text-strong)] hover:bg-[var(--control-hover)] rounded transition-colors flex items-center gap-1"
+            className="px-2 py-0.5 hover:text-[var(--text-strong)] hover:bg-[var(--control-hover)] rounded transition-colors flex items-center gap-1.5"
             title="Download active file"
             type="button"
           >
-            <Download size={11} />
+            <Download size={12} />
             <span className="hidden sm:inline">Export</span>
           </button>
         )}
-        <span className="opacity-40">|</span>
-        <span>{languageLabel || "Plain"}</span>
-        <span className="opacity-40">|</span>
-        <span>UTF-8</span>
+        <span className="opacity-30">|</span>
+        <span className="font-mono text-[11px]">{languageLabel || "Plain"}</span>
+        <span className="opacity-30">|</span>
+        <span className="font-mono text-[11px]">UTF-8</span>
       </div>
     </div>
   );

@@ -78,9 +78,14 @@ export default function EditorPage() {
   const [commandInput, setCommandInput] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // 3-Column Resizable Widths (Explorer: 230px, Output: 380px, Middle: flex-1)
+  // 3-Column Resizable Widths (Explorer: 230px, Output: 520px by default, Middle: flex-1)
   const [explorerWidth, setExplorerWidth] = useState(230);
-  const [outputWidth, setOutputWidth] = useState(380);
+  const [outputWidth, setOutputWidth] = useState(() => {
+    if (typeof window !== "undefined" && window.innerWidth >= 1280) {
+      return Math.max(480, Math.min(620, Math.floor(window.innerWidth * 0.38)));
+    }
+    return 520;
+  });
   const activeDragRef = useRef<"left" | "right" | null>(null);
 
   const { error, execution, loading, runCode, cancelExecution, resetExecutionState } = useCompiler();
@@ -105,13 +110,13 @@ export default function EditorPage() {
 
       if (activeDragRef.current === "left") {
         let nextW = e.clientX;
-        if (nextW < 160) nextW = 160;
+        if (nextW < 170) nextW = 170;
         if (nextW > 450) nextW = 450;
         setExplorerWidth(nextW);
       } else if (activeDragRef.current === "right") {
         let nextW = window.innerWidth - e.clientX;
-        if (nextW < 240) nextW = 240;
-        if (nextW > 750) nextW = 750;
+        if (nextW < 260) nextW = 260;
+        if (nextW > 850) nextW = 850;
         setOutputWidth(nextW);
       }
     };
@@ -261,6 +266,37 @@ export default function EditorPage() {
       : nextFiles[0].id;
     persist({ ...workspace, activeFileId: nextActiveId, files: nextFiles, folders: nextFolders });
     setStatusMessage(`Deleted folder ${getWorkspaceBaseName(path)}.`);
+  };
+
+  const handleDuplicateFile = (fileId: string) => {
+    if (!workspace) return;
+    const file = workspace.files.find((f) => f.id === fileId);
+    if (!file) return;
+
+    const baseName = getWorkspaceBaseName(file.path);
+    const parentPath = getWorkspaceParentPath(file.path);
+    const dotIndex = baseName.lastIndexOf(".");
+    const stem = dotIndex > 0 ? baseName.slice(0, dotIndex) : baseName;
+    const ext = dotIndex > 0 ? baseName.slice(dotIndex) : "";
+    const newName = `${stem}-copy${ext}`;
+    const newPath = parentPath ? `${parentPath}/${newName}` : newName;
+
+    const duplicateFile: ProjectFile = {
+      content: file.content,
+      id: `copy-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      languageId: file.languageId,
+      name: newName,
+      path: newPath,
+    };
+
+    const nextWorkspace = {
+      ...workspace,
+      activeFileId: duplicateFile.id,
+      files: [...workspace.files, duplicateFile],
+    };
+
+    persist(nextWorkspace);
+    setStatusMessage(`Duplicated ${baseName}`);
   };
 
   const handleMoveFile = (fileId: string, targetFolder: string) => {
@@ -525,7 +561,7 @@ export default function EditorPage() {
 
   return (
     <main
-      className="h-screen w-screen overflow-hidden flex flex-col font-sans select-none antialiased transition-colors"
+      className="min-h-screen w-full flex flex-col font-sans select-none antialiased transition-colors"
       style={{
         background: "var(--background-main)",
         color: "var(--text)",
@@ -551,10 +587,10 @@ export default function EditorPage() {
       {/* 1. TOP NAVBAR (Clean, Premium Aesthetic, Matching Login & Manual)          */}
       {/* ========================================================================= */}
       <header
-        className="h-11 shrink-0 px-4 flex items-center justify-between z-30 relative select-none transition-colors"
+        className="h-12 shrink-0 px-4 flex items-center justify-between z-30 relative select-none transition-colors border-b"
         style={{
           background: "var(--panel-background)",
-          borderBottom: "1px solid var(--border)",
+          borderColor: "var(--border)",
         }}
       >
         {/* Left: Brand Logo & File Path & Run Trigger */}
@@ -567,11 +603,11 @@ export default function EditorPage() {
             <Brand compact />
           </Link>
 
-          <div className="h-3.5 w-px" style={{ background: "var(--border)" }} />
+          <div className="h-4 w-px" style={{ background: "var(--border)" }} />
 
-          {/* Active File Path Tag (JetBrains Mono) */}
+          {/* Active File Path Tag */}
           <div
-            className="flex items-center gap-2 px-2.5 py-1 rounded-md text-[11px] font-mono transition-colors"
+            className="flex items-center gap-2 px-2.5 py-1 rounded-md text-xs font-sans transition-colors"
             style={{
               background: "var(--surface-soft)",
               border: "1px solid var(--border)",
@@ -579,18 +615,18 @@ export default function EditorPage() {
             }}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-            <span className="font-medium" style={{ color: "var(--text-strong)" }}>
+            <span className="font-medium font-sans" style={{ color: "var(--text-strong)" }}>
               {formatWorkspacePath(activeFile.path)}
             </span>
             <span style={{ color: "var(--border)" }}>/</span>
-            <span style={{ color: "var(--muted)" }}>{currentLanguage.label}</span>
+            <span className="font-mono text-[11px]" style={{ color: "var(--muted)" }}>{currentLanguage.label}</span>
           </div>
 
           {/* Action Run Pill Button */}
           <button
             onClick={() => void handleRun()}
             disabled={loading || (!currentLanguage.runnable && !currentLanguage.previewable) || Boolean(interactiveSession)}
-            className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md shadow-sm active:scale-[0.98] transition-all disabled:opacity-40 ml-1"
+            className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md shadow-sm active:scale-[0.98] transition-all disabled:opacity-40 ml-1 cursor-pointer font-sans"
             style={{
               background: "var(--action-background)",
               color: "var(--action-foreground)",
@@ -603,13 +639,13 @@ export default function EditorPage() {
             ) : (
               <Play className="w-3.5 h-3.5 fill-current" />
             )}
-            <span className="font-mono">Run</span>
+            <span>Run</span>
           </button>
 
           {/* Save Trigger */}
           <button
             onClick={handleSave}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-colors"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer font-sans"
             style={{
               background: "var(--surface-soft)",
               border: "1px solid var(--border)",
@@ -624,7 +660,7 @@ export default function EditorPage() {
 
           {/* Status Message */}
           <span
-            className="text-[10px] font-mono pl-1 truncate max-w-[130px]"
+            className="text-[11px] font-sans pl-1 truncate max-w-[140px]"
             style={{ color: "var(--muted)" }}
           >
             {statusMessage}
@@ -633,7 +669,7 @@ export default function EditorPage() {
 
         {/* Right: Minimal Text Buttons (Manual, GitHub, Collab, AI Guide) & Switcher */}
         <div className="flex items-center gap-2.5">
-          <nav className="flex items-center gap-1 text-xs font-medium">
+          <nav className="flex items-center gap-1 text-xs font-medium font-sans">
             <Link
               href="/editor/manual"
               className="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)]"
@@ -668,7 +704,7 @@ export default function EditorPage() {
             </Link>
           </nav>
 
-          <div className="h-3.5 w-px" style={{ background: "var(--border)" }} />
+          <div className="h-4 w-px" style={{ background: "var(--border)" }} />
 
           {/* Dual Theme Switcher (Light / Dark) */}
           <ThemeSwitcher />
@@ -676,7 +712,7 @@ export default function EditorPage() {
           {/* Settings Trigger */}
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className="p-1.5 rounded-md transition-colors hover:bg-[var(--surface-soft)]"
+            className="p-1.5 rounded-md transition-colors hover:bg-[var(--surface-soft)] cursor-pointer"
             style={{ color: "var(--muted)" }}
             title="Workspace Settings (Language, Region, Shortcuts)"
             type="button"
@@ -704,7 +740,7 @@ export default function EditorPage() {
       {/* 2. MAIN WORKSPACE (3-Column Flex: Left, Middle Editor, Right Output)       */}
       {/* ========================================================================= */}
       <div
-        className="flex-1 flex overflow-hidden min-h-0 relative"
+        className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden min-h-[640px] relative transition-colors"
         style={{ background: "var(--background-main)" }}
       >
         {/* ── Left Column: File Explorer Sidebar ── */}
@@ -722,6 +758,7 @@ export default function EditorPage() {
           onDeleteFolder={handleDeleteFolder}
           onDraftLanguageChange={setDraftLanguage}
           onDraftNameChange={setDraftName}
+          onDuplicateFile={handleDuplicateFile}
           onImportFiles={() => fileImportRef.current?.click()}
           onImportFolder={() => folderImportRef.current?.click()}
           onMoveFile={handleMoveFile}
@@ -740,10 +777,9 @@ export default function EditorPage() {
             document.body.style.cursor = "col-resize";
             document.body.style.userSelect = "none";
           }}
-          onDoubleClick={() => setExplorerWidth(230)}
           className="w-1 hover:w-1.5 cursor-col-resize transition-all duration-100 z-20 flex flex-col items-center justify-center group shrink-0"
           style={{ background: "var(--border)" }}
-          title="Drag to resize sidebar (Double click to reset 230px)"
+          title="Drag to resize sidebar"
         >
           <div
             className="h-6 w-[1.5px] rounded-full group-hover:scale-125 transition-transform"
@@ -784,10 +820,9 @@ export default function EditorPage() {
             document.body.style.cursor = "col-resize";
             document.body.style.userSelect = "none";
           }}
-          onDoubleClick={() => setOutputWidth(380)}
           className="w-1 hover:w-1.5 cursor-col-resize transition-all duration-100 z-20 flex flex-col items-center justify-center group shrink-0"
           style={{ background: "var(--border)" }}
-          title="Drag to resize output panel (Double click to reset 380px)"
+          title="Drag to resize output terminal"
         >
           <div
             className="h-6 w-[1.5px] rounded-full group-hover:scale-125 transition-transform"
@@ -830,7 +865,7 @@ export default function EditorPage() {
               setPendingInteractiveInput("");
               setStdin("");
             }}
-            onResetSplit={() => setOutputWidth(380)}
+            onResetSplit={() => setOutputWidth(520)}
             onRun={() => void handleRun()}
             pendingInteractiveInput={pendingInteractiveInput}
             stdin={stdin}
@@ -844,13 +879,13 @@ export default function EditorPage() {
       {/* ========================================================================= */}
       {isSettingsOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 font-sans"
           onClick={(e) => {
             if (e.target === e.currentTarget) setIsSettingsOpen(false);
           }}
         >
           <div
-            className="w-full max-w-md rounded-lg shadow-2xl p-5 space-y-4 font-sans transition-colors"
+            className="w-full max-w-md rounded-xl shadow-2xl p-5 space-y-4 font-sans transition-colors"
             style={{
               background: "var(--panel-background)",
               border: "1px solid var(--border-strong)",
@@ -871,21 +906,21 @@ export default function EditorPage() {
               <button
                 type="button"
                 onClick={() => setIsSettingsOpen(false)}
-                className="p-1 rounded transition-colors hover:bg-[var(--surface-soft)]"
+                className="p-1 rounded transition-colors hover:bg-[var(--surface-soft)] cursor-pointer"
                 style={{ color: "var(--muted)" }}
               >
                 <X size={15} />
               </button>
             </div>
 
-            <div className="space-y-4 text-xs">
+            <div className="space-y-4 text-xs font-sans">
               {/* Language Runtime Selection */}
               <div className="space-y-1.5">
                 <label className="font-medium block text-[11px]" style={{ color: "var(--text-strong)" }}>
                   Active Language Runtime
                 </label>
                 <select
-                  className="w-full rounded px-3 py-2 outline-none font-mono text-xs cursor-pointer transition-colors"
+                  className="w-full rounded-md px-3 py-2 outline-none font-sans text-xs cursor-pointer transition-colors"
                   style={{
                     background: "var(--input-background)",
                     border: "1px solid var(--border)",
@@ -924,7 +959,7 @@ export default function EditorPage() {
                   Execution Sandbox Region
                 </label>
                 <select
-                  className="w-full rounded px-3 py-2 outline-none font-mono text-xs cursor-pointer transition-colors"
+                  className="w-full rounded-md px-3 py-2 outline-none font-sans text-xs cursor-pointer transition-colors"
                   style={{
                     background: "var(--input-background)",
                     border: "1px solid var(--border)",
@@ -951,34 +986,34 @@ export default function EditorPage() {
                 <span className="font-medium block text-[11px]" style={{ color: "var(--muted)" }}>
                   Shortcuts Cheatsheet
                 </span>
-                <div className="grid grid-cols-2 gap-1.5 text-[10px] font-mono">
+                <div className="grid grid-cols-2 gap-1.5 text-[11px] font-sans">
                   <div
-                    className="flex justify-between p-1.5 rounded"
+                    className="flex justify-between p-2 rounded-md"
                     style={{ background: "var(--surface-soft)", border: "1px solid var(--border)" }}
                   >
                     <span style={{ color: "var(--muted)" }}>Run script:</span>
-                    <kbd className="font-semibold" style={{ color: "var(--text-strong)" }}>Ctrl+Enter</kbd>
+                    <kbd className="font-mono text-[10px] font-semibold" style={{ color: "var(--text-strong)" }}>Ctrl+Enter</kbd>
                   </div>
                   <div
-                    className="flex justify-between p-1.5 rounded"
+                    className="flex justify-between p-2 rounded-md"
                     style={{ background: "var(--surface-soft)", border: "1px solid var(--border)" }}
                   >
                     <span style={{ color: "var(--muted)" }}>Save workspace:</span>
-                    <kbd className="font-semibold" style={{ color: "var(--text-strong)" }}>Ctrl+S</kbd>
+                    <kbd className="font-mono text-[10px] font-semibold" style={{ color: "var(--text-strong)" }}>Ctrl+S</kbd>
                   </div>
                   <div
-                    className="flex justify-between p-1.5 rounded"
+                    className="flex justify-between p-2 rounded-md"
                     style={{ background: "var(--surface-soft)", border: "1px solid var(--border)" }}
                   >
                     <span style={{ color: "var(--muted)" }}>New file:</span>
-                    <kbd className="font-semibold" style={{ color: "var(--text-strong)" }}>Ctrl+Shift+N</kbd>
+                    <kbd className="font-mono text-[10px] font-semibold" style={{ color: "var(--text-strong)" }}>Ctrl+Shift+N</kbd>
                   </div>
                   <div
-                    className="flex justify-between p-1.5 rounded"
+                    className="flex justify-between p-2 rounded-md"
                     style={{ background: "var(--surface-soft)", border: "1px solid var(--border)" }}
                   >
                     <span style={{ color: "var(--muted)" }}>Close modal:</span>
-                    <kbd className="font-semibold" style={{ color: "var(--text-strong)" }}>Escape</kbd>
+                    <kbd className="font-mono text-[10px] font-semibold" style={{ color: "var(--text-strong)" }}>Escape</kbd>
                   </div>
                 </div>
               </div>
@@ -992,7 +1027,7 @@ export default function EditorPage() {
               <button
                 type="button"
                 onClick={() => setIsSettingsOpen(false)}
-                className="px-3 py-1.5 text-xs rounded font-medium transition-opacity hover:opacity-90 shadow-sm"
+                className="px-4 py-1.5 text-xs rounded-md font-semibold transition-opacity hover:opacity-90 shadow-sm cursor-pointer"
                 style={{
                   background: "var(--action-background)",
                   color: "var(--action-foreground)",
