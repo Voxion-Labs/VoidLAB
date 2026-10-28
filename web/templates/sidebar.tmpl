@@ -83,227 +83,171 @@
     </div>
   </div>
 
-  <!-- ── File Tree (VS Code Look, Clean Chevrons, Tree Lines, Context Menu) ── -->
+  <!-- ── File Tree (VS Code Look, Clean Chevrons, Tree Lines, Drag & Drop) ── -->
   <div
     id="file-tree"
     class="scrollbar-thin flex-1 overflow-y-auto py-1 text-[13px] font-sans"
   >
-    {{if .TreeItems}}
-      {{range .TreeItems}}
-        {{if eq .Kind "folder"}}
-          <!-- Folder Item -->
-          <div
-            class="relative flex items-center justify-between group cursor-pointer h-[26px] pr-2 transition-colors duration-75 select-none hover:bg-[var(--control-hover)]"
-            style="padding-left: {{.PaddingLeft}}px; border-left: 2px solid transparent;"
-            hx-get="/api/ui/explorer/toggle?path={{.Path}}"
-            hx-target="#file-tree"
-            hx-swap="innerHTML"
-          >
-            <!-- Indentation lines -->
-            {{range .IndentLevels}}
-              <span class="absolute top-0 bottom-0 pointer-events-none" style="left: {{.}}px; border-left: 1px solid var(--border); opacity: 0.6;"></span>
-            {{end}}
-
-            <button
-              class="min-w-0 flex-1 h-full flex items-center gap-1.5 truncate text-left focus:outline-none"
-              type="button"
-            >
-              <span class="w-4 h-4 flex items-center justify-center shrink-0">
-                {{if .IsCollapsed}}
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-70 group-hover:opacity-100 transition-transform">
-                    <polyline points="9 18 15 12 9 6"></polyline>
-                  </svg>
-                {{else}}
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-80 group-hover:opacity-100 transition-transform">
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                  </svg>
-                {{end}}
-              </span>
-              <span
-                class="truncate text-[13px] font-sans tracking-normal"
-                style="color: var(--text); font-weight: 500;"
-              >
-                {{.Name}}
-              </span>
-            </button>
-
-            <!-- 3-Dots Action Button -->
-            <button
-              hx-get="/api/ui/file/menu?path={{.Path}}&kind=folder"
-              hx-target="#context-menu"
-              hx-swap="innerHTML"
-              class="p-1 opacity-0 group-hover:opacity-100 rounded hover:bg-[var(--control-hover)] transition-opacity duration-100 shrink-0 ml-1"
-              title="Folder Actions"
-              type="button"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--muted);">
-                <circle cx="12" cy="12" r="1"></circle>
-                <circle cx="19" cy="12" r="1"></circle>
-                <circle cx="5" cy="12" r="1"></circle>
-              </svg>
-            </button>
-          </div>
-        {{else}}
-          <!-- File Item -->
-          <div
-            class="relative flex items-center justify-between group cursor-pointer h-[26px] pr-2 transition-colors duration-75 select-none {{if .IsActive}}font-medium{{else}}hover:bg-[var(--control-hover)]{{end}}"
-            style="padding-left: {{.PaddingLeft}}px; {{if .IsActive}}background: var(--accent-soft); border-left: 2px solid var(--accent);{{else}}border-left: 2px solid transparent;{{end}}"
-            hx-get="/api/files/open?id={{.ID}}"
-            hx-target="#editor-workspace"
-            hx-swap="outerHTML"
-          >
-            <!-- Indentation lines -->
-            {{range .IndentLevels}}
-              <span class="absolute top-0 bottom-0 pointer-events-none" style="left: {{.}}px; border-left: 1px solid var(--border); opacity: 0.6;"></span>
-            {{end}}
-
-            <button
-              class="min-w-0 flex-1 h-full flex items-center gap-1.5 truncate text-left focus:outline-none"
-              type="button"
-            >
-              <span class="w-4 h-4 flex items-center justify-center shrink-0">
-                <svg class="w-3.5 h-3.5 shrink-0 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                </svg>
-              </span>
-              <span
-                class="truncate text-[13px] font-sans tracking-normal"
-                style="{{if .IsActive}}color: var(--text-strong); font-weight: 600;{{else}}color: var(--text); font-weight: 400;{{end}}"
-              >
-                {{.Name}}
-              </span>
-            </button>
-
-            <!-- 3-Dots Action Button -->
-            <button
-              hx-get="/api/ui/file/menu?id={{.ID}}&path={{.Path}}&kind=file"
-              hx-target="#context-menu"
-              hx-swap="innerHTML"
-              class="p-1 opacity-0 group-hover:opacity-100 rounded hover:bg-[var(--control-hover)] transition-opacity duration-100 shrink-0 ml-1"
-              title="File Actions"
-              type="button"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--muted);">
-                <circle cx="12" cy="12" r="1"></circle>
-                <circle cx="19" cy="12" r="1"></circle>
-                <circle cx="5" cy="12" r="1"></circle>
-              </svg>
-            </button>
-          </div>
-        {{end}}
-      {{end}}
-    {{else}}
-      <!-- Default Tree Representation (Exact Match with Workspace Baseline) -->
-      <!-- Folder: src -->
-      <div
-        class="relative flex items-center justify-between group cursor-pointer h-[26px] pr-2 transition-colors duration-75 select-none hover:bg-[var(--control-hover)]"
-        style="padding-left: 8px; border-left: 2px solid transparent;"
-        hx-get="/api/ui/explorer/toggle?path=src"
-        hx-target="#file-tree"
-        hx-swap="innerHTML"
-      >
-        <button class="min-w-0 flex-1 h-full flex items-center gap-1.5 truncate text-left focus:outline-none" type="button">
-          <span class="w-4 h-4 flex items-center justify-center shrink-0">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-80 group-hover:opacity-100 transition-transform">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-          </span>
-          <span class="truncate text-[13px] font-sans tracking-normal" style="color: var(--text); font-weight: 500;">
-            src
-          </span>
-        </button>
-        <button
-          hx-get="/api/ui/file/menu?path=src&kind=folder"
-          hx-target="#context-menu"
-          hx-swap="innerHTML"
-          class="p-1 opacity-0 group-hover:opacity-100 rounded hover:bg-[var(--control-hover)] transition-opacity duration-100 shrink-0 ml-1"
-          title="Folder Actions"
-          type="button"
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--muted);">
-            <circle cx="12" cy="12" r="1"></circle>
-            <circle cx="19" cy="12" r="1"></circle>
-            <circle cx="5" cy="12" r="1"></circle>
-          </svg>
-        </button>
-      </div>
-
-      <!-- File: src/main.py (Active) -->
-      <div
-        class="relative flex items-center justify-between group cursor-pointer h-[26px] pr-2 transition-colors duration-75 select-none font-medium"
-        style="padding-left: 22px; background: var(--accent-soft); border-left: 2px solid var(--accent);"
-        hx-get="/api/files/open?path=src/main.py"
-        hx-target="#editor-workspace"
-        hx-swap="outerHTML"
-      >
-        <span class="absolute top-0 bottom-0 pointer-events-none" style="left: 14px; border-left: 1px solid var(--border); opacity: 0.6;"></span>
-        <button class="min-w-0 flex-1 h-full flex items-center gap-1.5 truncate text-left focus:outline-none" type="button">
-          <span class="w-4 h-4 flex items-center justify-center shrink-0">
-            <svg class="w-3.5 h-3.5 shrink-0 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="16 18 22 12 16 6"></polyline>
-              <polyline points="8 6 2 12 8 18"></polyline>
-            </svg>
-          </span>
-          <span class="truncate text-[13px] font-sans tracking-normal" style="color: var(--text-strong); font-weight: 600;">
-            main.py
-          </span>
-        </button>
-        <button
-          hx-get="/api/ui/file/menu?path=src/main.py&kind=file"
-          hx-target="#context-menu"
-          hx-swap="innerHTML"
-          class="p-1 opacity-0 group-hover:opacity-100 rounded hover:bg-[var(--control-hover)] transition-opacity duration-100 shrink-0 ml-1"
-          title="File Actions"
-          type="button"
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--muted);">
-            <circle cx="12" cy="12" r="1"></circle>
-            <circle cx="19" cy="12" r="1"></circle>
-            <circle cx="5" cy="12" r="1"></circle>
-          </svg>
-        </button>
-      </div>
-
-      <!-- File: README.md -->
-      <div
-        class="relative flex items-center justify-between group cursor-pointer h-[26px] pr-2 transition-colors duration-75 select-none hover:bg-[var(--control-hover)]"
-        style="padding-left: 8px; border-left: 2px solid transparent;"
-        hx-get="/api/files/open?path=README.md"
-        hx-target="#editor-workspace"
-        hx-swap="outerHTML"
-      >
-        <button class="min-w-0 flex-1 h-full flex items-center gap-1.5 truncate text-left focus:outline-none" type="button">
-          <span class="w-4 h-4 flex items-center justify-center shrink-0">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-sky-400 shrink-0">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="16" x2="12" y2="12"></line>
-              <line x1="12" y1="8" x2="12.01" y2="8"></line>
-            </svg>
-          </span>
-          <span class="truncate text-[13px] font-sans tracking-normal" style="color: var(--text); font-weight: 400;">
-            README.md
-          </span>
-        </button>
-        <button
-          hx-get="/api/ui/file/menu?path=README.md&kind=file"
-          hx-target="#context-menu"
-          hx-swap="innerHTML"
-          class="p-1 opacity-0 group-hover:opacity-100 rounded hover:bg-[var(--control-hover)] transition-opacity duration-100 shrink-0 ml-1"
-          title="File Actions"
-          type="button"
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--muted);">
-            <circle cx="12" cy="12" r="1"></circle>
-            <circle cx="19" cy="12" r="1"></circle>
-            <circle cx="5" cy="12" r="1"></circle>
-          </svg>
-        </button>
-      </div>
-    {{end}}
+    {{template "file-tree" .}}
   </div>
 
   <!-- Dynamic Context Menu Container -->
   <div id="context-menu"></div>
 </aside>
+{{end}}
+
+{{define "file-tree"}}
+  {{if .TreeItems}}
+    {{range .TreeItems}}
+      {{if eq .Kind "folder"}}
+        <!-- Folder Item (Supports Drag Target & Drop) -->
+        <div
+          draggable="true"
+          ondragstart="event.dataTransfer.setData('text/plain', '{{.Path}}')"
+          ondragover="event.preventDefault(); this.classList.add('bg-[var(--accent-soft)]', 'ring-1', 'ring-[var(--accent)]');"
+          ondragleave="this.classList.remove('bg-[var(--accent-soft)]', 'ring-1', 'ring-[var(--accent)]');"
+          ondrop="event.preventDefault(); this.classList.remove('bg-[var(--accent-soft)]', 'ring-1', 'ring-[var(--accent)]'); var src = event.dataTransfer.getData('text/plain'); if (src && src !== '{{.Path}}') { htmx.ajax('PATCH', '/api/explorer/move', { values: { source: src, target: '{{.Path}}' }, target: '#file-tree', swap: 'innerHTML' }); }"
+          class="relative flex items-center justify-between group cursor-pointer h-[26px] pr-2 transition-colors duration-75 select-none hover:bg-[var(--control-hover)]"
+          style="padding-left: {{.PaddingLeft}}px; border-left: 2px solid transparent;"
+        >
+          <!-- Indentation lines -->
+          {{range .IndentLevels}}
+            <span class="absolute top-0 bottom-0 pointer-events-none" style="left: {{.}}px; border-left: 1px solid var(--border); opacity: 0.6;"></span>
+          {{end}}
+
+          <button
+            class="min-w-0 flex-1 h-full flex items-center gap-1.5 truncate text-left focus:outline-none cursor-pointer"
+            hx-get="/api/ui/explorer/toggle?path={{.Path}}"
+            hx-target="#file-tree"
+            hx-swap="innerHTML"
+            type="button"
+          >
+            <span class="w-4 h-4 flex items-center justify-center shrink-0">
+              {{if .IsCollapsed}}
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-70 group-hover:opacity-100 transition-transform">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+              {{else}}
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-80 group-hover:opacity-100 transition-transform">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              {{end}}
+            </span>
+            <span
+              class="truncate text-[13px] font-sans tracking-normal"
+              style="color: var(--text); font-weight: 500;"
+            >
+              {{.Name}}
+            </span>
+          </button>
+
+          <!-- 3-Dots Action Button -->
+          <button
+            hx-get="/api/ui/file/menu?path={{.Path}}&kind=folder"
+            hx-target="#context-menu"
+            hx-swap="innerHTML"
+            class="p-1 opacity-0 group-hover:opacity-100 rounded hover:bg-[var(--control-hover)] transition-opacity duration-100 shrink-0 ml-1 cursor-pointer"
+            title="Folder Actions"
+            type="button"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--muted);">
+              <circle cx="12" cy="12" r="1"></circle>
+              <circle cx="19" cy="12" r="1"></circle>
+              <circle cx="5" cy="12" r="1"></circle>
+            </svg>
+          </button>
+        </div>
+      {{else}}
+        <!-- File Item (Draggable) -->
+        <div
+          draggable="true"
+          ondragstart="event.dataTransfer.setData('text/plain', '{{.Path}}')"
+          class="relative flex items-center justify-between group cursor-pointer h-[26px] pr-2 transition-colors duration-75 select-none {{if .IsActive}}font-medium{{else}}hover:bg-[var(--control-hover)]{{end}}"
+          style="padding-left: {{.PaddingLeft}}px; {{if .IsActive}}background: var(--accent-soft); border-left: 2px solid var(--accent);{{else}}border-left: 2px solid transparent;{{end}}"
+        >
+          <!-- Indentation lines -->
+          {{range .IndentLevels}}
+            <span class="absolute top-0 bottom-0 pointer-events-none" style="left: {{.}}px; border-left: 1px solid var(--border); opacity: 0.6;"></span>
+          {{end}}
+
+          <button
+            class="min-w-0 flex-1 h-full flex items-center gap-1.5 truncate text-left focus:outline-none cursor-pointer"
+            hx-get="/api/files/open?path={{.Path}}"
+            hx-target="#editor-workspace"
+            hx-swap="outerHTML"
+            type="button"
+          >
+            <span class="w-4 h-4 flex items-center justify-center shrink-0">
+              {{if eq .IconType "python"}}
+                <svg class="w-3.5 h-3.5 shrink-0 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="16 18 22 12 16 6"></polyline>
+                  <polyline points="8 6 2 12 8 18"></polyline>
+                </svg>
+              {{else if eq .IconType "react"}}
+                <svg class="w-3.5 h-3.5 shrink-0 text-cyan-400" viewBox="0 0 115.3 100" fill="currentColor">
+                  <ellipse cx="57.65" cy="50" rx="16.7" ry="49.5" fill="none" stroke="currentColor" stroke-width="6" transform="rotate(30 57.65 50)" />
+                  <ellipse cx="57.65" cy="50" rx="16.7" ry="49.5" fill="none" stroke="currentColor" stroke-width="6" transform="rotate(90 57.65 50)" />
+                  <ellipse cx="57.65" cy="50" rx="16.7" ry="49.5" fill="none" stroke="currentColor" stroke-width="6" transform="rotate(150 57.65 50)" />
+                  <circle cx="57.65" cy="50" r="10" fill="currentColor" />
+                </svg>
+              {{else if eq .IconType "markdown"}}
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-sky-400 shrink-0">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+              {{else if eq .IconType "git"}}
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-teal-400 shrink-0">
+                  <line x1="6" y1="3" x2="6" y2="15"></line>
+                  <circle cx="18" cy="6" r="3"></circle>
+                  <circle cx="6" cy="18" r="3"></circle>
+                  <path d="M18 9a9 9 0 0 1-9 9"></path>
+                </svg>
+              {{else if eq .IconType "env"}}
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-400 shrink-0">
+                  <line x1="4" y1="21" x2="4" y2="14"></line>
+                  <line x1="4" y1="10" x2="4" y2="3"></line>
+                  <line x1="12" y1="21" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12" y2="3"></line>
+                  <line x1="20" y1="21" x2="20" y2="16"></line>
+                  <line x1="20" y1="12" x2="20" y2="3"></line>
+                </svg>
+              {{else}}
+                <svg class="w-3.5 h-3.5 shrink-0 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                </svg>
+              {{end}}
+            </span>
+            <span
+              class="truncate text-[13px] font-sans tracking-normal"
+              style="{{if .IsActive}}color: var(--text-strong); font-weight: 600;{{else}}color: var(--text); font-weight: 400;{{end}}"
+            >
+              {{.Name}}
+            </span>
+          </button>
+
+          <!-- 3-Dots Action Button -->
+          <button
+            hx-get="/api/ui/file/menu?path={{.Path}}&kind=file"
+            hx-target="#context-menu"
+            hx-swap="innerHTML"
+            class="p-1 opacity-0 group-hover:opacity-100 rounded hover:bg-[var(--control-hover)] transition-opacity duration-100 shrink-0 ml-1 cursor-pointer"
+            title="File Actions"
+            type="button"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--muted);">
+              <circle cx="12" cy="12" r="1"></circle>
+              <circle cx="19" cy="12" r="1"></circle>
+              <circle cx="5" cy="12" r="1"></circle>
+            </svg>
+          </button>
+        </div>
+      {{end}}
+    {{end}}
+  {{else}}
+    <div class="py-8 px-4 text-center text-xs font-sans" style="color: var(--muted);">
+      Workspace is empty. Create a file or folder above.
+    </div>
+  {{end}}
 {{end}}

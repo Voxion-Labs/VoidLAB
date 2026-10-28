@@ -5,9 +5,15 @@
 
 BINARY_NAME  ?= voidlab
 BIN_DIR      ?= bin
+ifeq ($(OS),Windows_NT)
+    TARGET_BIN = $(BIN_DIR)/$(BINARY_NAME).exe
+else
+    TARGET_BIN = $(BIN_DIR)/$(BINARY_NAME)
+endif
 BENCH_OUTPUT ?= benchmarks.txt
 COVER_OUTPUT ?= coverage.out
-PKG          ?= ./cmd/...
+MAIN_PKG     ?= ./cmd/voidlab
+TEST_PKG     ?= ./cmd/... ./internal/...
 
 GO           ?= go
 GOFLAGS      ?= -v
@@ -32,7 +38,7 @@ all: build
 ## build: Compiles the VoidLAB server binary
 build:
 	@echo "==> Building $(BINARY_NAME)..."
-	$(GO) build $(GOFLAGS) -ldflags="$(LDFLAGS)" -o $(BIN_DIR)/$(BINARY_NAME) $(PKG)
+	$(GO) build $(GOFLAGS) -ldflags="$(LDFLAGS)" -o $(TARGET_BIN) $(MAIN_PKG)
 
 ## clean: Removes build artifacts, benchmarks, and coverage profiles
 clean:
@@ -43,18 +49,18 @@ clean:
 ## test: Runs test suite with data race detection and coverage profile
 test:
 	@echo "==> Running test suite..."
-	$(GO) test $(GOFLAGS) -cover -coverprofile=$(COVER_OUTPUT) $(PKG)
+	$(GO) test $(GOFLAGS) -cover -coverprofile=$(COVER_OUTPUT) $(TEST_PKG)
 
 ## bench: Executes benchmarks with memory allocations and writes metrics to file
 bench:
 	@echo "==> Executing performance benchmarks..."
-	$(GO) test -run=none -bench=. -benchmem $(PKG) > $(BENCH_OUTPUT)
+	$(GO) test -run=none -bench=. -benchmem $(TEST_PKG) > $(BENCH_OUTPUT)
 	@$(PRINT_CMD)
 
 ## regression: Critical testing protocol validating TS/JS -> Go API and behavior contracts
 regression:
 	@echo "==> Executing regression suite (contract & behavior parity validation)..."
-	$(GO) test $(GOFLAGS) -tags=regression -run=TestRegression $(PKG)
+	$(GO) test $(GOFLAGS) -tags=regression -run=TestRegression $(TEST_PKG)
 
 ## bot-rebase: Safe fetch, rebase on origin/main, and tidy Go module dependencies
 bot-rebase:

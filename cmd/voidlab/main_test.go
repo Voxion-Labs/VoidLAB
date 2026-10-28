@@ -2,13 +2,34 @@ package main
 
 import (
 	"html/template"
+	"net/http"
+	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
-func TestEngineInitialization(t *testing.T) {
-	if err := run(); err != nil {
-		t.Fatalf("expected run() to succeed, got %v", err)
+func TestServerSetupAndEditorRoute(t *testing.T) {
+	tempDir := t.TempDir()
+	tmplPattern := filepath.Join("..", "..", "web", "templates", "*.tmpl")
+	publicDir := filepath.Join("..", "..", "public")
+
+	mux, _, _, err := setupServer(tempDir, tmplPattern, publicDir)
+	if err != nil {
+		t.Fatalf("setupServer failed: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/editor", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK for GET /editor, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	body := rec.Body.String()
+	if !strings.Contains(body, "Explorer") || !strings.Contains(body, "VoidLAB") {
+		t.Errorf("expected rendered editor HTML to contain 'Explorer' and 'VoidLAB'")
 	}
 }
 
@@ -23,10 +44,24 @@ func TestTemplateParsing(t *testing.T) {
 	}
 }
 
-func BenchmarkVoidLABEngine(b *testing.B) {
+func BenchmarkVoidLABServerEditor(b *testing.B) {
+	tempDir := b.TempDir()
+	tmplPattern := filepath.Join("..", "..", "web", "templates", "*.tmpl")
+	publicDir := filepath.Join("..", "..", "public")
+
+	mux, _, _, err := setupServer(tempDir, tmplPattern, publicDir)
+	if err != nil {
+		b.Fatalf("setupServer failed: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/editor", nil)
+
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if err := run(); err != nil {
-			b.Fatalf("benchmark iteration failed: %v", err)
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			b.Fatalf("expected 200 OK, got %d", rec.Code)
 		}
 	}
 }
