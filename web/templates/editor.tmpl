@@ -1,0 +1,327 @@
+{{define "editor"}}
+<main
+  class="min-h-screen w-full flex flex-col font-sans select-none antialiased transition-colors"
+  style="background: var(--background-main); color: var(--text);"
+>
+  <!-- 1. TOP NAVBAR -->
+  {{template "topbar" .}}
+
+  <!-- 2. MAIN WORKSPACE (3-Column Layout: Sidebar, Editor, Terminal) -->
+  <div
+    id="editor-workspace"
+    class="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden min-h-[640px] relative transition-colors"
+    style="background: var(--background-main);"
+  >
+    <!-- Left Column: File Explorer Sidebar -->
+    {{template "sidebar" .}}
+
+    <!-- Divider 1: Left Resizable Splitter (between Explorer & Editor) -->
+    <div
+      class="w-1 hover:w-1.5 cursor-col-resize transition-all duration-100 z-20 flex flex-col items-center justify-center group shrink-0"
+      style="background: var(--border);"
+      title="Drag to resize sidebar"
+    >
+      <div
+        class="h-6 w-[1.5px] rounded-full group-hover:scale-125 transition-transform"
+        style="background: var(--muted);"
+      ></div>
+    </div>
+
+    <!-- Middle Column: Main Code Editor -->
+    <div
+      class="flex-1 min-w-[320px] flex flex-col h-full overflow-hidden relative"
+      style="background: var(--background-main);"
+    >
+      <!-- Editor Tabs Bar (Exact 1:1 from EditorTabs.tsx) -->
+      <div
+        class="h-9 flex items-center justify-between px-1 shrink-0 select-none font-sans text-xs overflow-x-auto scrollbar-thin transition-colors"
+        style="background: var(--surface-soft); border-bottom: 1px solid var(--border);"
+      >
+        <!-- Left: Open Tabs List -->
+        <div id="editor-tabs-list" class="flex items-center gap-0.5 h-full">
+          {{if .OpenTabs}}
+            {{range .OpenTabs}}
+              <div
+                class="h-full px-3 flex items-center gap-2 text-xs cursor-pointer transition-colors duration-100 {{if .IsActive}}font-semibold{{else}}opacity-75 hover:opacity-100 hover:bg-[var(--control-hover)]{{end}}"
+                style="background: {{if .IsActive}}var(--panel-background){{else}}transparent{{end}}; border-right: 1px solid var(--border); border-top: {{if .IsActive}}2px solid var(--accent){{else}}2px solid transparent{{end}}; color: {{if .IsActive}}var(--text-strong){{else}}var(--muted){{end}};"
+                hx-get="/api/files/open?id={{.ID}}"
+                hx-target="#editor-workspace"
+                hx-swap="outerHTML"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: {{if .IsActive}}var(--accent){{else}}var(--muted){{end}};">
+                  <polyline points="16 18 22 12 16 6"></polyline>
+                  <polyline points="8 6 2 12 8 18"></polyline>
+                </svg>
+                <span class="truncate max-w-[150px]">{{.Name}}</span>
+                <button
+                  class="rounded p-0.5 opacity-50 hover:opacity-100 hover:bg-[var(--control-hover)] transition-all ml-0.5"
+                  hx-delete="/api/files/close?id={{.ID}}"
+                  hx-target="#editor-workspace"
+                  hx-swap="outerHTML"
+                  title="Close {{.Name}}"
+                  type="button"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+            {{end}}
+          {{else}}
+            <!-- Default Active Tab -->
+            <div
+              class="h-full px-3 flex items-center gap-2 text-xs cursor-pointer transition-colors duration-100 font-semibold"
+              style="background: var(--panel-background); border-right: 1px solid var(--border); border-top: 2px solid var(--accent); color: var(--text-strong);"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent);">
+                <polyline points="16 18 22 12 16 6"></polyline>
+                <polyline points="8 6 2 12 8 18"></polyline>
+              </svg>
+              <span class="truncate max-w-[150px]">{{if .ActiveFile}}{{.ActiveFile.Name}}{{else}}main.py{{end}}</span>
+              <button
+                class="rounded p-0.5 opacity-50 hover:opacity-100 hover:bg-[var(--control-hover)] transition-all ml-0.5"
+                title="Close Tab"
+                type="button"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+          {{end}}
+        </div>
+
+        <!-- Right: Quick Actions & Language Metadata -->
+        <div class="flex items-center gap-2 text-xs font-sans px-2 shrink-0" style="color: var(--muted);">
+          <button
+            hx-post="/api/code/boilerplate"
+            hx-target="#code-editor"
+            hx-swap="outerHTML"
+            class="px-2 py-0.5 hover:text-[var(--text-strong)] hover:bg-[var(--control-hover)] rounded transition-colors flex items-center gap-1.5 cursor-pointer"
+            title="Insert fresh boilerplate for active language"
+            type="button"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path>
+            </svg>
+            <span class="hidden sm:inline">Boilerplate</span>
+          </button>
+
+          <a
+            href="/api/files/download"
+            class="px-2 py-0.5 hover:text-[var(--text-strong)] hover:bg-[var(--control-hover)] rounded transition-colors flex items-center gap-1.5"
+            title="Download active file"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span class="hidden sm:inline">Export</span>
+          </a>
+
+          <span class="opacity-30">|</span>
+          <span class="font-mono text-[11px]">{{if .ActiveFile}}{{.ActiveFile.LanguageLabel}}{{else}}Python{{end}}</span>
+          <span class="opacity-30">|</span>
+          <span class="font-mono text-[11px]">UTF-8</span>
+        </div>
+      </div>
+
+      <!-- Editor Code Canvas (Monaco / WASM Mount Target) -->
+      <div id="monaco-editor-container" class="flex-1 h-full min-h-0 relative flex bg-[var(--background-main)] overflow-hidden">
+        <!-- Line Numbers Gutter -->
+        <div class="w-12 py-3 pr-4 text-right text-xs font-mono select-none opacity-40 leading-6 border-r border-[var(--border)] shrink-0">
+          <div>1</div>
+          <div>2</div>
+          <div>3</div>
+          <div>4</div>
+          <div>5</div>
+          <div>6</div>
+          <div>7</div>
+          <div>8</div>
+          <div>9</div>
+          <div>10</div>
+          <div>11</div>
+          <div>12</div>
+        </div>
+
+        <!-- Editable Code Surface / Textarea -->
+        <textarea
+          id="code-editor"
+          name="content"
+          hx-post="/api/files/save"
+          hx-trigger="keyup changed delay:1000ms"
+          hx-target="#status-message"
+          hx-swap="innerHTML"
+          spellcheck="false"
+          class="flex-1 h-full p-3 font-mono text-xs leading-6 bg-transparent outline-none resize-none scrollbar-thin transition-colors"
+          style="color: var(--text);"
+          placeholder="# Write code here or select a file..."
+        >{{if .ActiveFile}}{{.ActiveFile.Content}}{{else}}# VoidLAB - Local-First Cloud IDE
+# Sub-millisecond execution engine (Go + HTMX + WASM)
+
+def main():
+    print("Welcome to VoidLAB 2.0")
+
+if __name__ == "__main__":
+    main()
+{{end}}</textarea>
+      </div>
+    </div>
+
+    <!-- Divider 2: Right Resizable Splitter (between Editor & Output) -->
+    <div
+      class="w-1 hover:w-1.5 cursor-col-resize transition-all duration-100 z-20 flex flex-col items-center justify-center group shrink-0"
+      style="background: var(--border);"
+      title="Drag to resize output terminal"
+    >
+      <div
+        class="h-6 w-[1.5px] rounded-full group-hover:scale-125 transition-transform"
+        style="background: var(--muted);"
+      ></div>
+    </div>
+
+    <!-- Right Column: Output Panel (Terminal, Output, Ports) -->
+    <aside
+      id="output-panel"
+      style="width: 520px; background: var(--panel-background); border-left: 1px solid var(--border);"
+      class="shrink-0 flex flex-col h-full overflow-hidden relative"
+    >
+      <!-- Terminal Header: Slim Tabs & Tools (TerminalBox.tsx) -->
+      <div
+        class="h-8 px-2.5 flex items-center justify-between shrink-0 text-xs font-mono transition-colors"
+        style="background: var(--surface-soft); border-bottom: 1px solid var(--border);"
+      >
+        <!-- Tab Buttons -->
+        <div class="flex items-center gap-3">
+          <button
+            hx-get="/api/ui/terminal/tab?tab=terminal"
+            hx-target="#terminal-tab-content"
+            hx-swap="innerHTML"
+            class="pb-1 text-[11px] font-mono transition-colors duration-100 font-semibold cursor-pointer"
+            style="color: var(--text-strong); border-bottom: 2px solid var(--accent);"
+            type="button"
+          >
+            Terminal
+          </button>
+          <button
+            hx-get="/api/ui/terminal/tab?tab=output"
+            hx-target="#terminal-tab-content"
+            hx-swap="innerHTML"
+            class="pb-1 text-[11px] font-mono transition-colors duration-100 opacity-70 hover:opacity-100 cursor-pointer"
+            style="color: var(--muted); border-bottom: 2px solid transparent;"
+            type="button"
+          >
+            Output
+          </button>
+          <button
+            hx-get="/api/ui/terminal/tab?tab=ports"
+            hx-target="#terminal-tab-content"
+            hx-swap="innerHTML"
+            class="pb-1 text-[11px] font-mono transition-colors duration-100 opacity-70 hover:opacity-100 cursor-pointer"
+            style="color: var(--muted); border-bottom: 2px solid transparent;"
+            type="button"
+          >
+            Ports
+          </button>
+        </div>
+
+        <!-- Status & Tools -->
+        <div class="flex items-center gap-2">
+          <!-- Active Status Badge -->
+          <span
+            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium"
+            style="background: var(--control-background); border: 1px solid var(--border); color: var(--muted-strong);"
+          >
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            IDLE
+          </span>
+
+          <!-- Clear Terminal Button -->
+          <button
+            hx-post="/api/terminal/clear"
+            hx-target="#terminal-stream"
+            hx-swap="innerHTML"
+            class="p-1 rounded opacity-70 hover:opacity-100 hover:bg-[var(--control-hover)] transition-all cursor-pointer"
+            style="color: var(--muted);"
+            title="Clear Output"
+            type="button"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+
+          <!-- Reset Column Width -->
+          <button
+            class="p-1 rounded opacity-70 hover:opacity-100 hover:bg-[var(--control-hover)] transition-all cursor-pointer"
+            style="color: var(--muted);"
+            title="Reset Column Width"
+            type="button"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+              <path d="M3 3v5h5"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Terminal Content Stream -->
+      <div
+        id="terminal-tab-content"
+        class="flex-1 overflow-y-auto p-2.5 space-y-1 font-mono text-[11px] leading-5 scrollbar-thin transition-colors"
+        style="background: var(--terminal-bg); color: var(--terminal-text);"
+      >
+        <div id="terminal-stream" class="space-y-1">
+          <div class="opacity-60 pb-1 text-[10px]">
+            VoidLAB Sandbox Shell [Local Client VFS: {{if .Cwd}}{{.Cwd}}{{else}}/workspace{{end}}]
+          </div>
+          <div class="opacity-60 text-[10px]">
+            Connected to sandbox session. Type commands below (e.g. <code>ls</code>, <code>mkdir</code>, <code>touch</code>) or click Run.
+          </div>
+          {{if .TerminalHistory}}
+            {{range .TerminalHistory}}
+              <div class="space-y-0.5 pb-1">
+                <div class="opacity-80">
+                  <span class="opacity-50">{{.Cwd}}</span> $ {{.Command}}
+                </div>
+                <pre class="whitespace-pre-wrap break-words pl-2 text-[11px] {{if eq .Status "error"}}text-rose-500{{else if eq .Status "success"}}opacity-90{{else}}opacity-60{{end}}">{{.Output}}</pre>
+              </div>
+            {{end}}
+          {{end}}
+        </div>
+      </div>
+
+      <!-- Fixed Bottom Command Input Bar -->
+      <form
+        hx-post="/api/terminal/exec"
+        hx-target="#terminal-stream"
+        hx-swap="beforeend"
+        class="h-8 px-2.5 flex items-center gap-2 shrink-0 font-mono text-xs transition-colors"
+        style="background: var(--surface-soft); border-top: 1px solid var(--border);"
+      >
+        <span class="opacity-60 select-none text-xs">$</span>
+        <input
+          name="command"
+          class="flex-1 bg-transparent outline-none text-xs font-mono"
+          style="color: var(--text);"
+          placeholder="Type workspace command (e.g. ls, mkdir src, touch app.py)..."
+          autocomplete="off"
+        />
+        <button
+          type="submit"
+          class="text-xs opacity-60 hover:opacity-100 transition-opacity p-1 cursor-pointer"
+          style="color: var(--text);"
+          title="Run Command (Enter)"
+        >
+          ↵
+        </button>
+      </form>
+    </aside>
+  </div>
+</main>
+{{end}}

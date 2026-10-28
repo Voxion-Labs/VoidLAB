@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{if .Theme}}{{.Theme}}{{else}}light{{end}}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{if .Title}}{{.Title}}{{else}}VoidLAB - Local-First Cloud IDE{{end}}</title>
+  <meta name="description" content="Local-first browser IDE, compiler, and workspace by Voxion Labs.">
+
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS Engine -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- HTMX: Zero client-side JS bloat, hyper-optimized reactive HTML swaps -->
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+
+  <!-- Design System Root Variables & Styles (1:1 with src/app/globals.css) -->
+  <style>
+    :root,
+    :root[data-theme="light"] {
+      --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-display: 'Outfit', system-ui, -apple-system, sans-serif;
+
+      /* Text */
+      --text: #1a1a1a;
+      --text-strong: #0d0d0d;
+      --muted: #6b7280;
+      --muted-strong: #374151;
+
+      /* Accent — Flutter blue */
+      --accent: #0468d7;
+      --accent-strong: #0357b8;
+      --accent-soft: rgba(4, 104, 215, 0.07);
+      --accent-text: #0468d7;
+
+      /* Borders */
+      --border: rgba(0, 0, 0, 0.08);
+      --border-strong: rgba(4, 104, 215, 0.25);
+
+      /* Surfaces */
+      --background-main: #ffffff;
+      --glass-background: #ffffff;
+      --panel-background: #ffffff;
+      --shell-background: #f8f9fa;
+      --surface-soft: #f8f9fa;
+      --surface-strong: #f1f3f5;
+      --surface-elevated: #ffffff;
+      --control-background: #f8f9fa;
+      --control-hover: #f1f3f5;
+      --input-background: #ffffff;
+
+      /* Shadows */
+      --shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.05);
+      --shadow-hover: 0 2px 8px rgba(0,0,0,0.09), 0 8px 32px rgba(0,0,0,0.07);
+      --focus-ring: rgba(4, 104, 215, 0.22);
+
+      /* Action button */
+      --action-background: #0468d7;
+      --action-foreground: #ffffff;
+      --action-shadow: 0 4px 14px rgba(4, 104, 215, 0.28);
+
+      /* Terminal */
+      --terminal-bg: #f8f9fa;
+      --terminal-text: #1a1a1a;
+      --terminal-muted: #6b7280;
+    }
+
+    :root[data-theme="dark"] {
+      --text: #e5e7eb;
+      --text-strong: #f9fafb;
+      --muted: #9ca3af;
+      --muted-strong: #d1d5db;
+
+      --accent: #54a0ff;
+      --accent-strong: #74b9ff;
+      --accent-soft: rgba(84, 160, 255, 0.10);
+      --accent-text: #54a0ff;
+
+      --border: rgba(255, 255, 255, 0.08);
+      --border-strong: rgba(84, 160, 255, 0.25);
+
+      --background-main: #111111;
+      --glass-background: #1a1a1a;
+      --panel-background: #1a1a1a;
+      --shell-background: #111111;
+      --surface-soft: #1e1e1e;
+      --surface-strong: #252525;
+      --surface-elevated: #2a2a2a;
+      --control-background: #1e1e1e;
+      --control-hover: #252525;
+      --input-background: #1a1a1a;
+
+      --shadow: 0 1px 3px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.3);
+      --shadow-hover: 0 2px 8px rgba(0,0,0,0.5), 0 8px 32px rgba(0,0,0,0.4);
+      --focus-ring: rgba(84, 160, 255, 0.25);
+
+      --action-background: #54a0ff;
+      --action-foreground: #0a0a0a;
+      --action-shadow: 0 4px 14px rgba(84, 160, 255, 0.28);
+
+      --terminal-bg: #1a1a1a;
+      --terminal-text: #e5e7eb;
+      --terminal-muted: #9ca3af;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--background-main);
+      color: var(--text);
+    }
+
+    .font-display {
+      font-family: var(--font-display);
+    }
+
+    .scrollbar-thin::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    .scrollbar-thin::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+    .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+      background: var(--muted);
+    }
+  </style>
+</head>
+<body class="min-h-screen w-full flex flex-col font-sans select-none antialiased transition-colors" style="background: var(--background-main); color: var(--text);">
+  {{block "content" .}}
+    {{template "editor" .}}
+  {{end}}
+
+  <!-- Global Modal Host for HTMX Dynamic Dialogs -->
+  <div id="modal-container"></div>
+</body>
+</html>
