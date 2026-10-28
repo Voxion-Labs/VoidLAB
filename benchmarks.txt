@@ -2,17 +2,17 @@ goos: windows
 goarch: amd64
 pkg: github.com/Voxion-Labs/VoidLAB/cmd/voidlab
 cpu: Intel(R) Core(TM) 5 210H
-BenchmarkVoidLABServerEditor-12    	    5630	    212498 ns/op	   92566 B/op	     365 allocs/op
+BenchmarkVoidLABServerEditor-12    	    3903	    293364 ns/op	  176361 B/op	     368 allocs/op
 PASS
-ok  	github.com/Voxion-Labs/VoidLAB/cmd/voidlab	5.524s
+ok  	github.com/Voxion-Labs/VoidLAB/cmd/voidlab	3.907s
 PASS
-ok  	github.com/Voxion-Labs/VoidLAB/internal/docker	0.540s
+ok  	github.com/Voxion-Labs/VoidLAB/internal/docker	0.532s
 goos: windows
 goarch: amd64
 pkg: github.com/Voxion-Labs/VoidLAB/internal/explorer
 cpu: Intel(R) Core(TM) 5 210H
-BenchmarkBuildWorkspaceData-12    	    2727	    387830 ns/op	   76330 B/op	     350 allocs/op
+BenchmarkBuildWorkspaceData-12    	    3170	    358370 ns/op	   76504 B/op	     350 allocs/op
 PASS
-ok  	github.com/Voxion-Labs/VoidLAB/internal/explorer	2.251s
+ok  	github.com/Voxion-Labs/VoidLAB/internal/explorer	2.283s
 PASS
-ok  	github.com/Voxion-Labs/VoidLAB/internal/terminal	1.241s
+ok  	github.com/Voxion-Labs/VoidLAB/internal/terminal	1.269s

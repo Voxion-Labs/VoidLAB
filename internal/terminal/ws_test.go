@@ -59,7 +59,7 @@ func TestWebSocketTerminalUpgradeAndStreaming(t *testing.T) {
 	}
 	defer conn.Close()
 
-	// Read initial greeting frame
+	// 1. Read initial status frame
 	_ = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
 	_, msgBytes, err := conn.ReadMessage()
 	if err != nil {
@@ -75,7 +75,16 @@ func TestWebSocketTerminalUpgradeAndStreaming(t *testing.T) {
 		t.Errorf("expected initial frame type 'status', got %s", greeting.Type)
 	}
 
-	// Send ping message
+	// 2. Read ANSI banner frame
+	_, bannerBytes, err := conn.ReadMessage()
+	if err != nil {
+		t.Fatalf("failed to read banner frame: %v", err)
+	}
+	if !strings.Contains(string(bannerBytes), "VoidLAB Engine") {
+		t.Errorf("expected banner to contain VoidLAB Engine, got %s", string(bannerBytes))
+	}
+
+	// 3. Send ping message
 	pingMsg := InboundMessage{Type: "ping"}
 	if err := conn.WriteJSON(pingMsg); err != nil {
 		t.Fatalf("failed to send ping: %v", err)
@@ -93,6 +102,94 @@ func TestWebSocketTerminalUpgradeAndStreaming(t *testing.T) {
 	}
 	if pong.Message != "pong" {
 		t.Errorf("expected pong message, got %s", pong.Message)
+	}
+}
+
+func TestWebSocketRawKeystrokesAndShellCommands(t *testing.T) {
+	_, server := setupTestTerminal(t)
+
+	wsURL := "ws" + strings.TrimPrefix(server.URL, "http") + "/api/ws/terminal"
+
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("dial failed: %v", err)
+	}
+	defer conn.Close()
+
+	// Consume initial greeting and banner
+	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	_, _, _ = conn.ReadMessage()
+	_, _, _ = conn.ReadMessage()
+
+	// Send raw keystrokes: 'p', 'w', 'd', '\r'
+	if err := conn.WriteMessage(websocket.TextMessage, []byte("pwd\r")); err != nil {
+		t.Fatalf("failed to write raw keystrokes: %v", err)
+	}
+
+	var received strings.Builder
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		_ = conn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
+		_, chunk, err := conn.ReadMessage()
+		if err != nil {
+			break
+		}
+		received.WriteString(string(chunk))
+		if strings.Contains(received.String(), "/workspace") {
+			break
+		}
+	}
+
+	if !strings.Contains(received.String(), "/workspace") {
+		t.Errorf("expected output to contain '/workspace', got: %s", received.String())
+	}
+}
+
+func TestWebSocketExecuteRunBiDirectional(t *testing.T) {
+	handler, server := setupTestTerminal(t)
+
+	// Create test python file in workspace
+	data, _ := handler.explorerSvc.BuildWorkspaceData()
+	if data != nil && data.ActiveFile != nil {
+		_ = os.WriteFile(filepath.Join(data.Cwd, data.ActiveFile.Path), []byte("print('STREAM_HELLO_VOXION')\n"), 0644)
+	}
+
+	wsURL := "ws" + strings.TrimPrefix(server.URL, "http") + "/api/ws/terminal"
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("dial failed: %v", err)
+	}
+	defer conn.Close()
+
+	// Drain greeting & banner
+	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	_, _, _ = conn.ReadMessage()
+	_, _, _ = conn.ReadMessage()
+
+	// Send JSON Run command
+	runCmd := InboundMessage{Type: "run", Path: data.ActiveFile.Path}
+	if err := conn.WriteJSON(runCmd); err != nil {
+		t.Fatalf("failed to write run command: %v", err)
+	}
+
+	// Read stream chunks
+	var streamOutput strings.Builder
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		_ = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+		_, msg, err := conn.ReadMessage()
+		if err != nil {
+			break
+		}
+		streamOutput.WriteString(string(msg))
+		if strings.Contains(streamOutput.String(), "STREAM_HELLO_VOXION") || strings.Contains(streamOutput.String(), "exit code") {
+			break
+		}
+	}
+
+	out := streamOutput.String()
+	if !strings.Contains(out, "Executing") && !strings.Contains(out, "STREAM_HELLO_VOXION") && !strings.Contains(out, "exit") {
+		t.Errorf("expected execution output stream, got: %s", out)
 	}
 }
 

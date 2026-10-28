@@ -1,0 +1,375 @@
+{{define "terminal"}}
+<aside
+  id="output-panel"
+  style="width: 520px; background: var(--panel-background); border-left: 1px solid var(--border);"
+  class="shrink-0 flex flex-col h-full overflow-hidden relative select-none"
+>
+  <!-- Terminal Header: Slim Tabs & Tools (1:1 with TerminalBox.tsx) -->
+  <div
+    class="h-8 px-2.5 flex items-center justify-between shrink-0 text-xs font-mono transition-colors"
+    style="background: var(--surface-soft); border-bottom: 1px solid var(--border);"
+  >
+    <!-- Tab Buttons -->
+    <div class="flex items-center gap-3">
+      <button
+        id="tab-btn-terminal"
+        onclick="voidlabSwitchTab('terminal')"
+        class="pb-1 text-[11px] font-mono transition-colors duration-100 font-semibold cursor-pointer"
+        style="color: var(--text-strong); border-bottom: 2px solid var(--accent);"
+        type="button"
+      >
+        Terminal
+      </button>
+      <button
+        id="tab-btn-output"
+        onclick="voidlabSwitchTab('output')"
+        class="pb-1 text-[11px] font-mono transition-colors duration-100 opacity-70 hover:opacity-100 cursor-pointer"
+        style="color: var(--muted); border-bottom: 2px solid transparent;"
+        type="button"
+      >
+        Output
+      </button>
+      <button
+        id="tab-btn-ports"
+        onclick="voidlabSwitchTab('ports')"
+        class="pb-1 text-[11px] font-mono transition-colors duration-100 opacity-70 hover:opacity-100 cursor-pointer"
+        style="color: var(--muted); border-bottom: 2px solid transparent;"
+        type="button"
+      >
+        Ports
+      </button>
+    </div>
+
+    <!-- Status & Tools -->
+    <div class="flex items-center gap-2">
+      <!-- Active Status Badge -->
+      <span
+        id="terminal-status-badge"
+        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium"
+        style="background: var(--control-background); border: 1px solid var(--border); color: var(--muted-strong);"
+      >
+        <span id="terminal-status-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+        <span id="terminal-status-text">IDLE</span>
+      </span>
+
+      <!-- Clear Terminal Button -->
+      <button
+        onclick="voidlabClear()"
+        class="p-1 rounded opacity-70 hover:opacity-100 hover:bg-[var(--control-hover)] transition-all cursor-pointer"
+        style="color: var(--muted);"
+        title="Clear Output"
+        type="button"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+      </button>
+
+      <!-- Reset / Fit Terminal Button -->
+      <button
+        onclick="voidlabFitTerm()"
+        class="p-1 rounded opacity-70 hover:opacity-100 hover:bg-[var(--control-hover)] transition-all cursor-pointer"
+        style="color: var(--muted);"
+        title="Fit Terminal"
+        type="button"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+          <path d="M3 3v5h5"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- TAB 1: Live Interactive xterm.js Terminal -->
+  <div
+    id="view-terminal"
+    class="flex-1 w-full h-full min-h-0 flex flex-col overflow-hidden relative"
+    style="background: var(--terminal-bg);"
+  >
+    <div id="xterm-container" class="flex-1 w-full h-full min-h-0 overflow-hidden p-2"></div>
+  </div>
+
+  <!-- TAB 2: Output Transcript View -->
+  <div
+    id="view-output"
+    class="flex-1 w-full h-full min-h-0 hidden overflow-y-auto p-2.5 space-y-1 font-mono text-[11px] leading-5 scrollbar-thin transition-colors"
+    style="background: var(--terminal-bg); color: var(--terminal-text);"
+  >
+    <div id="terminal-stream" class="space-y-1">
+      <div class="opacity-60 pb-1 text-[10px]">
+        VoidLAB Execution Log [Workspace: {{if .Cwd}}{{.Cwd}}{{else}}/workspace{{end}}]
+      </div>
+      <div class="opacity-60 text-[10px]">
+        Output stream synchronized with ephemeral container engine. Run scripts to monitor output.
+      </div>
+      {{if .TerminalHistory}}
+        {{range .TerminalHistory}}
+          <div class="space-y-0.5 pb-1">
+            <div class="opacity-80">
+              <span class="opacity-50">{{.Cwd}}</span> $ {{.Command}}
+            </div>
+            <pre class="whitespace-pre-wrap break-words pl-2 text-[11px] {{if eq .Status "error"}}text-rose-500{{else if eq .Status "success"}}opacity-90{{else}}opacity-60{{end}}">{{.Output}}</pre>
+          </div>
+        {{end}}
+      {{end}}
+    </div>
+  </div>
+
+  <!-- TAB 3: Ports Monitor View -->
+  <div
+    id="view-ports"
+    class="flex-1 w-full h-full min-h-0 hidden overflow-y-auto p-3 font-mono text-xs space-y-3 transition-colors"
+    style="background: var(--terminal-bg); color: var(--terminal-text);"
+  >
+    <div class="text-[11px] opacity-70 border-b pb-2" style="border-color: var(--border);">
+      Active Network Listeners & Port Forwarding
+    </div>
+    <div class="flex items-center justify-between p-2 rounded text-xs" style="background: var(--surface-soft); border: 1px solid var(--border);">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+        <span class="font-semibold">Port 8080</span>
+        <span class="opacity-60">HTTP (IDE Server & API)</span>
+      </div>
+      <span class="text-[10px] px-1.5 py-0.5 rounded font-mono" style="background: var(--accent-soft); color: var(--accent);">Active</span>
+    </div>
+    <div class="flex items-center justify-between p-2 rounded text-xs opacity-60" style="background: var(--surface-soft); border: 1px solid var(--border);">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+        <span class="font-semibold">Port 3000</span>
+        <span class="opacity-60">Container Web App Forwarding</span>
+      </div>
+      <span class="text-[10px] px-1.5 py-0.5 rounded font-mono" style="background: var(--control-background); color: var(--muted);">Auto-Forward</span>
+    </div>
+  </div>
+
+  <!-- Fixed Bottom Command Bar -->
+  <form
+    id="terminal-cmd-form"
+    onsubmit="voidlabSubmitCmd(event)"
+    class="h-8 px-2.5 flex items-center gap-2 shrink-0 font-mono text-xs transition-colors"
+    style="background: var(--surface-soft); border-top: 1px solid var(--border);"
+  >
+    <span class="opacity-60 select-none text-xs">$</span>
+    <input
+      id="terminal-cmd-input"
+      name="command"
+      class="flex-1 bg-transparent outline-none text-xs font-mono"
+      style="color: var(--text);"
+      placeholder="Type command (e.g. run, ls, cat main.py, clear)..."
+      autocomplete="off"
+    />
+    <button
+      type="submit"
+      class="text-xs opacity-60 hover:opacity-100 transition-opacity p-1 cursor-pointer"
+      style="color: var(--text);"
+      title="Run Command (Enter)"
+    >
+      ↵
+    </button>
+  </form>
+
+  <!-- Hyper-Optimized Minimalist xterm.js Client Wiring -->
+  <script>
+    (function() {
+      // Avoid re-initialization if already mounted
+      if (window._voidlabTerminalInitialized) return;
+      window._voidlabTerminalInitialized = true;
+
+      const container = document.getElementById('xterm-container');
+      if (!container || typeof Terminal === 'undefined') return;
+
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const termBg = isDark ? '#1a1a1a' : '#f8f9fa';
+      const termFg = isDark ? '#e5e7eb' : '#1a1a1a';
+      const termCursor = isDark ? '#54a0ff' : '#0468d7';
+
+      // 1. Initialize xterm instance with clean typography and true-color support
+      const term = new Terminal({
+        cursorBlink: true,
+        fontSize: 12,
+        fontFamily: '"JetBrains Mono", Menlo, Monaco, "Courier New", monospace',
+        convertEol: true,
+        disableStdin: false,
+        theme: {
+          background: termBg,
+          foreground: termFg,
+          cursor: termCursor,
+          selectionBackground: 'rgba(4, 104, 215, 0.3)',
+          black: '#000000',
+          red: '#ef4444',
+          green: '#10b981',
+          yellow: '#f59e0b',
+          blue: '#3b82f6',
+          magenta: '#8b5cf6',
+          cyan: '#06b6d4',
+          white: '#ffffff',
+          brightBlack: '#6b7280',
+          brightRed: '#f87171',
+          brightGreen: '#34d399',
+          brightYellow: '#fbbf24',
+          brightBlue: '#60a5fa',
+          brightMagenta: '#a78bfa',
+          brightCyan: '#22d3ee',
+          brightWhite: '#f9fafb'
+        }
+      });
+
+      // 2. Load FitAddon
+      const fitAddon = new FitAddon.FitAddon();
+      term.loadAddon(fitAddon);
+      term.open(container);
+      
+      // Defer initial fit slightly to allow DOM layout stabilization
+      requestAnimationFrame(() => {
+        try { fitAddon.fit(); } catch (_) {}
+      });
+
+      // 3. Resize Observer for instant, zero-lag pane reflows
+      if (window.ResizeObserver) {
+        const ro = new ResizeObserver(() => {
+          try { fitAddon.fit(); } catch (_) {}
+        });
+        ro.observe(container);
+      } else {
+        window.addEventListener('resize', () => {
+          try { fitAddon.fit(); } catch (_) {}
+        });
+      }
+
+      // 4. WebSocket Bi-Directional Connection
+      let socket = null;
+      let reconnectTimer = null;
+
+      function updateStatus(running) {
+        const dot = document.getElementById('terminal-status-dot');
+        const text = document.getElementById('terminal-status-text');
+        if (!dot || !text) return;
+        if (running) {
+          dot.className = 'w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping';
+          text.textContent = 'RUNNING';
+        } else {
+          dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500';
+          text.textContent = 'IDLE';
+        }
+      }
+
+      function connect() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/api/ws/terminal`;
+        socket = new WebSocket(wsUrl);
+
+        socket.onopen = function() {
+          try { fitAddon.fit(); } catch (_) {}
+        };
+
+        // Incoming WebSocket message stream directly into xterm UI
+        socket.onmessage = function(event) {
+          const raw = event.data;
+          if (typeof raw === 'string' && raw.charCodeAt(0) === 123 /* '{' */) {
+            try {
+              const msg = JSON.parse(raw);
+              if (msg.type === 'stdout' || msg.type === 'stderr') {
+                term.write(msg.text);
+                return;
+              }
+              if (msg.type === 'status') {
+                if (msg.running !== undefined) updateStatus(msg.running);
+                if (msg.message) term.write(`\r\n\x1b[36m[VoidLAB]\x1b[0m ${msg.message}\r\n`);
+                return;
+              }
+              if (msg.type === 'exit') {
+                updateStatus(false);
+                return;
+              }
+            } catch (_) {}
+          }
+          // Raw stream chunk written directly to xterm
+          term.write(raw);
+        };
+
+        socket.onclose = function() {
+          updateStatus(false);
+          clearTimeout(reconnectTimer);
+          reconnectTimer = setTimeout(connect, 2000);
+        };
+
+        socket.onerror = function() {
+          try { socket.close(); } catch (_) {}
+        };
+      }
+
+      // Keystroke piping: send raw user keystrokes straight to WebSocket
+      term.onData(function(data) {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(data);
+        }
+      });
+
+      connect();
+
+      // Global Accessors & Controls
+      window.voidlabTerm = term;
+      window.voidlabFit = fitAddon;
+      window.voidlabFitTerm = function() {
+        try { fitAddon.fit(); } catch (_) {}
+      };
+      window.voidlabClear = function() {
+        term.clear();
+        const stream = document.getElementById('terminal-stream');
+        if (stream) {
+          stream.innerHTML = '<div class="opacity-60 pb-1 text-[10px]">VoidLAB Terminal cleared</div>';
+        }
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ type: 'command', command: 'clear' }));
+        }
+      };
+      window.voidlabRun = function(path) {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          updateStatus(true);
+          socket.send(JSON.stringify({ type: 'run', path: path || '' }));
+          // Ensure Terminal tab is active when running
+          window.voidlabSwitchTab('terminal');
+        }
+      };
+      window.voidlabSubmitCmd = function(e) {
+        if (e) e.preventDefault();
+        const input = document.getElementById('terminal-cmd-input');
+        if (!input) return;
+        const cmd = input.value.trim();
+        if (cmd && socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(cmd + '\r');
+          input.value = '';
+        }
+      };
+      window.voidlabSwitchTab = function(tab) {
+        const tabs = ['terminal', 'output', 'ports'];
+        tabs.forEach(t => {
+          const btn = document.getElementById('tab-btn-' + t);
+          const view = document.getElementById('view-' + t);
+          const isActive = t === tab;
+          if (btn) {
+            btn.style.color = isActive ? 'var(--text-strong)' : 'var(--muted)';
+            btn.style.borderBottom = isActive ? '2px solid var(--accent)' : '2px solid transparent';
+            btn.className = 'pb-1 text-[11px] font-mono transition-colors duration-100 cursor-pointer ' + 
+                            (isActive ? 'font-semibold' : 'opacity-70 hover:opacity-100');
+          }
+          if (view) {
+            if (isActive) {
+              view.classList.remove('hidden');
+            } else {
+              view.classList.add('hidden');
+            }
+          }
+        });
+        if (tab === 'terminal') {
+          requestAnimationFrame(() => {
+            try { fitAddon.fit(); } catch (_) {}
+          });
+        }
+      };
+    })();
+  </script>
+</aside>
+{{end}}

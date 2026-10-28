@@ -57,6 +57,7 @@
 
     <!-- Action Run Pill Button -->
     <button
+      onclick="if (window.voidlabRun) { window.voidlabRun(); }"
       hx-post="/api/code/run"
       hx-target="#terminal-stream"
       hx-swap="beforeend"
