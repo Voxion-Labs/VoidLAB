@@ -13,7 +13,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Voxion-Labs/VoidLAB/internal/docker"
 	"github.com/Voxion-Labs/VoidLAB/internal/explorer"
+	"github.com/Voxion-Labs/VoidLAB/internal/terminal"
 )
 
 const (
@@ -65,6 +67,13 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 	}
 
 	explorerHandler := explorer.NewHandler(explorerService, tmpl)
+
+	dockerOrchestrator, err := docker.NewOrchestrator(workspaceDir)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to initialize docker orchestrator: %w", err)
+	}
+
+	terminalHandler := terminal.NewHandler(dockerOrchestrator, explorerService)
 
 	// Standard Go 1.22+ multiplexer
 	mux := http.NewServeMux()
@@ -133,6 +142,12 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 	// 6. Buffer and File Workspace Actions
 	mux.HandleFunc("GET /api/files/open", explorerHandler.HandleOpenFile)
 	mux.HandleFunc("POST /api/files/save", explorerHandler.HandleSaveFile)
+
+	// 7. WebSocket Terminal Streaming & Ephemeral Docker Execution
+	mux.HandleFunc("GET /api/ws/terminal", terminalHandler.HandleWebSocket)
+	mux.HandleFunc("POST /api/code/run", terminalHandler.HandleRunTrigger)
+	mux.HandleFunc("POST /api/terminal/exec", terminalHandler.HandleTerminalExec)
+	mux.HandleFunc("POST /api/terminal/clear", terminalHandler.HandleClear)
 
 	return mux, explorerService, tmpl, nil
 }
