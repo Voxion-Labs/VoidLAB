@@ -1,7 +1,7 @@
 goos: linux
 goarch: amd64
 pkg: github.com/Voxion-Labs/VoidLAB/cmd/voidlab
-cpu: AMD EPYC 9V74 80-Core Processor                
-BenchmarkVoidLABEngine-4   	1000000000	         0.2735 ns/op	       0 B/op	       0 allocs/op
+cpu: AMD EPYC 7763 64-Core Processor                
+BenchmarkVoidLABEngine-4   	1000000000	         0.3133 ns/op	       0 B/op	       0 allocs/op
 PASS
-ok  	github.com/Voxion-Labs/VoidLAB/cmd/voidlab	0.305s
+ok  	github.com/Voxion-Labs/VoidLAB/cmd/voidlab	0.351s
