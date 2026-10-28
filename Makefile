@@ -14,6 +14,8 @@ BENCH_OUTPUT ?= benchmarks.txt
 COVER_OUTPUT ?= coverage.out
 MAIN_PKG     ?= ./cmd/voidlab
 TEST_PKG     ?= ./cmd/... ./internal/...
+WASM_PKG     ?= ./cmd/wasm
+WASM_OUTPUT  ?= public/wasm/voidlab.wasm
 
 GO           ?= go
 GOFLAGS      ?= -v
@@ -31,14 +33,23 @@ else
     PRINT_CMD   = cat $(BENCH_OUTPUT)
 endif
 
-.PHONY: all build clean test bench regression bot-rebase help
+.PHONY: all build wasm clean test bench regression bot-rebase help
 
-all: build
+all: build wasm
 
 ## build: Compiles the VoidLAB server binary
 build:
 	@echo "==> Building $(BINARY_NAME)..."
 	$(GO) build $(GOFLAGS) -ldflags="$(LDFLAGS)" -o $(TARGET_BIN) $(MAIN_PKG)
+
+## wasm: Compiles the Go WebAssembly client-side engine
+wasm:
+	@echo "==> Building WebAssembly module..."
+ifeq ($(OS),Windows_NT)
+	cmd.exe /c "set GOOS=js&& set GOARCH=wasm&& $(GO) build -ldflags=-s -o $(WASM_OUTPUT) $(WASM_PKG)"
+else
+	GOOS=js GOARCH=wasm $(GO) build -ldflags="-s -w" -o $(WASM_OUTPUT) $(WASM_PKG)
+endif
 
 ## clean: Removes build artifacts, benchmarks, and coverage profiles
 clean:
@@ -77,6 +88,7 @@ help:
 	@echo ""
 	@echo "Targets:"
 	@echo "  build       Compiles the VoidLAB server binary"
+	@echo "  wasm        Compiles the Go WebAssembly client-side engine"
 	@echo "  clean       Removes build artifacts, benchmarks, and coverage profiles"
 	@echo "  test        Runs test suite with coverage profile"
 	@echo "  bench       Executes benchmarks and writes metrics to file"

@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -201,10 +202,16 @@ func (o *Orchestrator) Run(
 	stdout io.Writer,
 	stderr io.Writer,
 ) (*ExecutionResult, error) {
-	cleanRel := filepath.Clean(filepath.FromSlash(strings.TrimSpace(relPath)))
-	if filepath.IsAbs(cleanRel) || cleanRel == ".." || strings.HasPrefix(cleanRel, ".."+string(filepath.Separator)) {
+	trimmed := strings.TrimSpace(relPath)
+	slashNormalized := strings.ReplaceAll(trimmed, "\\", "/")
+	if strings.HasPrefix(slashNormalized, "/") || (len(slashNormalized) > 1 && slashNormalized[1] == ':') {
 		return nil, errors.New("security error: path escapes workspace boundaries")
 	}
+	cleanedSlash := path.Clean(slashNormalized)
+	if cleanedSlash == ".." || strings.HasPrefix(cleanedSlash, "../") || strings.Contains(cleanedSlash, "/../") {
+		return nil, errors.New("security error: path escapes workspace boundaries")
+	}
+	cleanRel := filepath.Clean(filepath.FromSlash(cleanedSlash))
 
 	absHostPath := filepath.Join(o.workspaceDir, cleanRel)
 	if _, err := os.Stat(absHostPath); err != nil {

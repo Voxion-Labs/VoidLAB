@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"mime"
 	"net/http"
 	"os"
 	"os/signal"
@@ -77,6 +78,10 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 
 	// Standard Go 1.22+ multiplexer
 	mux := http.NewServeMux()
+
+	// Register explicit WebAssembly and JavaScript MIME types
+	_ = mime.AddExtensionType(".wasm", "application/wasm")
+	_ = mime.AddExtensionType(".js", "application/javascript")
 
 	// 1. Static asset server (zero bloat, streaming file server)
 	if _, err := os.Stat(publicDir); err == nil {

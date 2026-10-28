@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -145,24 +146,30 @@ func (s *Service) ResolveSafePath(relPath string) (string, error) {
 		return s.rootDir, nil
 	}
 
-	// Normalize forward/backward slashes
-	cleanedRel := filepath.Clean(filepath.FromSlash(trimmed))
+	// Cross-platform normalization: treat both '\' and '/' as directory separators
+	slashNormalized := strings.ReplaceAll(trimmed, "\\", "/")
 
-	// Reject absolute or root-anchored paths (cross-platform Windows & Unix)
-	if strings.HasPrefix(trimmed, "/") || strings.HasPrefix(trimmed, "\\") || filepath.IsAbs(cleanedRel) {
+	// Reject absolute paths, root-anchored paths, or Windows drive prefixes (e.g. C:)
+	if strings.HasPrefix(slashNormalized, "/") || (len(slashNormalized) > 1 && slashNormalized[1] == ':') {
 		return "", errors.New("security error: absolute paths not permitted")
 	}
 
-	// Reject traversal sequences
-	if cleanedRel == ".." || strings.HasPrefix(cleanedRel, ".."+string(filepath.Separator)) {
+	cleanedSlash := path.Clean(slashNormalized)
+	if cleanedSlash == ".." || strings.HasPrefix(cleanedSlash, "../") || strings.Contains(cleanedSlash, "/../") || strings.HasSuffix(cleanedSlash, "/..") {
 		return "", errors.New("security error: path traversal attempt detected")
 	}
 
-	fullPath := filepath.Join(s.rootDir, cleanedRel)
+	cleanedOS := filepath.Clean(filepath.FromSlash(cleanedSlash))
+	if filepath.IsAbs(cleanedOS) {
+		return "", errors.New("security error: absolute paths not permitted")
+	}
+
+	fullPath := filepath.Join(s.rootDir, cleanedOS)
 
 	// Ensure destination remains within root boundary
 	rel, err := filepath.Rel(s.rootDir, fullPath)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	relSlash := filepath.ToSlash(rel)
+	if err != nil || relSlash == ".." || strings.HasPrefix(relSlash, "../") {
 		return "", errors.New("security error: target escapes workspace root")
 	}
 
