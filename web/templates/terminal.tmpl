@@ -4,7 +4,7 @@
   style="width: 520px; background: var(--panel-background); border-left: 1px solid var(--border);"
   class="shrink-0 flex flex-col h-full overflow-hidden relative select-none"
 >
-  <!-- Terminal Header: Slim Tabs & Tools (1:1 with TerminalBox.tsx) -->
+  <!-- ── Terminal Header: Slim Tabs & Controls (1:1 with TerminalBox.tsx) ── -->
   <div
     class="h-8 px-2.5 flex items-center justify-between shrink-0 text-xs font-mono transition-colors"
     style="background: var(--surface-soft); border-bottom: 1px solid var(--border);"
@@ -40,7 +40,7 @@
       </button>
     </div>
 
-    <!-- Status & Tools -->
+    <!-- Status & Action Tools -->
     <div class="flex items-center gap-2">
       <!-- Active Status Badge -->
       <span
@@ -66,7 +66,7 @@
         </svg>
       </button>
 
-      <!-- Reset / Fit Terminal Button -->
+      <!-- Fit Terminal Button -->
       <button
         onclick="voidlabFitTerm()"
         class="p-1 rounded opacity-70 hover:opacity-100 hover:bg-[var(--control-hover)] transition-all cursor-pointer"
@@ -82,7 +82,7 @@
     </div>
   </div>
 
-  <!-- TAB 1: Live Interactive xterm.js Terminal -->
+  <!-- ── TAB 1: Live Interactive xterm.js Terminal ── -->
   <div
     id="view-terminal"
     class="flex-1 w-full h-full min-h-0 flex flex-col overflow-hidden relative"
@@ -91,18 +91,27 @@
     <div id="xterm-container" class="flex-1 w-full h-full min-h-0 overflow-hidden p-2"></div>
   </div>
 
-  <!-- TAB 2: Output Transcript View -->
+  <!-- ── TAB 2: Output Transcript & Execution Results ── -->
   <div
     id="view-output"
-    class="flex-1 w-full h-full min-h-0 hidden overflow-y-auto p-2.5 space-y-1 font-mono text-[11px] leading-5 scrollbar-thin transition-colors"
+    class="flex-1 w-full h-full min-h-0 hidden overflow-y-auto p-2.5 space-y-2 font-mono text-[11px] leading-5 scrollbar-thin transition-colors"
     style="background: var(--terminal-bg); color: var(--terminal-text);"
   >
+    <!-- Minimal Metric Strip (1:1 with TerminalBox.tsx) -->
+    <div
+      class="flex flex-wrap items-center gap-3 text-[10px] pb-1"
+      style="border-bottom: 1px solid var(--border); color: var(--muted);"
+    >
+      <span>STATUS: <strong id="metric-status" style="color: var(--text-strong);">Idle</strong></span>
+      <span>TIME: <strong id="metric-time" style="color: var(--text-strong);">0.00s</strong></span>
+      <span>MEMORY: <strong id="metric-memory" style="color: var(--text-strong);">0KB</strong></span>
+      <span>EXIT: <strong id="metric-exit" style="color: var(--text-strong);">0</strong></span>
+    </div>
+
+    <!-- Execution Output Stream -->
     <div id="terminal-stream" class="space-y-1">
-      <div class="opacity-60 pb-1 text-[10px]">
-        VoidLAB Execution Log [Workspace: {{if .Cwd}}{{.Cwd}}{{else}}/workspace{{end}}]
-      </div>
       <div class="opacity-60 text-[10px]">
-        Output stream synchronized with ephemeral container engine. Run scripts to monitor output.
+        [system] Run the active file to stream compiler logs, stdout, diagnostics, and metrics.
       </div>
       {{if .TerminalHistory}}
         {{range .TerminalHistory}}
@@ -115,9 +124,52 @@
         {{end}}
       {{end}}
     </div>
+
+    <!-- Stdin Interactive Session Box -->
+    <div
+      id="stdin-capture-box"
+      class="hidden p-2.5 rounded-[6px] space-y-2 mt-2"
+      style="background: var(--surface-soft); border: 1px solid var(--border-strong);"
+    >
+      <div
+        class="text-[10px] uppercase font-semibold flex items-center gap-1.5"
+        style="color: var(--accent);"
+      >
+        <span class="w-1.5 h-1.5 rounded-full animate-ping" style="background: var(--accent);"></span>
+        Input Required
+      </div>
+      <div class="text-[10px]" style="color: var(--muted);">
+        Enter line input to deliver to worker process:
+      </div>
+      <textarea
+        id="stdin-input-field"
+        class="w-full rounded-[6px] p-2 text-xs font-mono outline-none resize-none h-16"
+        style="background: var(--input-background); border: 1px solid var(--border); color: var(--text);"
+        placeholder="Type stdin values and hit Enter or click Send Line..."
+        onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); voidlabSendStdinLine(); }"
+      ></textarea>
+      <div class="flex gap-2 justify-end">
+        <button
+          onclick="document.getElementById('stdin-input-field').value=''"
+          class="px-2.5 py-1 text-[10px] rounded-[6px] transition-colors cursor-pointer"
+          style="background: var(--control-background); border: 1px solid var(--border); color: var(--text);"
+          type="button"
+        >
+          Clear
+        </button>
+        <button
+          onclick="voidlabSendStdinLine()"
+          class="px-3 py-1 text-[10px] rounded-[6px] font-semibold transition-all shadow-sm cursor-pointer"
+          style="background: var(--action-background); color: var(--action-foreground);"
+          type="button"
+        >
+          Send Line
+        </button>
+      </div>
+    </div>
   </div>
 
-  <!-- TAB 3: Ports Monitor View -->
+  <!-- ── TAB 3: Forwarded Ports & Sockets ── -->
   <div
     id="view-ports"
     class="flex-1 w-full h-full min-h-0 hidden overflow-y-auto p-3 font-mono text-xs space-y-3 transition-colors"
@@ -144,25 +196,25 @@
     </div>
   </div>
 
-  <!-- Fixed Bottom Command Bar -->
+  <!-- ── Terminal Command Input Bar (Fixed Bottom) ── -->
   <form
     id="terminal-cmd-form"
     onsubmit="voidlabSubmitCmd(event)"
     class="h-8 px-2.5 flex items-center gap-2 shrink-0 font-mono text-xs transition-colors"
     style="background: var(--surface-soft); border-top: 1px solid var(--border);"
   >
-    <span class="opacity-60 select-none text-xs">$</span>
+    <span class="select-none text-xs font-semibold" style="color: var(--accent);">$</span>
     <input
       id="terminal-cmd-input"
       name="command"
       class="flex-1 bg-transparent outline-none text-xs font-mono"
       style="color: var(--text);"
-      placeholder="Type command (e.g. run, ls, cat main.py, clear)..."
+      placeholder="Type command (e.g. ls, gcc, python main.py, clear)..."
       autocomplete="off"
     />
     <button
       type="submit"
-      class="text-xs opacity-60 hover:opacity-100 transition-opacity p-1 cursor-pointer"
+      class="text-xs opacity-60 hover:opacity-100 transition-opacity p-1 cursor-pointer font-bold"
       style="color: var(--text);"
       title="Run Command (Enter)"
     >
@@ -170,7 +222,7 @@
     </button>
   </form>
 
-  <!-- Hyper-Optimized Minimalist xterm.js Client Wiring -->
+  <!-- ── Hyper-Optimized Minimalist xterm.js Client Wiring ── -->
   <script>
     (function() {
       // Avoid re-initialization if already mounted
@@ -221,12 +273,11 @@
       term.loadAddon(fitAddon);
       term.open(container);
       
-      // Defer initial fit slightly to allow DOM layout stabilization
       requestAnimationFrame(() => {
         try { fitAddon.fit(); } catch (_) {}
       });
 
-      // 3. Resize Observer for instant, zero-lag pane reflows
+      // 3. Resize Observer for pane reflows
       if (window.ResizeObserver) {
         const ro = new ResizeObserver(() => {
           try { fitAddon.fit(); } catch (_) {}
@@ -242,16 +293,18 @@
       let socket = null;
       let reconnectTimer = null;
 
-      function updateStatus(running) {
+      function updateStatus(running, statusLabel) {
         const dot = document.getElementById('terminal-status-dot');
         const text = document.getElementById('terminal-status-text');
+        const metricStatus = document.getElementById('metric-status');
+        if (metricStatus) metricStatus.textContent = statusLabel || (running ? 'Running' : 'Idle');
         if (!dot || !text) return;
         if (running) {
           dot.className = 'w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping';
-          text.textContent = 'RUNNING';
+          text.textContent = statusLabel || 'RUNNING';
         } else {
           dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500';
-          text.textContent = 'IDLE';
+          text.textContent = statusLabel || 'IDLE';
         }
       }
 
@@ -264,7 +317,6 @@
           try { fitAddon.fit(); } catch (_) {}
         };
 
-        // Incoming WebSocket message stream directly into xterm UI
         socket.onmessage = function(event) {
           const raw = event.data;
           if (typeof raw === 'string' && raw.charCodeAt(0) === 123 /* '{' */) {
@@ -272,25 +324,33 @@
               const msg = JSON.parse(raw);
               if (msg.type === 'stdout' || msg.type === 'stderr') {
                 term.write(msg.text);
+                const stream = document.getElementById('terminal-stream');
+                if (stream) {
+                  const line = document.createElement('div');
+                  line.className = 'font-mono text-[11px] leading-5 whitespace-pre-wrap ' + (msg.type === 'stderr' ? 'text-rose-400' : '');
+                  line.textContent = msg.text;
+                  stream.appendChild(line);
+                }
                 return;
               }
               if (msg.type === 'status') {
-                if (msg.running !== undefined) updateStatus(msg.running);
+                if (msg.running !== undefined) updateStatus(msg.running, msg.message);
                 if (msg.message) term.write(`\r\n\x1b[36m[VoidLAB]\x1b[0m ${msg.message}\r\n`);
                 return;
               }
               if (msg.type === 'exit') {
-                updateStatus(false);
+                updateStatus(false, 'Exit: ' + (msg.exitCode || 0));
+                const exitEl = document.getElementById('metric-exit');
+                if (exitEl) exitEl.textContent = msg.exitCode !== undefined ? msg.exitCode : 0;
                 return;
               }
             } catch (_) {}
           }
-          // Raw stream chunk written directly to xterm
           term.write(raw);
         };
 
         socket.onclose = function() {
-          updateStatus(false);
+          updateStatus(false, 'Disconnected');
           clearTimeout(reconnectTimer);
           reconnectTimer = setTimeout(connect, 2000);
         };
@@ -300,7 +360,7 @@
         };
       }
 
-      // Keystroke piping: send raw user keystrokes straight to WebSocket
+      // Keystroke piping
       term.onData(function(data) {
         if (socket && socket.readyState === WebSocket.OPEN) {
           socket.send(data);
@@ -338,9 +398,8 @@
           return;
         }
         if (socket && socket.readyState === WebSocket.OPEN) {
-          updateStatus(true);
+          updateStatus(true, 'Running');
           socket.send(JSON.stringify({ type: 'run', path: targetPath || '' }));
-          // Ensure Terminal tab is active when running
           window.voidlabSwitchTab('terminal');
         }
       };
@@ -352,6 +411,15 @@
         if (cmd && socket && socket.readyState === WebSocket.OPEN) {
           socket.send(cmd + '\r');
           input.value = '';
+        }
+      };
+      window.voidlabSendStdinLine = function() {
+        const field = document.getElementById('stdin-input-field');
+        if (!field) return;
+        const val = field.value;
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(val + '\n');
+          field.value = '';
         }
       };
       window.voidlabSwitchTab = function(tab) {

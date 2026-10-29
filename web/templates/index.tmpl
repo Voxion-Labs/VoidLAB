@@ -59,9 +59,6 @@
       <button
         id="topbar-run-btn"
         onclick="handleVoidLabRun(event)"
-        hx-post="/api/code/run"
-        hx-target="#terminal-stream"
-        hx-swap="beforeend"
         class="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md shadow-sm active:scale-[0.98] transition-all disabled:opacity-40 ml-1 cursor-pointer font-sans"
         style="background: var(--action-background); color: var(--action-foreground);"
         title="Execute script (Ctrl+Enter)"
@@ -75,9 +72,7 @@
 
       <!-- Save Trigger -->
       <button
-        hx-post="/api/files/save"
-        hx-target="#status-message"
-        hx-swap="innerHTML"
+        onclick="voidlabTriggerManualSave()"
         class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer font-sans"
         style="background: var(--surface-soft); border: 1px solid var(--border); color: var(--text);"
         title="Save file (Ctrl+S)"
@@ -101,7 +96,7 @@
       </span>
     </div>
 
-    <!-- Right: Minimal Text Buttons (Manual, GitHub, Collab, AI Guide) & Theme Switcher -->
+    <!-- Right: Navigation Links & Theme Switcher -->
     <div class="flex items-center gap-2.5">
       <nav class="flex items-center gap-1 text-xs font-medium font-sans">
         <a
@@ -177,7 +172,7 @@
         hx-swap="innerHTML"
         class="p-1.5 rounded-md transition-colors hover:bg-[var(--surface-soft)] cursor-pointer"
         style="color: var(--muted);"
-        title="Workspace Settings (Language, Region, Shortcuts)"
+        title="Workspace Settings"
         type="button"
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -199,21 +194,21 @@
   </header>
 
   <!-- ========================================================================= -->
-  <!-- 2. MAIN WORKSPACE (3-Column Layout: Left Explorer, Middle Editor, Right Terminal) -->
+  <!-- 2. MAIN WORKSPACE (3-Column Layout: Explorer, Editor, Terminal)            -->
   <!-- ========================================================================= -->
   <div
     id="editor-workspace"
     class="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden min-h-[640px] relative transition-colors"
     style="background: var(--background-main);"
   >
-    <!-- ── Left Column: File Explorer Sidebar (Width: ~230px) ── -->
-    {{template "sidebar" .}}
+    <!-- Left Column: File Explorer (explorer.tmpl) -->
+    {{template "explorer" .}}
 
-    <!-- ── Divider 1: Left Resizable Splitter (between Explorer & Editor) ── -->
+    <!-- Divider 1: Left Splitter (between Explorer & Editor) -->
     <div
       class="w-1 hover:w-1.5 cursor-col-resize transition-all duration-100 z-20 flex flex-col items-center justify-center group shrink-0"
       style="background: var(--border);"
-      title="Drag to resize sidebar"
+      title="Drag to resize explorer"
     >
       <div
         class="h-6 w-[1.5px] rounded-full group-hover:scale-125 transition-transform"
@@ -221,186 +216,14 @@
       ></div>
     </div>
 
-    <!-- ── Middle Column: Main Code Editor (Takes Majority Flex-1 Width) ── -->
-    <div
-      id="editor-pane"
-      class="flex-1 min-w-[320px] flex flex-col h-full overflow-hidden relative"
-      style="background: var(--background-main);"
-    >
-      <!-- Top Buffer Tabs & Language Actions -->
-      <div
-        class="h-9 shrink-0 flex items-center justify-between border-b px-2 select-none overflow-x-auto scrollbar-thin"
-        style="background: var(--surface-soft); border-color: var(--border);"
-      >
-        <!-- Open Tabs List -->
-        <div class="flex items-center h-full gap-0.5 overflow-x-auto">
-          {{if .OpenTabs}}
-            {{range .OpenTabs}}
-              <div
-                class="h-full px-3 flex items-center gap-2 text-xs cursor-pointer transition-colors duration-100 {{if .IsActive}}font-semibold{{else}}opacity-70 hover:opacity-100{{end}}"
-                style="{{if .IsActive}}background: var(--panel-background); border-right: 1px solid var(--border); border-top: 2px solid var(--accent); color: var(--text-strong);{{else}}border-right: 1px solid var(--border); color: var(--muted);{{end}}"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{if .IsActive}}text-emerald-400{{else}}opacity-50{{end}}">
-                  <polyline points="16 18 22 12 16 6"></polyline>
-                  <polyline points="8 6 2 12 8 18"></polyline>
-                </svg>
-                <span
-                  class="truncate max-w-[150px]"
-                  hx-get="/api/files/open?path={{.Path}}"
-                  hx-target="#editor-workspace"
-                  hx-swap="outerHTML"
-                >{{.Name}}</span>
-                <button
-                  hx-delete="/api/explorer/delete?path={{.Path}}"
-                  hx-target="#editor-workspace"
-                  hx-swap="outerHTML"
-                  class="rounded p-0.5 opacity-50 hover:opacity-100 hover:bg-[var(--control-hover)] transition-all ml-0.5"
-                  title="Close Tab"
-                  type="button"
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
-                </button>
-              </div>
-            {{end}}
-          {{else}}
-            <!-- Default Active Tab -->
-            <div
-              class="h-full px-3 flex items-center gap-2 text-xs cursor-pointer transition-colors duration-100 font-semibold"
-              style="background: var(--panel-background); border-right: 1px solid var(--border); border-top: 2px solid var(--accent); color: var(--text-strong);"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent);">
-                <polyline points="16 18 22 12 16 6"></polyline>
-                <polyline points="8 6 2 12 8 18"></polyline>
-              </svg>
-              <span class="truncate max-w-[150px]">{{if .ActiveFile}}{{.ActiveFile.Name}}{{else}}main.py{{end}}</span>
-              <button
-                class="rounded p-0.5 opacity-50 hover:opacity-100 hover:bg-[var(--control-hover)] transition-all ml-0.5"
-                title="Close Tab"
-                type="button"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-            </div>
-          {{end}}
-        </div>
+    <!-- Middle Column: Main Code Editor (editor.tmpl) -->
+    {{template "editor" .}}
 
-        <!-- Right: Quick Actions & Language Metadata -->
-        <div class="flex items-center gap-2 text-xs font-sans px-2 shrink-0" style="color: var(--muted);">
-          <!-- Format Code Button (WASM Powered) -->
-          <button
-            onclick="voidlabFormatCode()"
-            class="px-2 py-0.5 hover:text-[var(--text-strong)] hover:bg-[var(--control-hover)] rounded transition-colors flex items-center gap-1.5 cursor-pointer"
-            title="Format active file (WebAssembly powered)"
-            type="button"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="21" y1="10" x2="7" y2="10"></line>
-              <line x1="21" y1="6" x2="3" y2="6"></line>
-              <line x1="21" y1="14" x2="3" y2="14"></line>
-              <line x1="21" y1="18" x2="7" y2="18"></line>
-            </svg>
-            <span class="hidden sm:inline">Format</span>
-          </button>
-
-          <!-- Boilerplate Generator -->
-          <button
-            hx-post="/api/code/boilerplate"
-            hx-target="#code-editor"
-            hx-swap="outerHTML"
-            class="px-2 py-0.5 hover:text-[var(--text-strong)] hover:bg-[var(--control-hover)] rounded transition-colors flex items-center gap-1.5 cursor-pointer"
-            title="Insert fresh boilerplate for active language"
-            type="button"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path>
-            </svg>
-            <span class="hidden sm:inline">Boilerplate</span>
-          </button>
-
-          <a
-            href="/api/files/download"
-            class="px-2 py-0.5 hover:text-[var(--text-strong)] hover:bg-[var(--control-hover)] rounded transition-colors flex items-center gap-1.5"
-            title="Download active file"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            <span class="hidden sm:inline">Export</span>
-          </a>
-
-          <span class="opacity-30">|</span>
-          <!-- WebAssembly Client Engine Status Badge -->
-          <span id="wasm-badge" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono" style="background: var(--control-background); border: 1px solid var(--border); color: var(--muted);" title="Client-Side WebAssembly Engine">
-            <span id="wasm-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            <span id="wasm-status-text">WASM</span>
-          </span>
-          <span class="opacity-30">|</span>
-          <span id="wasm-syntax-indicator" class="font-mono text-[11px] text-emerald-500" title="Instant Client-Side Syntax Validation">Valid</span>
-          <span class="opacity-30">|</span>
-          <span id="wasm-metrics-lines" class="font-mono text-[11px]">0L</span>
-          <span class="opacity-30">|</span>
-          <span class="font-mono text-[11px]">{{if .ActiveFile}}{{.ActiveFile.LanguageLabel}}{{else}}Python{{end}}</span>
-          <span class="opacity-30">|</span>
-          <span class="font-mono text-[11px]">UTF-8</span>
-        </div>
-      </div>
-
-      <!-- Editor Code Canvas (Monaco / WASM Mount Target) -->
-      <div id="monaco-editor-container" class="flex-1 h-full min-h-0 relative flex bg-[var(--background-main)] overflow-hidden">
-        <!-- Line Numbers Gutter -->
-        <div id="editor-gutter" class="w-12 py-3 pr-4 text-right text-xs font-mono select-none opacity-40 leading-6 border-r border-[var(--border)] shrink-0">
-          <div>1</div>
-          <div>2</div>
-          <div>3</div>
-          <div>4</div>
-          <div>5</div>
-          <div>6</div>
-          <div>7</div>
-          <div>8</div>
-          <div>9</div>
-          <div>10</div>
-          <div>11</div>
-          <div>12</div>
-        </div>
-
-        <!-- Editable Code Surface / Textarea -->
-        <textarea
-          id="code-editor"
-          name="content"
-          data-active-path="{{if .ActiveFile}}{{.ActiveFile.Path}}{{end}}"
-          hx-post="/api/files/save"
-          hx-trigger="keyup changed delay:1000ms"
-          hx-target="#status-message"
-          hx-swap="innerHTML"
-          spellcheck="false"
-          class="flex-1 h-full p-3 font-mono text-xs leading-6 bg-transparent outline-none resize-none scrollbar-thin transition-colors"
-          style="color: var(--text);"
-          placeholder="# Write code here or select a file..."
-        >{{if .ActiveFile}}{{.ActiveFile.Content}}{{else}}# VoidLAB - Local-First Cloud IDE
-# Sub-millisecond execution engine (Go + HTMX + WASM)
-
-def main():
-    print("Welcome to VoidLAB 2.0")
-
-if __name__ == "__main__":
-    main()
-{{end}}</textarea>
-      </div>
-    </div>
-
-    <!-- ── Divider 2: Right Resizable Splitter (between Editor & Output) ── -->
+    <!-- Divider 2: Right Splitter (between Editor & Terminal) -->
     <div
       class="w-1 hover:w-1.5 cursor-col-resize transition-all duration-100 z-20 flex flex-col items-center justify-center group shrink-0"
       style="background: var(--border);"
-      title="Drag to resize output terminal"
+      title="Drag to resize terminal"
     >
       <div
         class="h-6 w-[1.5px] rounded-full group-hover:scale-125 transition-transform"
@@ -408,14 +231,16 @@ if __name__ == "__main__":
       ></div>
     </div>
 
-    <!-- ── Right Column: Output Panel (Width: ~520px / resizable) ── -->
+    <!-- Right Column: Interactive xterm.js Terminal & Output (terminal.tmpl) -->
     {{template "terminal" .}}
   </div>
 </main>
 
+<!-- Client-Side Vanilla JS Logic: WASM Loading, Gutter Sync, Shortcuts, Theme -->
 <script>
-  // Topbar Run handler opening HTML/CSS in new tab or executing in Docker
+  // 1. Run Trigger
   function handleVoidLabRun(e) {
+    if (e) e.preventDefault();
     var tag = document.getElementById('active-file-tag-path');
     var path = tag ? tag.innerText.trim() : '';
     if (!path) {
@@ -435,7 +260,171 @@ if __name__ == "__main__":
     }
   }
 
-  // Dual theme switcher
+  // 2. Manual Save Trigger
+  function voidlabTriggerManualSave() {
+    var editor = document.getElementById('code-editor');
+    if (!editor) return;
+    var content = editor.value;
+    var status = document.getElementById('status-message');
+    if (status) status.innerText = 'Saving...';
+    htmx.ajax('POST', '/api/files/save', {
+      values: { content: content },
+      target: '#status-message',
+      swap: 'innerHTML'
+    });
+  }
+
+  // 3. Line Number Gutter Synchronization
+  function voidlabUpdateGutter(editor) {
+    if (!editor) editor = document.getElementById('code-editor');
+    if (!editor) return;
+    var gutter = document.getElementById('editor-gutter');
+    if (!gutter) return;
+
+    var lines = (editor.value || '').split('\n').length;
+    var currentLines = gutter.children.length;
+
+    if (currentLines !== lines) {
+      var fragment = document.createDocumentFragment();
+      for (var i = 1; i <= lines; i++) {
+        var div = document.createElement('div');
+        div.textContent = i;
+        fragment.appendChild(div);
+      }
+      gutter.innerHTML = '';
+      gutter.appendChild(fragment);
+    }
+
+    var metricLines = document.getElementById('wasm-metrics-lines');
+    if (metricLines) metricLines.textContent = lines + 'L';
+  }
+
+  function voidlabSyncGutterScroll(editor) {
+    var gutter = document.getElementById('editor-gutter');
+    if (gutter && editor) {
+      gutter.scrollTop = editor.scrollTop;
+    }
+  }
+
+  function voidlabHandleEditorInput(editor) {
+    voidlabUpdateGutter(editor);
+    var lang = editor.getAttribute('data-active-lang') || 'python';
+    voidlabValidateCode(editor.value, lang);
+  }
+
+  function voidlabHandleEditorKeydown(e, editor) {
+    // Tab key: insert 2 spaces
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      var start = editor.selectionStart;
+      var end = editor.selectionEnd;
+      editor.value = editor.value.substring(0, start) + '  ' + editor.value.substring(end);
+      editor.selectionStart = editor.selectionEnd = start + 2;
+      voidlabHandleEditorInput(editor);
+      return;
+    }
+    // Ctrl+S: Save file
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault();
+      voidlabTriggerManualSave();
+      return;
+    }
+    // Ctrl+Enter: Run code
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      handleVoidLabRun(e);
+      return;
+    }
+  }
+
+  // 4. WebAssembly Instant Client-Side Syntax Validation & Format
+  function voidlabValidateCode(code, lang) {
+    if (!window.voidlabWASM || !window.voidlabWASM.validate) return;
+    try {
+      var res = window.voidlabWASM.validate(code, lang);
+      if (typeof res === 'string') res = JSON.parse(res);
+      var banner = document.getElementById('wasm-syntax-banner');
+      var ind = document.getElementById('wasm-syntax-indicator');
+      var errText = document.getElementById('wasm-syntax-error-text');
+      var errPos = document.getElementById('wasm-syntax-pos');
+
+      if (res && !res.valid) {
+        if (banner) banner.classList.remove('hidden');
+        if (ind) {
+          ind.textContent = 'Alert';
+          ind.className = 'font-mono text-[11px] text-rose-500 font-bold';
+        }
+        if (errText) errText.textContent = res.message || 'Syntax error';
+        if (errPos && res.line) errPos.textContent = 'Line ' + res.line + (res.column ? (':' + res.column) : '');
+      } else {
+        if (banner) banner.classList.add('hidden');
+        if (ind) {
+          ind.textContent = 'Valid';
+          ind.className = 'font-mono text-[11px] text-emerald-500';
+        }
+      }
+    } catch (_) {}
+  }
+
+  function voidlabFormatCode() {
+    var editor = document.getElementById('code-editor');
+    if (!editor) return;
+    var lang = editor.getAttribute('data-active-lang') || 'python';
+    if (window.voidlabWASM && window.voidlabWASM.format) {
+      try {
+        var formatted = window.voidlabWASM.format(editor.value, lang);
+        if (formatted) {
+          editor.value = formatted;
+          voidlabHandleEditorInput(editor);
+          voidlabTriggerManualSave();
+        }
+      } catch (_) {}
+    }
+  }
+
+  // 5. Asynchronous WebAssembly Engine Loading (Non-Blocking)
+  (function() {
+    function loadWASM() {
+      if (window._voidlabWASMLoaded) return;
+      window._voidlabWASMLoaded = true;
+
+      const wasmScript = document.createElement('script');
+      wasmScript.src = '/public/wasm/wasm_exec.js';
+      wasmScript.async = true;
+      wasmScript.onload = function() {
+        if (typeof Go === 'undefined') return;
+        const go = new Go();
+        const instantiate = WebAssembly.instantiateStreaming
+          ? WebAssembly.instantiateStreaming(fetch('/public/wasm/voidlab.wasm'), go.importObject)
+          : fetch('/public/wasm/voidlab.wasm').then(res => res.arrayBuffer()).then(bytes => WebAssembly.instantiate(bytes, go.importObject));
+
+        instantiate.then(result => {
+          go.run(result.instance);
+          const badgeDot = document.getElementById('wasm-dot');
+          const badgeText = document.getElementById('wasm-status-text');
+          if (badgeDot) badgeDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400';
+          if (badgeText) badgeText.textContent = 'WASM Ready';
+
+          var editor = document.getElementById('code-editor');
+          if (editor) {
+            voidlabUpdateGutter(editor);
+            voidlabValidateCode(editor.value, editor.getAttribute('data-active-lang') || 'python');
+          }
+        }).catch(err => {
+          console.warn('[VoidLAB WASM] initialization deferred:', err);
+        });
+      };
+      document.body.appendChild(wasmScript);
+    }
+
+    if (document.readyState === 'complete') {
+      loadWASM();
+    } else {
+      window.addEventListener('load', loadWASM);
+    }
+  })();
+
+  // 6. Theme Switcher (Dark / Light)
   function toggleVoidLabTheme() {
     const html = document.documentElement;
     const current = html.getAttribute('data-theme') || 'light';
@@ -463,7 +452,7 @@ if __name__ == "__main__":
     }
   }
 
-  // Restore saved theme on page load
+  // Restore theme on mount
   (function() {
     try {
       const savedTheme = localStorage.getItem('voidlab-theme') || 'light';

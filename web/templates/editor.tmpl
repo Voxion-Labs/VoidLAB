@@ -1,193 +1,159 @@
 {{define "editor"}}
-<main
-  class="min-h-screen w-full flex flex-col font-sans select-none antialiased transition-colors"
-  style="background: var(--background-main); color: var(--text);"
+<div
+  id="editor-pane"
+  class="flex-1 min-w-[320px] flex flex-col h-full overflow-hidden relative"
+  style="background: var(--background-main);"
 >
-  <!-- 1. TOP NAVBAR -->
-  {{template "topbar" .}}
-
-  <!-- 2. MAIN WORKSPACE (3-Column Layout: Sidebar, Editor, Terminal) -->
+  <!-- ── Top Buffer Tab Bar (1:1 with EditorTabs.tsx) ── -->
   <div
-    id="editor-workspace"
-    class="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden min-h-[640px] relative transition-colors"
-    style="background: var(--background-main);"
+    class="h-9 flex items-center justify-between px-1 shrink-0 select-none font-sans text-xs overflow-x-auto scrollbar-thin transition-colors"
+    style="background: var(--surface-soft); border-bottom: 1px solid var(--border);"
   >
-    <!-- Left Column: File Explorer Sidebar -->
-    {{template "sidebar" .}}
-
-    <!-- Divider 1: Left Resizable Splitter (between Explorer & Editor) -->
-    <div
-      class="w-1 hover:w-1.5 cursor-col-resize transition-all duration-100 z-20 flex flex-col items-center justify-center group shrink-0"
-      style="background: var(--border);"
-      title="Drag to resize sidebar"
-    >
-      <div
-        class="h-6 w-[1.5px] rounded-full group-hover:scale-125 transition-transform"
-        style="background: var(--muted);"
-      ></div>
+    <!-- Left: Open Tabs List -->
+    <div id="editor-tabs-list" class="flex items-center gap-0.5 h-full">
+      {{if .OpenTabs}}
+        {{range .OpenTabs}}
+          <div
+            class="h-full px-3 flex items-center gap-2 text-xs cursor-pointer transition-colors duration-100 {{if .IsActive}}font-semibold{{else}}opacity-75 hover:opacity-100 hover:bg-[var(--control-hover)]{{end}}"
+            style="background: {{if .IsActive}}var(--panel-background){{else}}transparent{{end}}; border-right: 1px solid var(--border); border-top: {{if .IsActive}}2px solid var(--accent){{else}}2px solid transparent{{end}}; color: {{if .IsActive}}var(--text-strong){{else}}var(--muted){{end}};"
+            hx-get="/api/files/open?path={{.Path}}"
+            hx-target="#editor-pane"
+            hx-swap="outerHTML"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: {{if .IsActive}}var(--accent){{else}}var(--muted){{end}};">
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
+            </svg>
+            <span class="truncate max-w-[150px]">{{.Name}}</span>
+            <button
+              class="rounded p-0.5 opacity-50 hover:opacity-100 hover:bg-[var(--control-hover)] transition-all ml-0.5 cursor-pointer"
+              hx-delete="/api/files/close?path={{.Path}}"
+              hx-target="#editor-pane"
+              hx-swap="outerHTML"
+              title="Close {{.Name}}"
+              type="button"
+              onclick="event.stopPropagation();"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+        {{end}}
+      {{else}}
+        <!-- Default Active Tab -->
+        <div
+          class="h-full px-3 flex items-center gap-2 text-xs cursor-pointer transition-colors duration-100 font-semibold"
+          style="background: var(--panel-background); border-right: 1px solid var(--border); border-top: 2px solid var(--accent); color: var(--text-strong);"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent);">
+            <polyline points="16 18 22 12 16 6"></polyline>
+            <polyline points="8 6 2 12 8 18"></polyline>
+          </svg>
+          <span class="truncate max-w-[150px]">{{if .ActiveFile}}{{.ActiveFile.Name}}{{else}}main.py{{end}}</span>
+          <button
+            class="rounded p-0.5 opacity-50 hover:opacity-100 hover:bg-[var(--control-hover)] transition-all ml-0.5 cursor-pointer"
+            title="Close Tab"
+            type="button"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      {{end}}
     </div>
 
-    <!-- Middle Column: Main Code Editor -->
-    <div
-      class="flex-1 min-w-[320px] flex flex-col h-full overflow-hidden relative"
-      style="background: var(--background-main);"
-    >
-      <!-- Editor Tabs Bar (Exact 1:1 from EditorTabs.tsx) -->
-      <div
-        class="h-9 flex items-center justify-between px-1 shrink-0 select-none font-sans text-xs overflow-x-auto scrollbar-thin transition-colors"
-        style="background: var(--surface-soft); border-bottom: 1px solid var(--border);"
+    <!-- Right: Quick Actions & Language Metadata -->
+    <div class="flex items-center gap-2 text-xs font-sans px-2 shrink-0" style="color: var(--muted);">
+      <!-- Format Code Button (WASM Powered) -->
+      <button
+        onclick="voidlabFormatCode()"
+        class="px-2 py-0.5 hover:text-[var(--text-strong)] hover:bg-[var(--control-hover)] rounded transition-colors flex items-center gap-1.5 cursor-pointer"
+        title="Format active file (WebAssembly powered)"
+        type="button"
       >
-        <!-- Left: Open Tabs List -->
-        <div id="editor-tabs-list" class="flex items-center gap-0.5 h-full">
-          {{if .OpenTabs}}
-            {{range .OpenTabs}}
-              <div
-                class="h-full px-3 flex items-center gap-2 text-xs cursor-pointer transition-colors duration-100 {{if .IsActive}}font-semibold{{else}}opacity-75 hover:opacity-100 hover:bg-[var(--control-hover)]{{end}}"
-                style="background: {{if .IsActive}}var(--panel-background){{else}}transparent{{end}}; border-right: 1px solid var(--border); border-top: {{if .IsActive}}2px solid var(--accent){{else}}2px solid transparent{{end}}; color: {{if .IsActive}}var(--text-strong){{else}}var(--muted){{end}};"
-                hx-get="/api/files/open?id={{.ID}}"
-                hx-target="#editor-workspace"
-                hx-swap="outerHTML"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: {{if .IsActive}}var(--accent){{else}}var(--muted){{end}};">
-                  <polyline points="16 18 22 12 16 6"></polyline>
-                  <polyline points="8 6 2 12 8 18"></polyline>
-                </svg>
-                <span class="truncate max-w-[150px]">{{.Name}}</span>
-                <button
-                  class="rounded p-0.5 opacity-50 hover:opacity-100 hover:bg-[var(--control-hover)] transition-all ml-0.5"
-                  hx-delete="/api/files/close?id={{.ID}}"
-                  hx-target="#editor-workspace"
-                  hx-swap="outerHTML"
-                  title="Close {{.Name}}"
-                  type="button"
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
-                </button>
-              </div>
-            {{end}}
-          {{else}}
-            <!-- Default Active Tab -->
-            <div
-              class="h-full px-3 flex items-center gap-2 text-xs cursor-pointer transition-colors duration-100 font-semibold"
-              style="background: var(--panel-background); border-right: 1px solid var(--border); border-top: 2px solid var(--accent); color: var(--text-strong);"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent);">
-                <polyline points="16 18 22 12 16 6"></polyline>
-                <polyline points="8 6 2 12 8 18"></polyline>
-              </svg>
-              <span class="truncate max-w-[150px]">{{if .ActiveFile}}{{.ActiveFile.Name}}{{else}}main.py{{end}}</span>
-              <button
-                class="rounded p-0.5 opacity-50 hover:opacity-100 hover:bg-[var(--control-hover)] transition-all ml-0.5"
-                title="Close Tab"
-                type="button"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-            </div>
-          {{end}}
-        </div>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="21" y1="10" x2="7" y2="10"></line>
+          <line x1="21" y1="6" x2="3" y2="6"></line>
+          <line x1="21" y1="14" x2="3" y2="14"></line>
+          <line x1="21" y1="18" x2="7" y2="18"></line>
+        </svg>
+        <span class="hidden sm:inline">Format</span>
+      </button>
 
-        <!-- Right: Quick Actions & Language Metadata -->
-        <div class="flex items-center gap-2 text-xs font-sans px-2 shrink-0" style="color: var(--muted);">
-          <!-- Format Code Button (WASM Powered) -->
-          <button
-            onclick="voidlabFormatCode()"
-            class="px-2 py-0.5 hover:text-[var(--text-strong)] hover:bg-[var(--control-hover)] rounded transition-colors flex items-center gap-1.5 cursor-pointer"
-            title="Format active file (WebAssembly powered)"
-            type="button"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="21" y1="10" x2="7" y2="10"></line>
-              <line x1="21" y1="6" x2="3" y2="6"></line>
-              <line x1="21" y1="14" x2="3" y2="14"></line>
-              <line x1="21" y1="18" x2="7" y2="18"></line>
-            </svg>
-            <span class="hidden sm:inline">Format</span>
-          </button>
+      <!-- Boilerplate Generator -->
+      <button
+        hx-post="/api/code/boilerplate"
+        hx-target="#code-editor"
+        hx-swap="outerHTML"
+        class="px-2 py-0.5 hover:text-[var(--text-strong)] hover:bg-[var(--control-hover)] rounded transition-colors flex items-center gap-1.5 cursor-pointer"
+        title="Insert fresh boilerplate for active language"
+        type="button"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path>
+        </svg>
+        <span class="hidden sm:inline">Boilerplate</span>
+      </button>
 
-          <!-- Boilerplate Generator -->
-          <button
-            hx-post="/api/code/boilerplate"
-            hx-target="#code-editor"
-            hx-swap="outerHTML"
-            class="px-2 py-0.5 hover:text-[var(--text-strong)] hover:bg-[var(--control-hover)] rounded transition-colors flex items-center gap-1.5 cursor-pointer"
-            title="Insert fresh boilerplate for active language"
-            type="button"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path>
-            </svg>
-            <span class="hidden sm:inline">Boilerplate</span>
-          </button>
+      <a
+        href="/api/files/download"
+        class="px-2 py-0.5 hover:text-[var(--text-strong)] hover:bg-[var(--control-hover)] rounded transition-colors flex items-center gap-1.5"
+        title="Download active file"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        <span class="hidden sm:inline">Export</span>
+      </a>
 
-          <a
-            href="/api/files/download"
-            class="px-2 py-0.5 hover:text-[var(--text-strong)] hover:bg-[var(--control-hover)] rounded transition-colors flex items-center gap-1.5"
-            title="Download active file"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            <span class="hidden sm:inline">Export</span>
-          </a>
+      <span class="opacity-30">|</span>
+      <!-- WebAssembly Client Engine Status Badge -->
+      <span id="wasm-badge" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono" style="background: var(--control-background); border: 1px solid var(--border); color: var(--muted);" title="Client-Side WebAssembly Engine">
+        <span id="wasm-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+        <span id="wasm-status-text">WASM</span>
+      </span>
+      <span class="opacity-30">|</span>
+      <span id="wasm-syntax-indicator" class="font-mono text-[11px] text-emerald-500" title="Instant Client-Side Syntax Validation">Valid</span>
+      <span class="opacity-30">|</span>
+      <span id="wasm-metrics-lines" class="font-mono text-[11px]">0L</span>
+      <span class="opacity-30">|</span>
+      <span class="font-mono text-[11px]">{{if .ActiveFile}}{{.ActiveFile.LanguageLabel}}{{else}}Python{{end}}</span>
+      <span class="opacity-30">|</span>
+      <span class="font-mono text-[11px]">UTF-8</span>
+    </div>
+  </div>
 
-          <span class="opacity-30">|</span>
-          <!-- WebAssembly Client Engine Status Badge -->
-          <span id="wasm-badge" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono" style="background: var(--control-background); border: 1px solid var(--border); color: var(--muted);" title="Client-Side WebAssembly Engine">
-            <span id="wasm-dot" class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-            <span id="wasm-status-text">WASM</span>
-          </span>
-          <span class="opacity-30">|</span>
-          <span id="wasm-syntax-indicator" class="font-mono text-[11px] text-emerald-500" title="Instant Client-Side Syntax Validation">Valid</span>
-          <span class="opacity-30">|</span>
-          <span id="wasm-metrics-lines" class="font-mono text-[11px]">0L</span>
-          <span class="opacity-30">|</span>
-          <span class="font-mono text-[11px]">{{if .ActiveFile}}{{.ActiveFile.LanguageLabel}}{{else}}Python{{end}}</span>
-          <span class="opacity-30">|</span>
-          <span class="font-mono text-[11px]">UTF-8</span>
-        </div>
-      </div>
+  <!-- ── Editor Code Canvas (Monaco Style / Textarea) ── -->
+  <div id="monaco-editor-container" class="flex-1 h-full min-h-0 relative flex bg-[var(--background-main)] overflow-hidden">
+    <!-- Line Numbers Gutter -->
+    <div id="editor-gutter" class="w-12 py-3 pr-4 text-right text-xs font-mono select-none opacity-40 leading-6 border-r border-[var(--border)] shrink-0 overflow-hidden">
+      <div>1</div>
+    </div>
 
-      <!-- Editor Code Canvas (Monaco / WASM Mount Target) -->
-      <div id="monaco-editor-container" class="flex-1 h-full min-h-0 relative flex bg-[var(--background-main)] overflow-hidden">
-        <!-- Line Numbers Gutter -->
-        <div class="w-12 py-3 pr-4 text-right text-xs font-mono select-none opacity-40 leading-6 border-r border-[var(--border)] shrink-0">
-          <div>1</div>
-          <div>2</div>
-          <div>3</div>
-          <div>4</div>
-          <div>5</div>
-          <div>6</div>
-          <div>7</div>
-          <div>8</div>
-          <div>9</div>
-          <div>10</div>
-          <div>11</div>
-          <div>12</div>
-        </div>
-
-        <!-- Editable Code Surface / Textarea -->
-        <textarea
-          id="code-editor"
-          name="content"
-          data-active-path="{{if .ActiveFile}}{{.ActiveFile.Path}}{{end}}"
-          hx-post="/api/files/save"
-          hx-trigger="keyup changed delay:1000ms"
-          hx-target="#status-message"
-          hx-swap="innerHTML"
-          spellcheck="false"
-          class="flex-1 h-full p-3 font-mono text-xs leading-6 bg-transparent outline-none resize-none scrollbar-thin transition-colors"
-          style="color: var(--text);"
-          placeholder="# Write code here or select a file..."
-        >{{if .ActiveFile}}{{.ActiveFile.Content}}{{else}}# VoidLAB - Local-First Cloud IDE
+    <!-- Editable Code Surface / Textarea -->
+    <textarea
+      id="code-editor"
+      name="content"
+      data-active-path="{{if .ActiveFile}}{{.ActiveFile.Path}}{{end}}"
+      data-active-lang="{{if .ActiveFile}}{{.ActiveFile.LanguageLabel}}{{end}}"
+      hx-post="/api/files/save"
+      hx-trigger="keyup changed delay:1000ms"
+      hx-target="#status-message"
+      hx-swap="innerHTML"
+      spellcheck="false"
+      class="flex-1 h-full p-3 font-mono text-xs leading-6 bg-transparent outline-none resize-none scrollbar-thin transition-colors"
+      style="color: var(--text);"
+      placeholder="# Write code here or select a file..."
+      oninput="voidlabHandleEditorInput(this)"
+      onscroll="voidlabSyncGutterScroll(this)"
+      onkeydown="voidlabHandleEditorKeydown(event, this)"
+    >{{if .ActiveFile}}{{.ActiveFile.Content}}{{else}}# VoidLAB - Local-First Cloud IDE
 # Sub-millisecond execution engine (Go + HTMX + WASM)
 
 def main():
@@ -196,164 +162,40 @@ def main():
 if __name__ == "__main__":
     main()
 {{end}}</textarea>
-      </div>
-
-      <!-- Instant Client-Side Syntax Alert Bar (WASM Powered) -->
-      <div
-        id="wasm-syntax-banner"
-        class="hidden px-3 py-1 text-xs font-mono flex items-center justify-between border-t transition-colors"
-        style="background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.2); color: #ef4444;"
-      >
-        <div class="flex items-center gap-2">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="8" x2="12" y2="12"></line>
-            <line x1="12" y1="16" x2="12.01" y2="16"></line>
-          </svg>
-          <span id="wasm-syntax-error-text">Syntax alert detected</span>
-        </div>
-        <span id="wasm-syntax-pos" class="text-[10px] opacity-80 font-mono"></span>
-      </div>
-    </div>
-
-    <!-- Divider 2: Right Resizable Splitter (between Editor & Output) -->
-    <div
-      class="w-1 hover:w-1.5 cursor-col-resize transition-all duration-100 z-20 flex flex-col items-center justify-center group shrink-0"
-      style="background: var(--border);"
-      title="Drag to resize output terminal"
-    >
-      <div
-        class="h-6 w-[1.5px] rounded-full group-hover:scale-125 transition-transform"
-        style="background: var(--muted);"
-      ></div>
-    </div>
-
-    <!-- Right Column: Interactive xterm.js Terminal & Output Panel -->
-    {{template "terminal" .}}
   </div>
 
-  <!-- Non-Blocking Asynchronous WebAssembly Engine Integration -->
+  <!-- Instant Client-Side Syntax Alert Bar (WASM Powered) -->
+  <div
+    id="wasm-syntax-banner"
+    class="hidden px-3 py-1 text-xs font-mono flex items-center justify-between border-t transition-colors shrink-0"
+    style="background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.2); color: #ef4444;"
+  >
+    <div class="flex items-center gap-2">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      <span id="wasm-syntax-error-text">Syntax alert detected</span>
+    </div>
+    <span id="wasm-syntax-pos" class="text-[10px] opacity-80 font-mono"></span>
+  </div>
+
   <script>
     (function() {
-      function loadWASM() {
-        if (window._voidlabWASMLoaded) return;
-        window._voidlabWASMLoaded = true;
+      var path = "{{if .ActiveFile}}{{.ActiveFile.Path}}{{end}}";
+      var lang = "{{if .ActiveFile}}{{.ActiveFile.LanguageLabel}}{{end}}";
+      var tagPath = document.getElementById('active-file-tag-path');
+      var tagLang = document.getElementById('active-file-tag-lang');
+      if (tagPath && path) tagPath.innerText = path;
+      if (tagLang && lang) tagLang.innerText = lang;
 
-        const wasmScript = document.createElement('script');
-        wasmScript.src = '/public/wasm/wasm_exec.js';
-        wasmScript.async = true;
-        wasmScript.onload = function() {
-          if (typeof Go === 'undefined') return;
-          const go = new Go();
-
-          const instantiate = WebAssembly.instantiateStreaming
-            ? WebAssembly.instantiateStreaming(fetch('/public/wasm/voidlab.wasm'), go.importObject)
-            : fetch('/public/wasm/voidlab.wasm')
-                .then(res => res.arrayBuffer())
-                .then(bytes => WebAssembly.instantiate(bytes, go.importObject));
-
-          instantiate.then(result => {
-            go.run(result.instance);
-
-            const dot = document.getElementById('wasm-dot');
-            const text = document.getElementById('wasm-status-text');
-            if (dot) dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500';
-            if (text) text.textContent = 'WASM';
-
-            if (window.voidlabRunValidation) {
-              window.voidlabRunValidation();
-            }
-          }).catch(err => {
-            console.warn('[VoidLAB WASM] async load notice:', err);
-          });
-        };
-        document.head.appendChild(wasmScript);
-      }
-
-      if ('requestIdleCallback' in window) {
-        requestIdleCallback(loadWASM, { timeout: 1000 });
-      } else {
-        setTimeout(loadWASM, 150);
-      }
-
-      window.voidlabRunValidation = function() {
-        const editor = document.getElementById('code-editor');
-        if (!editor || !window.voidlabWASM) return;
-        const content = editor.value;
-
-        // 1. Instant Document Metrics
-        try {
-          const m = window.voidlabWASM.metrics(content);
-          const linesEl = document.getElementById('wasm-metrics-lines');
-          if (linesEl && m.lines !== undefined) {
-            linesEl.textContent = `${m.lines}L`;
-          }
-        } catch (_) {}
-
-        // 2. Client-Side Syntax Validation
-        try {
-          const activeLang = '{{if .ActiveFile}}{{.ActiveFile.Language}}{{else}}python{{end}}';
-          const res = window.voidlabWASM.validate(content, activeLang);
-          const banner = document.getElementById('wasm-syntax-banner');
-          const errText = document.getElementById('wasm-syntax-error-text');
-          const posText = document.getElementById('wasm-syntax-pos');
-          const indicator = document.getElementById('wasm-syntax-indicator');
-
-          if (!res.valid) {
-            if (banner) banner.classList.remove('hidden');
-            if (errText) errText.textContent = res.message;
-            if (posText) posText.textContent = res.line ? `Line ${res.line}` : '';
-            if (indicator) {
-              indicator.textContent = 'Syntax Alert';
-              indicator.className = 'font-mono text-[11px] text-rose-400 font-semibold';
-            }
-          } else {
-            if (banner) banner.classList.add('hidden');
-            if (indicator) {
-              indicator.textContent = 'Valid';
-              indicator.className = 'font-mono text-[11px] text-emerald-500';
-            }
-          }
-        } catch (_) {}
-      };
-
-      window.voidlabFormatCode = function() {
-        const editor = document.getElementById('code-editor');
-        if (!editor || !window.voidlabWASM) return;
-        try {
-          const activeLang = '{{if .ActiveFile}}{{.ActiveFile.Language}}{{else}}python{{end}}';
-          const formatted = window.voidlabWASM.format(editor.value, activeLang);
-          if (formatted && formatted !== editor.value) {
-            editor.value = formatted;
-            window.voidlabRunValidation();
-            if (window.htmx) {
-              window.htmx.trigger(editor, 'change');
-            }
-          }
-        } catch (err) {
-          console.error('[VoidLAB] Format error:', err);
-        }
-      };
-
-      // Wire validation into input changes
-      function attachEditorListeners() {
-        const editor = document.getElementById('code-editor');
-        if (editor && !editor._wasmBound) {
-          editor._wasmBound = true;
-          editor.addEventListener('input', function() {
-            if (window.voidlabRunValidation) {
-              window.voidlabRunValidation();
-            }
-          });
-        }
-      }
-
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', attachEditorListeners);
-      } else {
-        attachEditorListeners();
+      var editor = document.getElementById('code-editor');
+      if (editor) {
+        if (window.voidlabUpdateGutter) window.voidlabUpdateGutter(editor);
+        if (window.voidlabValidateCode) window.voidlabValidateCode(editor.value, lang);
       }
     })();
   </script>
-</main>
+</div>
 {{end}}

@@ -1,4 +1,4 @@
-{{define "sidebar"}}
+{{define "explorer"}}
 <aside
   id="file-explorer"
   style="width: 230px; background: var(--surface-soft); border-right: 1px solid var(--border); color: var(--text);"
@@ -67,6 +67,22 @@
         </svg>
       </button>
 
+      <!-- Import Folder -->
+      <button
+        hx-get="/api/ui/modal/import-folder"
+        hx-target="#modal-container"
+        hx-swap="innerHTML"
+        class="p-1 rounded opacity-70 hover:opacity-100 hover:bg-[var(--control-hover)] transition-all cursor-pointer"
+        title="Import Folder"
+        type="button"
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          <polyline points="12 11 12 17"></polyline>
+          <polyline points="9 14 12 11 15 14"></polyline>
+        </svg>
+      </button>
+
       <!-- Refresh / Toggle Folders -->
       <button
         hx-get="/api/ui/explorer"
@@ -94,6 +110,10 @@
   <!-- Dynamic Context Menu Container -->
   <div id="context-menu"></div>
 </aside>
+{{end}}
+
+{{define "sidebar"}}
+  {{template "explorer" .}}
 {{end}}
 
 {{define "file-tree"}}
@@ -158,7 +178,7 @@
           </button>
         </div>
       {{else}}
-        <!-- File Item (Draggable) -->
+        <!-- File Item (Draggable & Realistic VS Code Icon) -->
         <div
           draggable="true"
           ondragstart="event.dataTransfer.setData('text/plain', '{{.Path}}')"
@@ -173,16 +193,24 @@
           <button
             class="min-w-0 flex-1 h-full flex items-center gap-1.5 truncate text-left focus:outline-none cursor-pointer"
             hx-get="/api/files/open?path={{.Path}}"
-            hx-target="#editor-workspace"
+            hx-target="#editor-pane"
             hx-swap="outerHTML"
             type="button"
           >
+            <!-- Realistic File Icons (1:1 with FileIcon in FileExplorer.tsx) -->
             <span class="w-4 h-4 flex items-center justify-center shrink-0">
               {{if eq .IconType "python"}}
-                <svg class="w-3.5 h-3.5 shrink-0 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="16 18 22 12 16 6"></polyline>
-                  <polyline points="8 6 2 12 8 18"></polyline>
-                </svg>
+                <span class="px-0.5 py-[0.5px] text-[8px] font-bold rounded-[2px] bg-gradient-to-r from-blue-500 to-amber-400 text-white shrink-0 select-none leading-none">
+                  PY
+                </span>
+              {{else if eq .IconType "typescript"}}
+                <span class="w-3.5 h-3.5 flex items-center justify-center text-[8.5px] font-bold rounded-[2px] bg-[#3178c6] text-white shrink-0 select-none leading-none">
+                  TS
+                </span>
+              {{else if eq .IconType "javascript"}}
+                <span class="w-3.5 h-3.5 flex items-center justify-center text-[8.5px] font-black rounded-[2px] bg-[#f7df1e] text-black shrink-0 select-none leading-none">
+                  JS
+                </span>
               {{else if eq .IconType "react"}}
                 <svg class="w-3.5 h-3.5 shrink-0 text-cyan-400" viewBox="0 0 115.3 100" fill="currentColor">
                   <ellipse cx="57.65" cy="50" rx="16.7" ry="49.5" fill="none" stroke="currentColor" stroke-width="6" transform="rotate(30 57.65 50)" />
@@ -190,6 +218,22 @@
                   <ellipse cx="57.65" cy="50" rx="16.7" ry="49.5" fill="none" stroke="currentColor" stroke-width="6" transform="rotate(150 57.65 50)" />
                   <circle cx="57.65" cy="50" r="10" fill="currentColor" />
                 </svg>
+              {{else if eq .IconType "cpp"}}
+                <span class="px-0.5 py-[0.5px] text-[7.5px] font-bold rounded-[2px] bg-[#00599c] text-white shrink-0 select-none leading-none">
+                  C++
+                </span>
+              {{else if eq .IconType "html"}}
+                <span class="w-3.5 text-center text-xs font-bold text-orange-500 shrink-0 select-none leading-none">
+                  &lt;&gt;
+                </span>
+              {{else if eq .IconType "css"}}
+                <span class="w-3.5 text-center text-xs font-bold text-sky-400 shrink-0 select-none leading-none">
+                  #
+                </span>
+              {{else if eq .IconType "json"}}
+                <span class="w-3.5 text-center text-xs font-bold text-amber-400 shrink-0 font-mono select-none leading-none">
+                  &#123;&#125;
+                </span>
               {{else if eq .IconType "markdown"}}
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-sky-400 shrink-0">
                   <circle cx="12" cy="12" r="10"></circle>
@@ -213,7 +257,7 @@
                   <line x1="20" y1="12" x2="20" y2="3"></line>
                 </svg>
               {{else}}
-                <svg class="w-3.5 h-3.5 shrink-0 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg class="w-3.5 h-3.5 shrink-0 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                   <polyline points="14 2 14 8 20 8"></polyline>
                 </svg>
