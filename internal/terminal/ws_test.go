@@ -151,7 +151,7 @@ func TestWebSocketExecuteRunBiDirectional(t *testing.T) {
 	// Create test python file in workspace
 	data, _ := handler.explorerSvc.BuildWorkspaceData()
 	if data != nil && data.ActiveFile != nil {
-		_ = os.WriteFile(filepath.Join(data.Cwd, data.ActiveFile.Path), []byte("print('STREAM_HELLO_VOXION')\n"), 0644)
+		_ = handler.explorerSvc.WriteFileContent(data.ActiveFile.Path, []byte("print('STREAM_HELLO_VOXION')\n"))
 	}
 
 	wsURL := "ws" + strings.TrimPrefix(server.URL, "http") + "/api/ws/terminal"

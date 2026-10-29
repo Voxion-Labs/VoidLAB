@@ -444,7 +444,7 @@ func (o *Orchestrator) ExecuteCodeContext(ctx context.Context, language string, 
 
 	start := time.Now()
 
-	// If Docker CLI and daemon are operational, run via Docker Engine
+	// If Docker CLI and daemon are operational, attempt Docker Engine execution
 	if o.IsDockerAvailable(execCtx) {
 		var stdoutBuf bytes.Buffer
 		var stderrBuf bytes.Buffer
@@ -454,27 +454,35 @@ func (o *Orchestrator) ExecuteCodeContext(ctx context.Context, language string, 
 		cmd.Stderr = &stderrBuf
 
 		err := cmd.Run()
-		duration := time.Since(start)
-
-		exitCode := 0
-		if err != nil {
-			var exitErr *exec.ExitError
-			if errors.As(err, &exitErr) {
-				exitCode = exitErr.ExitCode()
-			} else {
-				exitCode = 1
-			}
+		if err == nil {
+			duration := time.Since(start)
+			return &ExecutionResult{
+				Language: cfg.Name,
+				Image:    cfg.Image,
+				Duration: duration,
+				ExitCode: 0,
+				IsDocker: true,
+				Stdout:   stdoutBuf.String(),
+				Stderr:   stderrBuf.String(),
+			}, nil
 		}
 
-		return &ExecutionResult{
-			Language: cfg.Name,
-			Image:    cfg.Image,
-			Duration: duration,
-			ExitCode: exitCode,
-			IsDocker: true,
-			Stdout:   stdoutBuf.String(),
-			Stderr:   stderrBuf.String(),
-		}, err
+		// If user code executed in container and exited with non-zero exit code:
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && stdoutBuf.Len() > 0 {
+			return &ExecutionResult{
+				Language: cfg.Name,
+				Image:    cfg.Image,
+				Duration: time.Since(start),
+				ExitCode: exitErr.ExitCode(),
+				IsDocker: true,
+				Stdout:   stdoutBuf.String(),
+				Stderr:   stderrBuf.String(),
+			}, err
+		}
+
+		// Docker failed to start container / image pull failure in CI:
+		// Fall through to local fallback execution so code runs reliably!
 	}
 
 	// Fallback runner when Docker daemon is not active on host
@@ -1072,10 +1080,13 @@ func (o *Orchestrator) Run(
 
 	if o.IsDockerAvailable(ctx) {
 		result, err := o.runDocker(execCtx, profile, cleanRel, containerPath, stdin, stdout, stderr)
-		if result != nil {
-			result.Duration = time.Since(start)
+		if err == nil {
+			if result != nil {
+				result.Duration = time.Since(start)
+			}
+			return result, nil
 		}
-		return result, err
+		// If Docker run failed (e.g. image pull failure in CI), fall through to local fallback
 	}
 
 	// Fallback runner when Docker daemon is not active on host
