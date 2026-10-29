@@ -326,9 +326,20 @@
         }
       };
       window.voidlabRun = function(path) {
+        var targetPath = path;
+        if (!targetPath) {
+          var tag = document.getElementById('active-file-tag-path');
+          targetPath = tag ? tag.innerText.trim() : '';
+        }
+        var lower = (targetPath || '').toLowerCase();
+        if (lower.endsWith('.html') || lower.endsWith('.htm') || lower.endsWith('.css')) {
+          window.open('/preview?path=' + encodeURIComponent(targetPath), '_blank');
+          window.voidlabSwitchTab('terminal');
+          return;
+        }
         if (socket && socket.readyState === WebSocket.OPEN) {
           updateStatus(true);
-          socket.send(JSON.stringify({ type: 'run', path: path || '' }));
+          socket.send(JSON.stringify({ type: 'run', path: targetPath || '' }));
           // Ensure Terminal tab is active when running
           window.voidlabSwitchTab('terminal');
         }

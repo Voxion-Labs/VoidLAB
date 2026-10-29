@@ -188,3 +188,52 @@ func BenchmarkBuildWorkspaceData(b *testing.B) {
 		}
 	}
 }
+
+
+func TestHandlePreview(t *testing.T) {
+	tempDir := t.TempDir()
+	svc, err := NewService(tempDir)
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
+
+	tmpl := template.Must(template.New("tree").Parse(`<div>tree</div>`))
+	handler := NewHandler(svc, tmpl)
+
+	// Create test html and css
+	_ = os.WriteFile(filepath.Join(tempDir, "index.html"), []byte("<h1>Preview Test</h1>"), 0644)
+	_ = os.WriteFile(filepath.Join(tempDir, "style.css"), []byte("body { color: red; }"), 0644)
+
+	// 1. Preview HTML
+	req := httptest.NewRequest(http.MethodGet, "/preview?path=index.html", nil)
+	rec := httptest.NewRecorder()
+	handler.HandlePreview(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK for HTML preview, got: %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "Preview Test") {
+		t.Errorf("HTML preview missing content: %s", rec.Body.String())
+	}
+
+	// 2. Preview CSS
+	reqCSS := httptest.NewRequest(http.MethodGet, "/preview?path=style.css", nil)
+	recCSS := httptest.NewRecorder()
+	handler.HandlePreview(recCSS, reqCSS)
+
+	if recCSS.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK for CSS preview, got: %d", recCSS.Code)
+	}
+	if !strings.Contains(recCSS.Body.String(), "body { color: red; }") {
+		t.Errorf("CSS preview missing stylesheet: %s", recCSS.Body.String())
+	}
+
+	// 3. Security: traversal
+	reqSec := httptest.NewRequest(http.MethodGet, "/preview?path=../../etc/passwd", nil)
+	recSec := httptest.NewRecorder()
+	handler.HandlePreview(recSec, reqSec)
+
+	if recSec.Code != http.StatusNotFound {
+		t.Errorf("expected 404 for traversal attempt, got: %d", recSec.Code)
+	}
+}

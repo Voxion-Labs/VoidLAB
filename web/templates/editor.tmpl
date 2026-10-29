@@ -178,6 +178,7 @@
         <textarea
           id="code-editor"
           name="content"
+          data-active-path="{{if .ActiveFile}}{{.ActiveFile.Path}}{{end}}"
           hx-post="/api/files/save"
           hx-trigger="keyup changed delay:1000ms"
           hx-target="#status-message"

@@ -2,6 +2,7 @@ package explorer
 
 import (
 	"fmt"
+	"html"
 	"html/template"
 	"io"
 	"net/http"
@@ -410,6 +411,122 @@ func (h *Handler) HandleSaveFile(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	fmt.Fprintf(w, "Saved %s", data.ActiveFile.Name)
+}
+
+// HandlePreview serves a live browser preview for HTML, CSS, and Markdown documents.
+func (h *Handler) HandlePreview(w http.ResponseWriter, r *http.Request) {
+	relPath := strings.TrimSpace(r.URL.Query().Get("path"))
+	if relPath == "" {
+		relPath = strings.TrimSpace(r.URL.Query().Get("id"))
+	}
+
+	if relPath == "" {
+		data, err := h.service.BuildWorkspaceData()
+		if err == nil && data.ActiveFile != nil {
+			relPath = data.ActiveFile.Path
+		}
+	}
+
+	if relPath == "" {
+		relPath = "index.html"
+	}
+
+	content, err := h.service.ReadFileContent(relPath)
+	if err != nil {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, `<!DOCTYPE html><html><head><meta charset="utf-8"><title>VoidLAB Preview - Not Found</title><style>body{background:#030712;color:#f3f4f6;font-family:sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;}div{text-align:center;padding:32px;border:1px solid #1f2937;border-radius:12px;background:#111827;}</style></head><body><div><h2>Preview File Not Found</h2><p style="color:#9ca3af;">Could not find document <code>%s</code></p><p style="font-size:12px;color:#6b7280;">Create an HTML or CSS file to view live previews.</p></div></body></html>`, html.EscapeString(relPath))
+		return
+	}
+
+	ext := strings.ToLower(filepath.Ext(relPath))
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	switch ext {
+	case ".html", ".htm":
+		if strings.Contains(strings.ToLower(content), "<html") || strings.Contains(strings.ToLower(content), "<!doctype") {
+			_, _ = w.Write([]byte(content))
+			return
+		}
+		fmt.Fprintf(w, `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VoidLAB HTML Preview - %s</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #030712; color: #f3f4f6; padding: 24px; min-height: 100vh; }
+  </style>
+</head>
+<body>
+%s
+</body>
+</html>`, html.EscapeString(filepath.Base(relPath)), content)
+
+	case ".css":
+		fmt.Fprintf(w, `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VoidLAB CSS Preview - %s</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0b0f19; color: #f3f4f6; min-height: 100vh; display: grid; place-items: center; padding: 32px; }
+    .preview-canvas { background: #131b2e; border: 1px solid #1e293b; border-radius: 16px; padding: 32px; max-width: 640px; width: 100%%; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+    .preview-badge { display: inline-block; padding: 4px 10px; font-size: 11px; font-weight: 600; font-family: monospace; background: rgba(59, 130, 246, 0.2); color: #60a5fa; border-radius: 9999px; margin-bottom: 16px; }
+    .preview-canvas h1 { margin-top: 0; font-size: 24px; font-weight: 700; color: #ffffff; }
+    .preview-canvas p { color: #94a3b8; font-size: 14px; line-height: 1.6; margin-bottom: 24px; }
+    .btn-action { background: #2563eb; color: #ffffff; border: none; padding: 10px 20px; font-size: 14px; font-weight: 600; border-radius: 8px; cursor: pointer; transition: background 0.2s; }
+    .btn-action:hover { background: #1d4ed8; }
+    /* User Custom CSS Injected Below */
+    %s
+  </style>
+</head>
+<body>
+  <main class="preview-canvas">
+    <span class="preview-badge">VoidLAB Stylesheet Canvas</span>
+    <h1>VoidLAB CSS Preview</h1>
+    <p>Your stylesheet <code>%s</code> is loaded and rendered in this live canvas.</p>
+    <button class="btn-action">Action Component</button>
+  </main>
+</body>
+</html>`, html.EscapeString(filepath.Base(relPath)), content, html.EscapeString(filepath.Base(relPath)))
+
+	case ".md", ".markdown":
+		fmt.Fprintf(w, `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VoidLAB Markdown Preview - %s</title>
+  <style>
+    body { max-width: 760px; margin: 40px auto; padding: 0 24px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; background: #030712; color: #f3f4f6; }
+    pre { background: #111827; padding: 16px; border-radius: 8px; border: 1px solid #1f2937; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <pre>%s</pre>
+</body>
+</html>`, html.EscapeString(filepath.Base(relPath)), html.EscapeString(content))
+
+	default:
+		fmt.Fprintf(w, `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>VoidLAB Preview - %s</title>
+  <style>
+    body { background: #030712; color: #f3f4f6; font-family: monospace; padding: 24px; }
+    pre { white-space: pre-wrap; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <pre>%s</pre>
+</body>
+</html>`, html.EscapeString(filepath.Base(relPath)), html.EscapeString(content))
+	}
 }
 
 func formatParentLabel(parent string) string {

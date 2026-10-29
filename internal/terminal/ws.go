@@ -9,7 +9,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -457,6 +459,28 @@ func (h *Handler) HandleRunTrigger(w http.ResponseWriter, r *http.Request) {
 	data, err := h.explorerSvc.BuildWorkspaceData()
 	if err != nil || data.ActiveFile == nil {
 		http.Error(w, "no active file to run", http.StatusBadRequest)
+		return
+	}
+
+	ext := strings.ToLower(filepath.Ext(data.ActiveFile.Path))
+	if ext == ".html" || ext == ".htm" || ext == ".css" {
+		previewURL := "/preview?path=" + url.QueryEscape(data.ActiveFile.Path)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		fmt.Fprintf(w, `
+<div class="space-y-0.5 pb-1">
+  <div class="opacity-80">
+    <span class="opacity-50">[browser preview]</span> $ preview %s
+  </div>
+  <pre class="whitespace-pre-wrap break-words pl-2 text-[11px] text-cyan-400">Live preview canvas rendered in new browser tab.
+&gt; <a href="%s" target="_blank" class="underline text-cyan-300 font-mono hover:text-white">Click here if new tab was blocked: %s</a></pre>
+  <div class="text-[9px] opacity-60 pl-2">Browser Canvas Runtime (instant)</div>
+</div>
+`, html.EscapeString(data.ActiveFile.Path), previewURL, html.EscapeString(previewURL))
+
+		h.BroadcastRaw([]byte(fmt.Sprintf(
+			"\r\n\x1b[36m[VoidLAB]\x1b[0m \x1b[1mLive Preview Canvas Opened in New Tab:\x1b[0m %s\r\n\x1b[34mvoidlab\x1b[0m:\x1b[32m/workspace\x1b[0m$ ",
+			previewURL,
+		)))
 		return
 	}
 

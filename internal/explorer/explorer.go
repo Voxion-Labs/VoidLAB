@@ -598,16 +598,44 @@ func detectLanguage(name string) (lang, label string) {
 		return "javascript", "JavaScript"
 	case ".jsx":
 		return "javascriptreact", "JavaScript React"
-	case ".html":
-		return "html", "HTML"
-	case ".css":
-		return "css", "CSS"
 	case ".json":
 		return "json", "JSON"
 	case ".md":
 		return "markdown", "Markdown"
-	case ".sh":
+	case ".sh", ".bash":
 		return "shell", "Bash"
+	case ".sql":
+		return "sql", "SQL"
+	case ".html", ".htm":
+		return "html", "HTML"
+	case ".css":
+		return "css", "CSS"
+	case ".c", ".h":
+		return "c", "C"
+	case ".cpp", ".cc", ".cxx", ".hpp":
+		return "cpp", "C++"
+	case ".rs":
+		return "rust", "Rust"
+	case ".java":
+		return "java", "Java"
+	case ".cs":
+		return "csharp", "C#"
+	case ".php":
+		return "php", "PHP"
+	case ".rb":
+		return "ruby", "Ruby"
+	case ".swift":
+		return "swift", "Swift"
+	case ".kt", ".kts":
+		return "kotlin", "Kotlin"
+	case ".lua":
+		return "lua", "Lua"
+	case ".ps1":
+		return "powershell", "PowerShell"
+	case ".yaml", ".yml":
+		return "yaml", "YAML"
+	case ".xml":
+		return "xml", "XML"
 	default:
 		return "plaintext", "Plain Text"
 	}

@@ -76,23 +76,143 @@ func Test16LanguagesMapping(t *testing.T) {
 	}
 }
 
-func TestExecuteCodeEmptySignature(t *testing.T) {
+func TestBuildDockerArgsSecurityLimits(t *testing.T) {
 	tempDir := t.TempDir()
+	cmdSlice := []string{"python", "-u", "main.py"}
+	args := BuildDockerArgs("python:3.11-alpine", tempDir, cmdSlice)
+
+	joined := strings.Join(args, " ")
+	if !strings.Contains(joined, "--rm") {
+		t.Errorf("BuildDockerArgs missing --rm flag: %s", joined)
+	}
+	if !strings.Contains(joined, "--memory=256m") {
+		t.Errorf("BuildDockerArgs missing strict memory limit --memory=256m: %s", joined)
+	}
+	if !strings.Contains(joined, "--cpus=0.5") {
+		t.Errorf("BuildDockerArgs missing strict CPU limit --cpus=0.5: %s", joined)
+	}
+	if !strings.Contains(joined, ":/workspace:rw") {
+		t.Errorf("BuildDockerArgs missing secure volume mount :/workspace:rw: %s", joined)
+	}
+	if !strings.Contains(joined, "-w /workspace") {
+		t.Errorf("BuildDockerArgs missing working dir -w /workspace: %s", joined)
+	}
+}
+
+func TestExecuteCodeResourceLimitsAndExecution(t *testing.T) {
+	tempDir := t.TempDir()
+	pyFile := filepath.Join(tempDir, "main.py")
+	if err := os.WriteFile(pyFile, []byte("print('voidlab-execution-success')\n"), 0644); err != nil {
+		t.Fatalf("failed to write test file: %v", err)
+	}
+
 	orc, err := NewOrchestrator(tempDir)
 	if err != nil {
 		t.Fatalf("failed to create orchestrator: %v", err)
 	}
 
-	// Verify method signature on Orchestrator struct
+	// Verify method execution on Orchestrator
 	res, err := orc.ExecuteCode("python", tempDir)
-	if res != nil || err != nil {
-		t.Errorf("expected empty signature placeholder to return nil, nil; got %v, %v", res, err)
+	if err != nil {
+		t.Fatalf("ExecuteCode returned unexpected error: %v", err)
+	}
+	if res == nil {
+		t.Fatal("ExecuteCode returned nil result")
+	}
+	if res.ExitCode != 0 {
+		t.Errorf("expected exit code 0, got %d. stderr: %s", res.ExitCode, res.Stderr)
+	}
+	if !strings.Contains(res.Stdout, "voidlab-execution-success") {
+		t.Errorf("expected stdout to contain 'voidlab-execution-success', got: %q", res.Stdout)
 	}
 
-	// Verify package-level function signature
-	resPkg, errPkg := ExecuteCode("cpp", tempDir)
-	if resPkg != nil || errPkg != nil {
-		t.Errorf("expected package-level ExecuteCode to return nil, nil; got %v, %v", resPkg, errPkg)
+	// Verify package-level function execution
+	resPkg, errPkg := ExecuteCode("python", tempDir)
+	if errPkg != nil {
+		t.Fatalf("package-level ExecuteCode returned error: %v", errPkg)
+	}
+	if resPkg == nil || resPkg.ExitCode != 0 {
+		t.Fatalf("package-level ExecuteCode failed: %v", resPkg)
+	}
+	if !strings.Contains(resPkg.Stdout, "voidlab-execution-success") {
+		t.Errorf("expected package-level stdout to contain output, got: %q", resPkg.Stdout)
+	}
+}
+
+func TestExtendedLanguagesSupport(t *testing.T) {
+	languages := []string{"sql", "html", "css", "markdown", "json", "yaml", "xml"}
+	for _, l := range languages {
+		if _, ok := LanguageImageMap[l]; !ok {
+			t.Errorf("missing LanguageImageMap entry for %s", l)
+		}
+		if _, ok := DefaultLanguageConfigs[l]; !ok {
+			t.Errorf("missing DefaultLanguageConfigs entry for %s", l)
+		}
+	}
+
+	tempDir := t.TempDir()
+	orc, _ := NewOrchestrator(tempDir)
+
+	if orc.DetectLanguage("index.html") != "html" {
+		t.Errorf("expected html detection, got %s", orc.DetectLanguage("index.html"))
+	}
+	if orc.DetectLanguage("style.css") != "css" {
+		t.Errorf("expected css detection, got %s", orc.DetectLanguage("style.css"))
+	}
+	if orc.DetectLanguage("query.sql") != "sql" {
+		t.Errorf("expected sql detection, got %s", orc.DetectLanguage("query.sql"))
+	}
+	if NormalizeLanguage("sqlite3") != "sql" {
+		t.Errorf("expected sql normalization for sqlite3, got %s", NormalizeLanguage("sqlite3"))
+	}
+	if NormalizeLanguage("htm") != "html" {
+		t.Errorf("expected html normalization for htm, got %s", NormalizeLanguage("htm"))
+	}
+}
+
+func TestExecuteCodeHTMLAndCSS(t *testing.T) {
+	tempDir := t.TempDir()
+	orc, _ := NewOrchestrator(tempDir)
+
+	htmlContent := "<!DOCTYPE html><html><body><h1>VoidLAB Live Preview</h1></body></html>"
+	_ = os.WriteFile(filepath.Join(tempDir, "index.html"), []byte(htmlContent), 0644)
+
+	res, err := orc.ExecuteCode("html", tempDir)
+	if err != nil {
+		t.Fatalf("ExecuteCode(html) failed: %v", err)
+	}
+	if !strings.Contains(res.Stdout, "VoidLAB Live Preview") {
+		t.Errorf("expected html stdout to contain content, got: %s", res.Stdout)
+	}
+
+	cssContent := "body { background: #000; color: #fff; }"
+	_ = os.WriteFile(filepath.Join(tempDir, "style.css"), []byte(cssContent), 0644)
+
+	resCSS, errCSS := orc.ExecuteCode("css", tempDir)
+	if errCSS != nil {
+		t.Fatalf("ExecuteCode(css) failed: %v", errCSS)
+	}
+	if !strings.Contains(resCSS.Stdout, "background: #000") {
+		t.Errorf("expected css stdout to contain content, got: %s", resCSS.Stdout)
+	}
+}
+
+func TestExecuteCodeSQL(t *testing.T) {
+	tempDir := t.TempDir()
+	orc, _ := NewOrchestrator(tempDir)
+
+	sqlContent := "SELECT 100 + 42;"
+	_ = os.WriteFile(filepath.Join(tempDir, "main.sql"), []byte(sqlContent), 0644)
+
+	res, err := orc.ExecuteCode("sql", tempDir)
+	if err != nil {
+		t.Fatalf("ExecuteCode(sql) failed: %v", err)
+	}
+	if res.ExitCode != 0 {
+		t.Errorf("expected exit code 0 for sql execution, got %d, stderr: %s", res.ExitCode, res.Stderr)
+	}
+	if !strings.Contains(res.Stdout, "142") {
+		t.Errorf("expected sql result 142 in stdout, got: %s", res.Stdout)
 	}
 }
 

@@ -147,6 +147,8 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 	// 6. Buffer and File Workspace Actions
 	mux.HandleFunc("GET /api/files/open", explorerHandler.HandleOpenFile)
 	mux.HandleFunc("POST /api/files/save", explorerHandler.HandleSaveFile)
+	mux.HandleFunc("GET /preview", explorerHandler.HandlePreview)
+	mux.HandleFunc("GET /api/preview", explorerHandler.HandlePreview)
 
 	// 7. WebSocket Terminal Streaming & Ephemeral Docker Execution
 	mux.HandleFunc("GET /api/ws/terminal", terminalHandler.HandleWebSocket)

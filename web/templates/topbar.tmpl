@@ -46,18 +46,19 @@
       style="background: var(--surface-soft); border: 1px solid var(--border); color: var(--muted);"
     >
       <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
-      <span class="font-medium font-sans" style="color: var(--text-strong);">
+      <span id="active-file-tag-path" class="font-medium font-sans" style="color: var(--text-strong);">
         {{if .ActiveFile}}{{.ActiveFile.Path}}{{else}}src/main.py{{end}}
       </span>
       <span style="color: var(--border);">/</span>
-      <span class="font-mono text-[11px]" style="color: var(--muted);">
+      <span id="active-file-tag-lang" class="font-mono text-[11px]" style="color: var(--muted);">
         {{if .ActiveFile}}{{.ActiveFile.LanguageLabel}}{{else}}Python{{end}}
       </span>
     </div>
 
     <!-- Action Run Pill Button -->
     <button
-      onclick="if (window.voidlabRun) { window.voidlabRun(); }"
+      id="topbar-run-btn"
+      onclick="handleVoidLabRun(event)"
       hx-post="/api/code/run"
       hx-target="#terminal-stream"
       hx-swap="beforeend"
@@ -200,4 +201,25 @@
     </a>
   </div>
 </header>
+<script>
+  function handleVoidLabRun(e) {
+    var tag = document.getElementById('active-file-tag-path');
+    var path = tag ? tag.innerText.trim() : '';
+    if (!path) {
+      var editor = document.getElementById('code-editor');
+      path = editor ? (editor.getAttribute('data-active-path') || '') : '';
+    }
+    var lower = (path || '').toLowerCase();
+    if (lower.endsWith('.html') || lower.endsWith('.htm') || lower.endsWith('.css')) {
+      window.open('/preview?path=' + encodeURIComponent(path), '_blank');
+      if (window.voidlabSwitchTab) {
+        window.voidlabSwitchTab('terminal');
+      }
+      return;
+    }
+    if (window.voidlabRun) {
+      window.voidlabRun(path);
+    }
+  }
+</script>
 {{end}}
