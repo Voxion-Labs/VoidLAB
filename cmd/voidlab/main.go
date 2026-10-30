@@ -16,6 +16,7 @@ import (
 
 	"github.com/Voxion-Labs/VoidLAB/internal/docker"
 	"github.com/Voxion-Labs/VoidLAB/internal/explorer"
+	"github.com/Voxion-Labs/VoidLAB/internal/premium"
 	"github.com/Voxion-Labs/VoidLAB/internal/terminal"
 )
 
@@ -75,6 +76,7 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 	}
 
 	terminalHandler := terminal.NewHandler(dockerOrchestrator, explorerService)
+	premiumHandler := premium.NewHandler(explorerService)
 
 	// Standard Go 1.22+ multiplexer
 	mux := http.NewServeMux()
@@ -155,6 +157,28 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 	mux.HandleFunc("POST /api/code/run", terminalHandler.HandleRunTrigger)
 	mux.HandleFunc("POST /api/terminal/exec", terminalHandler.HandleTerminalExec)
 	mux.HandleFunc("POST /api/terminal/clear", terminalHandler.HandleClear)
+
+	// 8. Premium Feature Routes (HTMX HTML Fragments)
+	// Collaboration & Multiplayer WebSockets
+	mux.HandleFunc("GET /api/collab/room", premiumHandler.HandleCollabRoom)
+	mux.HandleFunc("POST /api/collab/room", premiumHandler.HandleCollabRoom)
+
+	// AI Guide Prompts & Suggestions
+	mux.HandleFunc("GET /api/ai/prompt", premiumHandler.HandleAIPrompt)
+	mux.HandleFunc("POST /api/ai/prompt", premiumHandler.HandleAIPrompt)
+
+	// Authentication & Secure HTTP-Only Cookie Session Management
+	mux.HandleFunc("POST /api/auth/login", premiumHandler.HandleLogin)
+	mux.HandleFunc("POST /api/auth/logout", premiumHandler.HandleLogout)
+	mux.HandleFunc("GET /api/auth/status", premiumHandler.HandleAuthStatus)
+	mux.HandleFunc("GET /api/ui/modal/profile", premiumHandler.HandleProfileModal)
+	mux.HandleFunc("GET /api/ui/modal/settings", premiumHandler.HandleSettingsModal)
+
+	// Navigation Panel Page Views (Full-page views with HTMX integration)
+	mux.HandleFunc("GET /editor/collaboration", premiumHandler.HandleCollabPage(tmpl, explorerService))
+	mux.HandleFunc("GET /editor/ai", premiumHandler.HandleAIPage(tmpl, explorerService))
+	mux.HandleFunc("GET /editor/profile", premiumHandler.HandleProfilePage(tmpl, explorerService))
+	mux.HandleFunc("GET /editor/manual", premiumHandler.HandleManualPage(tmpl, explorerService))
 
 	return mux, explorerService, tmpl, nil
 }
