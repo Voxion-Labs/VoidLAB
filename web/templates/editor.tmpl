@@ -199,3 +199,287 @@ if __name__ == "__main__":
   </script>
 </div>
 {{end}}
+
+{{define "editor-page"}}
+<main
+  class="min-h-screen w-full flex flex-col font-sans select-none antialiased transition-colors"
+  style="background: var(--background-main); color: var(--text);"
+>
+  <!-- ========================================================================= -->
+  <!-- 1. TOP NAVBAR (with Logout button & quick actions)                         -->
+  <!-- ========================================================================= -->
+  {{template "topbar" .}}
+
+  <!-- ========================================================================= -->
+  <!-- 2. MAIN WORKSPACE (3-Column Layout: Explorer, Editor, Terminal)            -->
+  <!-- ========================================================================= -->
+  <div
+    id="editor-workspace"
+    class="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden min-h-[640px] relative transition-colors"
+    style="background: var(--background-main);"
+  >
+    <!-- Left Column: File Explorer (explorer.tmpl) -->
+    {{template "explorer" .}}
+
+    <!-- Divider 1: Left Splitter (between Explorer & Editor) -->
+    <div
+      class="w-1 hover:w-1.5 cursor-col-resize transition-all duration-100 z-20 flex flex-col items-center justify-center group shrink-0"
+      style="background: var(--border);"
+      title="Drag to resize explorer"
+    >
+      <div
+        class="h-6 w-[1.5px] rounded-full group-hover:scale-125 transition-transform"
+        style="background: var(--muted);"
+      ></div>
+    </div>
+
+    <!-- Middle Column: Main Code Editor (editor.tmpl) -->
+    {{template "editor" .}}
+
+    <!-- Divider 2: Right Splitter (between Editor & Terminal) -->
+    <div
+      class="w-1 hover:w-1.5 cursor-col-resize transition-all duration-100 z-20 flex flex-col items-center justify-center group shrink-0"
+      style="background: var(--border);"
+      title="Drag to resize terminal"
+    >
+      <div
+        class="h-6 w-[1.5px] rounded-full group-hover:scale-125 transition-transform"
+        style="background: var(--muted);"
+      ></div>
+    </div>
+
+    <!-- Right Column: Interactive xterm.js Terminal & Output (terminal.tmpl) -->
+    {{template "terminal" .}}
+  </div>
+</main>
+
+<!-- Client-Side Vanilla JS Logic: WASM Loading, Gutter Sync, Shortcuts, Theme -->
+<script>
+  // 1. Run Trigger
+  function handleVoidLabRun(e) {
+    if (e) e.preventDefault();
+    var tag = document.getElementById('active-file-tag-path');
+    var path = tag ? tag.innerText.trim() : '';
+    if (!path) {
+      var editor = document.getElementById('code-editor');
+      path = editor ? (editor.getAttribute('data-active-path') || '') : '';
+    }
+    var lower = (path || '').toLowerCase();
+    if (lower.endsWith('.html') || lower.endsWith('.htm') || lower.endsWith('.css')) {
+      window.open('/preview?path=' + encodeURIComponent(path), '_blank');
+      if (window.voidlabSwitchTab) {
+        window.voidlabSwitchTab('terminal');
+      }
+      return;
+    }
+    if (window.voidlabRun) {
+      window.voidlabRun(path);
+    }
+  }
+
+  // 2. Manual Save Trigger
+  function voidlabTriggerManualSave() {
+    var editor = document.getElementById('code-editor');
+    if (!editor) return;
+    var content = editor.value;
+    var status = document.getElementById('status-message');
+    if (status) status.innerText = 'Saving...';
+    htmx.ajax('POST', '/api/files/save', {
+      values: { content: content },
+      target: '#status-message',
+      swap: 'innerHTML'
+    });
+  }
+
+  // 3. Line Number Gutter Synchronization
+  function voidlabUpdateGutter(editor) {
+    if (!editor) editor = document.getElementById('code-editor');
+    if (!editor) return;
+    var gutter = document.getElementById('editor-gutter');
+    if (!gutter) return;
+
+    var lines = (editor.value || '').split('\n').length;
+    var currentLines = gutter.children.length;
+
+    if (currentLines !== lines) {
+      var fragment = document.createDocumentFragment();
+      for (var i = 1; i <= lines; i++) {
+        var div = document.createElement('div');
+        div.textContent = i;
+        fragment.appendChild(div);
+      }
+      gutter.innerHTML = '';
+      gutter.appendChild(fragment);
+    }
+
+    var metricLines = document.getElementById('wasm-metrics-lines');
+    if (metricLines) metricLines.textContent = lines + 'L';
+  }
+
+  function voidlabSyncGutterScroll(editor) {
+    var gutter = document.getElementById('editor-gutter');
+    if (gutter && editor) {
+      gutter.scrollTop = editor.scrollTop;
+    }
+  }
+
+  function voidlabHandleEditorInput(editor) {
+    voidlabUpdateGutter(editor);
+    var lang = editor.getAttribute('data-active-lang') || 'python';
+    voidlabValidateCode(editor.value, lang);
+  }
+
+  function voidlabHandleEditorKeydown(e, editor) {
+    // Tab key: insert 2 spaces
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      var start = editor.selectionStart;
+      var end = editor.selectionEnd;
+      editor.value = editor.value.substring(0, start) + '  ' + editor.value.substring(end);
+      editor.selectionStart = editor.selectionEnd = start + 2;
+      voidlabHandleEditorInput(editor);
+      return;
+    }
+    // Ctrl+S: Save file
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault();
+      voidlabTriggerManualSave();
+      return;
+    }
+    // Ctrl+Enter: Run code
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      handleVoidLabRun(e);
+      return;
+    }
+  }
+
+  // 4. WebAssembly Instant Client-Side Syntax Validation & Format
+  function voidlabValidateCode(code, lang) {
+    if (!window.voidlabWASM || !window.voidlabWASM.validate) return;
+    try {
+      var res = window.voidlabWASM.validate(code, lang);
+      if (typeof res === 'string') res = JSON.parse(res);
+      var banner = document.getElementById('wasm-syntax-banner');
+      var ind = document.getElementById('wasm-syntax-indicator');
+      var errText = document.getElementById('wasm-syntax-error-text');
+      var errPos = document.getElementById('wasm-syntax-pos');
+
+      if (res && !res.valid) {
+        if (banner) banner.classList.remove('hidden');
+        if (ind) {
+          ind.textContent = 'Alert';
+          ind.className = 'font-mono text-[11px] text-rose-500 font-bold';
+        }
+        if (errText) errText.textContent = res.message || 'Syntax error';
+        if (errPos && res.line) errPos.textContent = 'Line ' + res.line + (res.column ? (':' + res.column) : '');
+      } else {
+        if (banner) banner.classList.add('hidden');
+        if (ind) {
+          ind.textContent = 'Valid';
+          ind.className = 'font-mono text-[11px] text-emerald-500';
+        }
+      }
+    } catch (_) {}
+  }
+
+  function voidlabFormatCode() {
+    var editor = document.getElementById('code-editor');
+    if (!editor) return;
+    var lang = editor.getAttribute('data-active-lang') || 'python';
+    if (window.voidlabWASM && window.voidlabWASM.format) {
+      try {
+        var formatted = window.voidlabWASM.format(editor.value, lang);
+        if (formatted) {
+          editor.value = formatted;
+          voidlabHandleEditorInput(editor);
+          voidlabTriggerManualSave();
+        }
+      } catch (_) {}
+    }
+  }
+
+  // 5. Asynchronous WebAssembly Engine Loading (Non-Blocking)
+  (function() {
+    function loadWASM() {
+      if (window._voidlabWASMLoaded) return;
+      window._voidlabWASMLoaded = true;
+
+      const wasmScript = document.createElement('script');
+      wasmScript.src = '/public/wasm/wasm_exec.js';
+      wasmScript.async = true;
+      wasmScript.onload = function() {
+        if (typeof Go === 'undefined') return;
+        const go = new Go();
+        const instantiate = WebAssembly.instantiateStreaming
+          ? WebAssembly.instantiateStreaming(fetch('/public/wasm/voidlab.wasm'), go.importObject)
+          : fetch('/public/wasm/voidlab.wasm').then(res => res.arrayBuffer()).then(bytes => WebAssembly.instantiate(bytes, go.importObject));
+
+        instantiate.then(result => {
+          go.run(result.instance);
+          const badgeDot = document.getElementById('wasm-dot');
+          const badgeText = document.getElementById('wasm-status-text');
+          if (badgeDot) badgeDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400';
+          if (badgeText) badgeText.textContent = 'WASM Ready';
+
+          var editor = document.getElementById('code-editor');
+          if (editor) {
+            voidlabUpdateGutter(editor);
+            voidlabValidateCode(editor.value, editor.getAttribute('data-active-lang') || 'python');
+          }
+        }).catch(err => {
+          console.warn('[VoidLAB WASM] initialization deferred:', err);
+        });
+      };
+      document.body.appendChild(wasmScript);
+    }
+
+    if (document.readyState === 'complete') {
+      loadWASM();
+    } else {
+      window.addEventListener('load', loadWASM);
+    }
+  })();
+
+  // 6. Theme Switcher (Dark / Light)
+  function toggleVoidLabTheme() {
+    const html = document.documentElement;
+    const current = html.getAttribute('data-theme') || 'light';
+    const next = current === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    try { localStorage.setItem('voidlab-theme', next); } catch (e) {}
+    updateThemeUI(next);
+  }
+
+  function updateThemeUI(theme) {
+    const isDark = theme === 'dark';
+    const sun = document.getElementById('theme-icon-sun');
+    const moon = document.getElementById('theme-icon-moon');
+    const label = document.getElementById('theme-label');
+    if (sun && moon) {
+      if (isDark) {
+        sun.classList.remove('hidden');
+        moon.classList.add('hidden');
+        if (label) label.innerText = 'Light';
+      } else {
+        sun.classList.add('hidden');
+        moon.classList.remove('hidden');
+        if (label) label.innerText = 'Dark';
+      }
+    }
+  }
+
+  // Restore theme on mount
+  (function() {
+    try {
+      const savedTheme = localStorage.getItem('voidlab-theme') || 'light';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      updateThemeUI(savedTheme);
+    } catch (e) {}
+  })();
+</script>
+{{end}}
+
+{{define "editor.tmpl"}}
+{{template "base.tmpl" .}}
+{{end}}

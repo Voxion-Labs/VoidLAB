@@ -56,6 +56,9 @@ type WorkspaceData struct {
 	Theme           string
 	UserInitial     string
 	TerminalHistory []TerminalHistoryItem
+	IsEditor        bool
+	IsLanding       bool
+	User            string
 }
 
 // TerminalHistoryItem models command entries in the sandbox shell.

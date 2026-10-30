@@ -44,6 +44,9 @@ func TestAuthCookieAndLoginLogout(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200 OK on login, got %d", rec.Code)
 	}
+	if hxRedirect := rec.Header().Get("HX-Redirect"); hxRedirect != "/editor" {
+		t.Errorf("expected HX-Redirect header '/editor', got %q", hxRedirect)
+	}
 
 	// Verify secure HTTP-only cookie
 	cookie := rec.Result().Cookies()
@@ -85,6 +88,9 @@ func TestAuthCookieAndLoginLogout(t *testing.T) {
 	logoutReq.AddCookie(authCookie)
 	logoutRec := httptest.NewRecorder()
 	handler.HandleLogout(logoutRec, logoutReq)
+	if hxRedirect := logoutRec.Header().Get("HX-Redirect"); hxRedirect != "/" {
+		t.Errorf("expected HX-Redirect header '/', got %q", hxRedirect)
+	}
 
 	logoutCookie := logoutRec.Result().Cookies()
 	cleared := false

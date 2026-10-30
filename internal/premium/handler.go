@@ -117,25 +117,38 @@ func (h *Handler) HandleAIPrompt(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, RenderAIPromptFragment(prompt, lang))
 }
 
-// HandleLogin authenticates a user and sets a secure HTTP-only cookie.
+// HandleLogin authenticates a user, sets a secure HTTP-only cookie, and redirects to /editor.
 func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	_ = r.ParseForm()
 	username := strings.TrimSpace(r.FormValue("username"))
 	if username == "" {
+		username = strings.TrimSpace(r.FormValue("email"))
+	}
+	if username == "" {
 		username = DefaultUsername
+	}
+	if idx := strings.Index(username, "@"); idx != -1 {
+		username = username[:idx]
 	}
 
 	// Issue secure HTTP-only cookie
 	SetAuthCookie(w, r, username)
 
+	// Use HX-Redirect for HTMX clients to redirect to /editor
+	w.Header().Set("HX-Redirect", "/editor")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
 	fmt.Fprint(w, RenderAuthenticatedBadge(username))
 }
 
-// HandleLogout clears the authentication cookie and returns the unauthenticated status badge.
+// HandleLogout clears the authentication cookie and redirects back to / via HX-Redirect.
 func (h *Handler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	ClearAuthCookie(w, r)
+
+	// Use HX-Redirect for HTMX clients to redirect to /
+	w.Header().Set("HX-Redirect", "/")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
 	fmt.Fprint(w, RenderUnauthenticatedBadge())
 }
 
@@ -216,7 +229,7 @@ func (h *Handler) HandleSettingsModal(w http.ResponseWriter, r *http.Request) {
   <div class="w-full max-w-md rounded-xl p-6 shadow-2xl transition-colors font-sans" style="background: var(--panel-background); border: 1px solid var(--border-strong); color: var(--text);">
     <div class="flex items-center justify-between pb-3 mb-4 border-b border-[var(--border)]">
       <div class="flex items-center gap-2">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent);"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent);"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
         <div class="font-bold text-sm text-[var(--text-strong)]">Workspace Preferences</div>
       </div>
       <button onclick="this.closest('.fixed').remove()" class="p-1 rounded opacity-70 hover:opacity-100 cursor-pointer" type="button">✕</button>

@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -98,6 +99,14 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 			http.Error(w, fmt.Sprintf("failed to load workspace: %v", err), http.StatusInternalServerError)
 			return
 		}
+		data.IsEditor = true
+		data.IsLanding = false
+		if user, ok := premium.GetAuthenticatedUser(r); ok {
+			data.User = user
+			if len(user) > 0 {
+				data.UserInitial = strings.ToUpper(string(user[0]))
+			}
+		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if err := tmpl.ExecuteTemplate(w, "base.tmpl", data); err != nil {
@@ -115,6 +124,14 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+		data.IsLanding = true
+		data.IsEditor = false
+		if user, ok := premium.GetAuthenticatedUser(r); ok {
+			data.User = user
+			if len(user) > 0 {
+				data.UserInitial = strings.ToUpper(string(user[0]))
+			}
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
