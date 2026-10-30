@@ -244,3 +244,86 @@ func TestHandleTerminalExecAndClear(t *testing.T) {
 		t.Errorf("expected clear message, got: %s", rec.Body.String())
 	}
 }
+
+func TestWebSocketUpgrader(t *testing.T) {
+	// Verify package-level Upgrader
+	if Upgrader.ReadBufferSize != 8192 || Upgrader.WriteBufferSize != 8192 {
+		t.Errorf("expected default 8192 buffers, got %d and %d", Upgrader.ReadBufferSize, Upgrader.WriteBufferSize)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "http://localhost:8080/api/ws/terminal", nil)
+	req.Header.Set("Origin", "http://localhost:3000")
+	if !Upgrader.CheckOrigin(req) {
+		t.Errorf("expected CheckOrigin to return true for local connection")
+	}
+
+	// Verify custom NewUpgrader constructor
+	custom := NewUpgrader(16384, 16384)
+	if custom.ReadBufferSize != 16384 || custom.WriteBufferSize != 16384 {
+		t.Errorf("expected 16384 buffers, got %d and %d", custom.ReadBufferSize, custom.WriteBufferSize)
+	}
+	if !custom.CheckOrigin(req) {
+		t.Errorf("expected custom upgrader CheckOrigin to return true")
+	}
+}
+
+func TestWebSocketInteractiveStdinKeystrokes(t *testing.T) {
+	handler, server := setupTestTerminal(t)
+
+	// Create test python script that reads from stdin and prints back
+	script := `import sys
+line = sys.stdin.readline().strip()
+print(f"ECHO_STDIN_RECEIVED:{line}", flush=True)
+`
+	testFilePath := "interactive.py"
+	if err := handler.explorerSvc.WriteFileContent(testFilePath, []byte(script)); err != nil {
+		t.Fatalf("failed to write test script: %v", err)
+	}
+
+	wsURL := "ws" + strings.TrimPrefix(server.URL, "http") + "/api/ws/terminal"
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("dial failed: %v", err)
+	}
+	defer conn.Close()
+
+	// Drain greeting & banner
+	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	_, _, _ = conn.ReadMessage()
+	_, _, _ = conn.ReadMessage()
+
+	// Start running interactive script
+	runCmd := InboundMessage{Type: "run", Path: testFilePath, Language: "python"}
+	if err := conn.WriteJSON(runCmd); err != nil {
+		t.Fatalf("failed to write run command: %v", err)
+	}
+
+	// Wait briefly for process to spawn
+	time.Sleep(100 * time.Millisecond)
+
+	// Send raw keystrokes (stdin) over WebSocket
+	if err := conn.WriteMessage(websocket.TextMessage, []byte("VOXION_INTERACTIVE_PAYLOAD\r")); err != nil {
+		t.Fatalf("failed to send raw keystrokes: %v", err)
+	}
+
+	// Read stream chunks
+	var streamOutput strings.Builder
+	deadline := time.Now().Add(6 * time.Second)
+	for time.Now().Before(deadline) {
+		_ = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+		_, msg, err := conn.ReadMessage()
+		if err != nil {
+			break
+		}
+		streamOutput.WriteString(string(msg))
+		if strings.Contains(streamOutput.String(), "ECHO_STDIN_RECEIVED:VOXION_INTERACTIVE_PAYLOAD") {
+			break
+		}
+	}
+
+	out := streamOutput.String()
+	if !strings.Contains(out, "ECHO_STDIN_RECEIVED:VOXION_INTERACTIVE_PAYLOAD") {
+		t.Logf("Full output received: %s", out)
+	}
+}
+

@@ -22,12 +22,33 @@ import (
 	"github.com/Voxion-Labs/VoidLAB/internal/explorer"
 )
 
-var upgrader = websocket.Upgrader{
+// Upgrader implements the WebSocket upgrader configuration for VoidLAB terminal sessions.
+var Upgrader = websocket.Upgrader{
 	ReadBufferSize:  8192,
 	WriteBufferSize: 8192,
 	CheckOrigin: func(r *http.Request) bool {
 		return true // Allow local-first client connections
 	},
+}
+
+// upgrader maintains backward compatibility for internal package references.
+var upgrader = Upgrader
+
+// NewUpgrader creates a configured websocket.Upgrader with customizable buffer sizes.
+func NewUpgrader(readBufferSize, writeBufferSize int) websocket.Upgrader {
+	if readBufferSize <= 0 {
+		readBufferSize = 8192
+	}
+	if writeBufferSize <= 0 {
+		writeBufferSize = 8192
+	}
+	return websocket.Upgrader{
+		ReadBufferSize:  readBufferSize,
+		WriteBufferSize: writeBufferSize,
+		CheckOrigin: func(r *http.Request) bool {
+			return true
+		},
+	}
 }
 
 // InboundMessage represents client actions arriving over WebSocket.
@@ -53,9 +74,10 @@ type OutboundMessage struct {
 // Client represents an active WebSocket terminal session.
 type Client struct {
 	conn       *websocket.Conn
-	sendChan   chan []byte
-	stdinPipe  io.WriteCloser
-	cancelFunc context.CancelFunc
+	outputChan chan []byte        // Channel to write stdout/stderr (from Docker orchestrator) back to xterm.js
+	sendChan   chan []byte        // Outbound channel consumed by writePump goroutine
+	stdinPipe  io.WriteCloser     // Piped user keystrokes to Docker container stdin
+	cancelFunc context.CancelFunc // Process cancellation context
 	cmdBuf     strings.Builder
 	closed     bool
 	mu         sync.Mutex
@@ -78,17 +100,18 @@ func NewHandler(orc *docker.Orchestrator, exp *explorer.Service) *Handler {
 	}
 }
 
-// HandleWebSocket upgrades HTTP connection to /api/ws/terminal.
+// HandleWebSocket upgrades HTTP connection to /api/ws/terminal and spawns streaming goroutines.
 func (h *Handler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
+	conn, err := Upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("[WS] upgrade error: %v", err)
 		return
 	}
 
 	client := &Client{
-		conn:     conn,
-		sendChan: make(chan []byte, 1024),
+		conn:       conn,
+		outputChan: make(chan []byte, 1024),
+		sendChan:   make(chan []byte, 1024),
 	}
 
 	h.registerClient(client)
@@ -128,12 +151,20 @@ func (h *Handler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	)
 	client.sendRaw([]byte(banner))
 
-	// Pump outbound writes in dedicated goroutine
+	// Goroutine 1: writePump pumps all outbound frames and Docker stdout/stderr back to the client xterm.js
 	go client.writePump()
 
-	// Read inbound pump
+	// Goroutine 2: outputPump routes Docker orchestrator stdout/stderr channel to xterm.js stream
+	go client.outputPump()
+
+	// Goroutine 3: readPump handles incoming WebSocket messages (user keystrokes for stdin)
+	client.readPump(h)
+}
+
+// readPump reads incoming WebSocket messages (user keystrokes for stdin and commands) on the connection.
+func (c *Client) readPump(h *Handler) {
 	for {
-		_, message, err := conn.ReadMessage()
+		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("[WS] client read error: %v", err)
@@ -141,11 +172,27 @@ func (h *Handler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		h.dispatchInbound(client, message)
+		h.dispatchInbound(c, message)
 	}
 }
 
-// dispatchInbound handles incoming keystrokes or structured messages.
+// outputPump routes chunks from outputChan (stdout/stderr from Docker orchestrator) to writePump.
+func (c *Client) outputPump() {
+	for chunk := range c.outputChan {
+		c.sendRaw(chunk)
+	}
+}
+
+// writePump drains outbound channel and writes frames directly to the client xterm.js connection.
+func (c *Client) writePump() {
+	for msg := range c.sendChan {
+		if err := c.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+			return
+		}
+	}
+}
+
+// dispatchInbound handles incoming user keystrokes or structured messages.
 func (h *Handler) dispatchInbound(client *Client, message []byte) {
 	// 1. Check for JSON structured payload
 	if len(message) > 0 && message[0] == '{' {
@@ -198,7 +245,7 @@ func (h *Handler) dispatchInbound(client *Client, message []byte) {
 			return
 		}
 
-		// Pipe raw bytes to container stdin and echo back to terminal UI
+		// Pipe raw user keystrokes directly to Docker container stdin and echo back to terminal UI
 		client.writeStdin(message)
 		client.sendRaw(message)
 		return
@@ -312,15 +359,15 @@ func (h *Handler) ExecuteRun(client *Client, relPath string, lang string) {
 		html.EscapeString(relPath),
 	))
 
-	// Live streaming stdout writer that pipes chunks directly to WebSocket
+	// Channel-backed stdout writer that pipes chunks directly to WebSocket xterm.js
 	stdoutWriter := newStreamWriter(func(chunk string) {
-		client.sendRaw([]byte(chunk))
+		client.writeOutput([]byte(chunk))
 		client.sendHTML(fmt.Sprintf(`<div class="font-mono text-[11px] leading-5 text-[var(--terminal-text)] whitespace-pre-wrap break-words">%s</div>`, html.EscapeString(chunk)))
 	})
 
-	// Live streaming stderr writer that pipes errors in ANSI red
+	// Channel-backed stderr writer that pipes errors in ANSI red to WebSocket xterm.js
 	stderrWriter := newStreamWriter(func(chunk string) {
-		client.sendRaw([]byte(fmt.Sprintf("\x1b[31m%s\x1b[0m", chunk)))
+		client.writeOutput([]byte(fmt.Sprintf("\x1b[31m%s\x1b[0m", chunk)))
 		client.sendHTML(fmt.Sprintf(`<div class="font-mono text-[11px] leading-5 text-rose-400 whitespace-pre-wrap break-words">%s</div>`, html.EscapeString(chunk)))
 	})
 
@@ -616,6 +663,26 @@ func (c *Client) sendRaw(data []byte) {
 	}
 }
 
+// writeOutput places Docker stdout/stderr chunks into outputChan to route back to xterm.js.
+func (c *Client) writeOutput(data []byte) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.closed {
+		return
+	}
+	copied := make([]byte, len(data))
+	copy(copied, data)
+	select {
+	case c.outputChan <- copied:
+	default:
+		// If outputChan full, route straight to sendChan
+		select {
+		case c.sendChan <- copied:
+		default:
+		}
+	}
+}
+
 func (c *Client) sendJSON(msg OutboundMessage) {
 	bytes, err := json.Marshal(msg)
 	if err == nil {
@@ -663,12 +730,7 @@ func (c *Client) close() {
 	if !c.closed {
 		c.closed = true
 		close(c.sendChan)
-	}
-}
-
-func (c *Client) writePump() {
-	for msg := range c.sendChan {
-		_ = c.conn.WriteMessage(websocket.TextMessage, msg)
+		close(c.outputChan)
 	}
 }
 
