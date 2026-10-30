@@ -101,9 +101,22 @@
     </span>
   </div>
 
-  <!-- Right: Minimal Text Buttons (Manual, GitHub, Collab, AI Guide), Logout & Switcher -->
+  <!-- Right: Sub-Views Navigation (Editor, Collab, AI Guide), Logout, Switcher & Profile -->
   <div class="flex items-center gap-2.5">
     <nav class="flex items-center gap-1 text-xs font-medium font-sans">
+      <!-- Switch back to Code Editor -->
+      <button
+        hx-get="/api/ui/editor"
+        hx-target="#main-editor-pane"
+        hx-swap="innerHTML"
+        class="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)] cursor-pointer"
+        style="color: var(--muted);"
+        title="Code Editor Canvas"
+        type="button"
+      >
+        Editor
+      </button>
+
       <a
         href="/editor/manual"
         class="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)]"
@@ -111,6 +124,7 @@
       >
         Manual
       </a>
+
       <a
         href="https://github.com/Voxion-Labs/VoidLAB"
         target="_blank"
@@ -125,21 +139,33 @@
           <line x1="10" y1="14" x2="21" y2="3"></line>
         </svg>
       </a>
-      <a
-        href="/editor/collaboration"
-        class="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)] flex items-center gap-1.5"
+
+      <!-- Collab Button (Dynamic Sub-View, Objective 2) -->
+      <button
+        hx-get="/api/ui/collab"
+        hx-target="#main-editor-pane"
+        hx-swap="innerHTML"
+        class="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)] flex items-center gap-1.5 cursor-pointer font-sans"
         style="color: var(--muted);"
+        title="Multiplayer Collaboration & Live Pair Programming"
+        type="button"
       >
         <span class="w-1.5 h-1.5 rounded-full" style="background: var(--accent);"></span>
         Collab
-      </a>
-      <a
-        href="/editor/ai"
-        class="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)]"
+      </button>
+
+      <!-- AI Guide Button (Dynamic Sub-View, Objective 2) -->
+      <button
+        hx-get="/api/ui/ai"
+        hx-target="#main-editor-pane"
+        hx-swap="innerHTML"
+        class="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)] cursor-pointer font-sans"
         style="color: var(--muted);"
+        title="Local AI Guide Copilot"
+        type="button"
       >
         AI Guide
-      </a>
+      </button>
     </nav>
 
     <div class="h-4 w-px" style="background: var(--border);"></div>
@@ -186,19 +212,22 @@
     >
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="3"></circle>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
       </svg>
     </button>
 
-    <!-- User Profile Avatar -->
-    <a
-      href="/editor/profile"
-      class="h-6 w-6 rounded-md flex items-center justify-center text-[10px] font-semibold transition-all hover:scale-105"
+    <!-- User Profile Avatar Button (Dynamic Sub-View, Objective 2) -->
+    <button
+      hx-get="/api/ui/profile"
+      hx-target="#main-editor-pane"
+      hx-swap="innerHTML"
+      class="h-6 w-6 rounded-md flex items-center justify-center text-[10px] font-semibold transition-all hover:scale-105 cursor-pointer"
       style="background: var(--surface-soft); border: 1px solid var(--border); color: var(--text-strong);"
-      title="Profile & Activity"
+      title="Developer Profile & Identity"
+      type="button"
     >
       {{if .UserInitial}}{{.UserInitial}}{{else}}R{{end}}
-    </a>
+    </button>
 
     <!-- Logout Button (Objective 1) -->
     <button

@@ -109,6 +109,62 @@
 
   <!-- Dynamic Context Menu Container -->
   <div id="context-menu"></div>
+  <!-- ── Sidebar Sub-Views Action Tray (Objective 2) ── -->
+  <div class="p-2 border-t border-[var(--border)] bg-[var(--surface-soft)] flex items-center justify-around text-xs shrink-0 select-none">
+    <button
+      hx-get="/api/ui/editor"
+      hx-target="#main-editor-pane"
+      hx-swap="innerHTML"
+      class="p-1.5 rounded hover:bg-[var(--control-hover)] text-[var(--muted)] hover:text-[var(--text-strong)] transition-colors cursor-pointer"
+      title="Code Editor"
+      type="button"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="16 18 22 12 16 6"></polyline>
+        <polyline points="8 6 2 12 8 18"></polyline>
+      </svg>
+    </button>
+    <button
+      hx-get="/api/ui/ai"
+      hx-target="#main-editor-pane"
+      hx-swap="innerHTML"
+      class="p-1.5 rounded hover:bg-[var(--control-hover)] text-[var(--muted)] hover:text-[var(--text-strong)] transition-colors cursor-pointer"
+      title="AI Guide Copilot"
+      type="button"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+      </svg>
+    </button>
+    <button
+      hx-get="/api/ui/collab"
+      hx-target="#main-editor-pane"
+      hx-swap="innerHTML"
+      class="p-1.5 rounded hover:bg-[var(--control-hover)] text-[var(--muted)] hover:text-[var(--text-strong)] transition-colors cursor-pointer"
+      title="Multiplayer Collaboration"
+      type="button"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+        <circle cx="9" cy="7" r="4"></circle>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+      </svg>
+    </button>
+    <button
+      hx-get="/api/ui/profile"
+      hx-target="#main-editor-pane"
+      hx-swap="innerHTML"
+      class="p-1.5 rounded hover:bg-[var(--control-hover)] text-[var(--muted)] hover:text-[var(--text-strong)] transition-colors cursor-pointer"
+      title="Developer Profile"
+      type="button"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+    </button>
+  </div>
 </aside>
 {{end}}
 
@@ -193,8 +249,8 @@
           <button
             class="min-w-0 flex-1 h-full flex items-center gap-1.5 truncate text-left focus:outline-none cursor-pointer"
             hx-get="/api/files/open?path={{.Path}}"
-            hx-target="#editor-pane"
-            hx-swap="outerHTML"
+            hx-target="#main-editor-pane"
+            hx-swap="innerHTML"
             type="button"
           >
             <!-- Realistic File Icons (1:1 with FileIcon in FileExplorer.tsx) -->

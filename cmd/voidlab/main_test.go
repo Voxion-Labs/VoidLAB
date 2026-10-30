@@ -53,12 +53,26 @@ func TestServerSetupAndEditorRoute(t *testing.T) {
 		t.Fatalf("setupServer failed: %v", err)
 	}
 
+	// 1. Unauthenticated GET /editor must redirect to / (Objective 3)
+	unauthReq := httptest.NewRequest(http.MethodGet, "/editor", nil)
+	unauthRec := httptest.NewRecorder()
+	mux.ServeHTTP(unauthRec, unauthReq)
+
+	if unauthRec.Code != http.StatusSeeOther {
+		t.Errorf("expected 303 See Other for unauthenticated /editor, got %d", unauthRec.Code)
+	}
+	if unauthRec.Header().Get("HX-Redirect") != "/" {
+		t.Errorf("expected HX-Redirect header '/', got %q", unauthRec.Header().Get("HX-Redirect"))
+	}
+
+	// 2. Authenticated GET /editor renders the full workspace (Objective 1 & 2)
 	req := httptest.NewRequest(http.MethodGet, "/editor", nil)
+	req.AddCookie(&http.Cookie{Name: "voidlab_session", Value: "Rudra:token:1234567890"})
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200 OK for GET /editor, got %d: %s", rec.Code, rec.Body.String())
+		t.Fatalf("expected 200 OK for authenticated GET /editor, got %d: %s", rec.Code, rec.Body.String())
 	}
 
 	body := rec.Body.String()
@@ -70,6 +84,109 @@ func TestServerSetupAndEditorRoute(t *testing.T) {
 	}
 	if !strings.Contains(body, `hx-post="/api/auth/logout"`) {
 		t.Errorf("expected Navbar in editor to contain hx-post=\"/api/auth/logout\"")
+	}
+	if !strings.Contains(body, `id="main-editor-pane"`) {
+		t.Errorf("expected 3-column workspace to contain #main-editor-pane host")
+	}
+	if !strings.Contains(body, `hx-get="/api/ui/ai"`) {
+		t.Errorf("expected Navbar to contain button with hx-get=\"/api/ui/ai\"")
+	}
+	if !strings.Contains(body, `hx-get="/api/ui/collab"`) {
+		t.Errorf("expected Navbar to contain button with hx-get=\"/api/ui/collab\"")
+	}
+	if !strings.Contains(body, `hx-get="/api/ui/profile"`) {
+		t.Errorf("expected Navbar to contain button with hx-get=\"/api/ui/profile\"")
+	}
+}
+
+func TestDynamicSubViewsAndAuthState(t *testing.T) {
+	tempDir := t.TempDir()
+	tmplPattern := filepath.Join("..", "..", "web", "templates", "*.tmpl")
+	publicDir := filepath.Join("..", "..", "public")
+
+	mux, _, _, err := setupServer(tempDir, tmplPattern, publicDir)
+	if err != nil {
+		t.Fatalf("setupServer failed: %v", err)
+	}
+
+	authCookie := &http.Cookie{Name: "voidlab_session", Value: "Rudra:token:1234567890"}
+
+	// 1. AI Guide Sub-View (/api/ui/ai)
+	// Unauthenticated
+	unauthReq := httptest.NewRequest(http.MethodGet, "/api/ui/ai", nil)
+	unauthRec := httptest.NewRecorder()
+	mux.ServeHTTP(unauthRec, unauthReq)
+	if unauthRec.Header().Get("HX-Redirect") != "/" {
+		t.Errorf("expected unauthenticated /api/ui/ai to redirect to /")
+	}
+
+	// Authenticated
+	aiReq := httptest.NewRequest(http.MethodGet, "/api/ui/ai", nil)
+	aiReq.AddCookie(authCookie)
+	aiRec := httptest.NewRecorder()
+	mux.ServeHTTP(aiRec, aiReq)
+	if aiRec.Code != http.StatusOK {
+		t.Errorf("expected 200 OK for /api/ui/ai, got %d", aiRec.Code)
+	}
+	if !strings.Contains(aiRec.Body.String(), "AI Guide & Copilot") {
+		t.Errorf("expected AI Guide fragment to contain 'AI Guide & Copilot', got: %s", aiRec.Body.String())
+	}
+	if !strings.Contains(aiRec.Body.String(), `id="ai-messages-list"`) {
+		t.Errorf("expected AI Guide fragment to contain #ai-messages-list")
+	}
+
+	// 2. Collab Sub-View (/api/ui/collab)
+	// Unauthenticated
+	unauthReq = httptest.NewRequest(http.MethodGet, "/api/ui/collab", nil)
+	unauthRec = httptest.NewRecorder()
+	mux.ServeHTTP(unauthRec, unauthReq)
+	if unauthRec.Header().Get("HX-Redirect") != "/" {
+		t.Errorf("expected unauthenticated /api/ui/collab to redirect to /")
+	}
+
+	// Authenticated
+	collabReq := httptest.NewRequest(http.MethodGet, "/api/ui/collab", nil)
+	collabReq.AddCookie(authCookie)
+	collabRec := httptest.NewRecorder()
+	mux.ServeHTTP(collabRec, collabReq)
+	if collabRec.Code != http.StatusOK {
+		t.Errorf("expected 200 OK for /api/ui/collab, got %d", collabRec.Code)
+	}
+	if !strings.Contains(collabRec.Body.String(), "Multiplayer Collaboration") {
+		t.Errorf("expected Collab fragment to contain 'Multiplayer Collaboration'")
+	}
+
+	// 3. Profile Sub-View (/api/ui/profile)
+	// Unauthenticated
+	unauthReq = httptest.NewRequest(http.MethodGet, "/api/ui/profile", nil)
+	unauthRec = httptest.NewRecorder()
+	mux.ServeHTTP(unauthRec, unauthReq)
+	if unauthRec.Header().Get("HX-Redirect") != "/" {
+		t.Errorf("expected unauthenticated /api/ui/profile to redirect to /")
+	}
+
+	// Authenticated
+	profileReq := httptest.NewRequest(http.MethodGet, "/api/ui/profile", nil)
+	profileReq.AddCookie(authCookie)
+	profileRec := httptest.NewRecorder()
+	mux.ServeHTTP(profileRec, profileReq)
+	if profileRec.Code != http.StatusOK {
+		t.Errorf("expected 200 OK for /api/ui/profile, got %d", profileRec.Code)
+	}
+	if !strings.Contains(profileRec.Body.String(), "Developer Profile") {
+		t.Errorf("expected Profile fragment to contain 'Developer Profile'")
+	}
+
+	// 4. Editor Sub-View (/api/ui/editor)
+	editorReq := httptest.NewRequest(http.MethodGet, "/api/ui/editor", nil)
+	editorReq.AddCookie(authCookie)
+	editorRec := httptest.NewRecorder()
+	mux.ServeHTTP(editorRec, editorReq)
+	if editorRec.Code != http.StatusOK {
+		t.Errorf("expected 200 OK for /api/ui/editor, got %d", editorRec.Code)
+	}
+	if !strings.Contains(editorRec.Body.String(), `id="editor-pane"`) {
+		t.Errorf("expected Editor fragment to contain #editor-pane")
 	}
 }
 
@@ -164,6 +281,7 @@ func BenchmarkVoidLABServerEditor(b *testing.B) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/editor", nil)
+	req.AddCookie(&http.Cookie{Name: "voidlab_session", Value: "Rudra:bench:1234567890"})
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

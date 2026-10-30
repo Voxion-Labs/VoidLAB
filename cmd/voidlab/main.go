@@ -57,6 +57,19 @@ func findDir(dir string) string {
 	return dir
 }
 
+// requireAuth guards handlers by enforcing a valid HTTP-only session cookie.
+// If unauthorized, it redirects to / (attaching the HX-Redirect header for HTMX clients).
+func requireAuth(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if _, ok := premium.GetAuthenticatedUser(r); !ok {
+			w.Header().Set("HX-Redirect", "/")
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
+		}
+		next(w, r)
+	}
+}
+
 // setupServer wires all Go 1.22+ routes and handlers to the mux.
 func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*http.ServeMux, *explorer.Service, *template.Template, error) {
 	tmpl, err := template.ParseGlob(tmplPattern)
@@ -93,7 +106,7 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 	}
 
 	// 2. Full-Page Routes
-	mux.HandleFunc("GET /editor", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /editor", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		data, err := explorerService.BuildWorkspaceData()
 		if err != nil {
 			http.Error(w, fmt.Sprintf("failed to load workspace: %v", err), http.StatusInternalServerError)
@@ -113,7 +126,7 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 			log.Printf("[HTTP] error rendering editor template: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
-	})
+	}))
 
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
@@ -152,16 +165,77 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 	mux.HandleFunc("PATCH /api/explorer/move", explorerHandler.HandleMove)
 	mux.HandleFunc("POST /api/explorer/move", explorerHandler.HandleMove) // fallback
 
-	// 4. Explorer Tree Fragments & Folder Toggles
-	mux.HandleFunc("GET /api/explorer", explorerHandler.HandleGetTree)
-	mux.HandleFunc("GET /api/ui/explorer", explorerHandler.HandleGetTree)
-	mux.HandleFunc("GET /api/ui/explorer/toggle", explorerHandler.HandleToggleFolder)
+	// 4. Dynamic Sub-Views Endpoints (Objective 2 & 3)
+	mux.HandleFunc("GET /api/ui/ai", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+		data, err := explorerService.BuildWorkspaceData()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := tmpl.ExecuteTemplate(w, "ai.tmpl", data); err != nil {
+			_ = tmpl.ExecuteTemplate(w, "ai", data)
+		}
+	}))
 
-	// 5. Context Modals & Menu Endpoints
-	mux.HandleFunc("GET /api/ui/modal/new-file", explorerHandler.HandleModalNewFile)
-	mux.HandleFunc("GET /api/ui/modal/new-folder", explorerHandler.HandleModalNewFolder)
-	mux.HandleFunc("GET /api/ui/modal/rename", explorerHandler.HandleModalRename)
-	mux.HandleFunc("GET /api/ui/file/menu", explorerHandler.HandleFileMenu)
+	mux.HandleFunc("GET /api/ui/collab", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+		data, err := explorerService.BuildWorkspaceData()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if user, ok := premium.GetAuthenticatedUser(r); ok {
+			data.User = user
+			if len(user) > 0 {
+				data.UserInitial = strings.ToUpper(string(user[0]))
+			}
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := tmpl.ExecuteTemplate(w, "collab.tmpl", data); err != nil {
+			_ = tmpl.ExecuteTemplate(w, "collab", data)
+		}
+	}))
+
+	mux.HandleFunc("GET /api/ui/profile", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+		data, err := explorerService.BuildWorkspaceData()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if user, ok := premium.GetAuthenticatedUser(r); ok {
+			data.User = user
+			if len(user) > 0 {
+				data.UserInitial = strings.ToUpper(string(user[0]))
+			}
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := tmpl.ExecuteTemplate(w, "profile.tmpl", data); err != nil {
+			_ = tmpl.ExecuteTemplate(w, "profile", data)
+		}
+	}))
+
+	mux.HandleFunc("GET /api/ui/editor", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+		data, err := explorerService.BuildWorkspaceData()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_ = tmpl.ExecuteTemplate(w, "editor", data)
+	}))
+
+	// 5. Explorer Tree Fragments & Folder Toggles (Auth Protected - Objective 3)
+	mux.HandleFunc("GET /api/explorer", requireAuth(explorerHandler.HandleGetTree))
+	mux.HandleFunc("GET /api/ui/explorer", requireAuth(explorerHandler.HandleGetTree))
+	mux.HandleFunc("GET /api/ui/explorer/toggle", requireAuth(explorerHandler.HandleToggleFolder))
+
+	// 6. Context Modals & Menu Endpoints (Auth Protected - Objective 3)
+	mux.HandleFunc("GET /api/ui/modal/new-file", requireAuth(explorerHandler.HandleModalNewFile))
+	mux.HandleFunc("GET /api/ui/modal/new-folder", requireAuth(explorerHandler.HandleModalNewFolder))
+	mux.HandleFunc("GET /api/ui/modal/rename", requireAuth(explorerHandler.HandleModalRename))
+	mux.HandleFunc("GET /api/ui/file/menu", requireAuth(explorerHandler.HandleFileMenu))
+	mux.HandleFunc("GET /api/ui/modal/profile", requireAuth(premiumHandler.HandleProfileModal))
+	mux.HandleFunc("GET /api/ui/modal/settings", requireAuth(premiumHandler.HandleSettingsModal))
 
 	// 6. Buffer and File Workspace Actions
 	mux.HandleFunc("GET /api/files/open", explorerHandler.HandleOpenFile)
@@ -188,14 +262,12 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 	mux.HandleFunc("POST /api/auth/login", premiumHandler.HandleLogin)
 	mux.HandleFunc("POST /api/auth/logout", premiumHandler.HandleLogout)
 	mux.HandleFunc("GET /api/auth/status", premiumHandler.HandleAuthStatus)
-	mux.HandleFunc("GET /api/ui/modal/profile", premiumHandler.HandleProfileModal)
-	mux.HandleFunc("GET /api/ui/modal/settings", premiumHandler.HandleSettingsModal)
 
 	// Navigation Panel Page Views (Full-page views with HTMX integration)
-	mux.HandleFunc("GET /editor/collaboration", premiumHandler.HandleCollabPage(tmpl, explorerService))
-	mux.HandleFunc("GET /editor/ai", premiumHandler.HandleAIPage(tmpl, explorerService))
-	mux.HandleFunc("GET /editor/profile", premiumHandler.HandleProfilePage(tmpl, explorerService))
-	mux.HandleFunc("GET /editor/manual", premiumHandler.HandleManualPage(tmpl, explorerService))
+	mux.HandleFunc("GET /editor/collaboration", requireAuth(premiumHandler.HandleCollabPage(tmpl, explorerService)))
+	mux.HandleFunc("GET /editor/ai", requireAuth(premiumHandler.HandleAIPage(tmpl, explorerService)))
+	mux.HandleFunc("GET /editor/profile", requireAuth(premiumHandler.HandleProfilePage(tmpl, explorerService)))
+	mux.HandleFunc("GET /editor/manual", requireAuth(premiumHandler.HandleManualPage(tmpl, explorerService)))
 
 	return mux, explorerService, tmpl, nil
 }

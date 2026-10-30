@@ -1,0 +1,157 @@
+{{define "ai"}}
+<div
+  id="ai-guide-view"
+  class="flex-1 flex flex-col h-full overflow-hidden select-none font-sans transition-colors"
+  style="background: var(--background-main); color: var(--text);"
+>
+  <!-- ── Top Header Toolbar ── -->
+  <div
+    class="h-9 px-3 flex items-center justify-between shrink-0 select-none font-sans text-xs border-b transition-colors"
+    style="background: var(--surface-soft); border-color: var(--border);"
+  >
+    <div class="flex items-center gap-2">
+      <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+      <span class="font-bold tracking-tight text-xs" style="color: var(--text-strong);">AI Guide & Copilot</span>
+      <span class="text-[10px] px-1.5 py-0.5 rounded font-mono" style="background: var(--control-background); border: 1px solid var(--border); color: var(--muted);">
+        VoidLAB 2.0 Local
+      </span>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex items-center gap-2">
+      <button
+        onclick="var el = document.getElementById('ai-messages-list'); if(el) el.innerHTML = '';"
+        class="px-2 py-0.5 rounded text-xs transition-colors hover:bg-[var(--control-hover)] cursor-pointer"
+        style="color: var(--muted);"
+        title="Clear chat history"
+        type="button"
+      >
+        Clear
+      </button>
+
+      <!-- Back to Editor Button -->
+      <button
+        hx-get="/api/ui/editor"
+        hx-target="#main-editor-pane"
+        hx-swap="innerHTML"
+        class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-colors hover:bg-[var(--control-hover)] border border-[var(--border)] cursor-pointer"
+        style="color: var(--text);"
+        title="Return to code editor"
+        type="button"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="16 18 22 12 16 6"></polyline>
+          <polyline points="8 6 2 12 8 18"></polyline>
+        </svg>
+        <span>Editor</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Chat Conversation Stream ── -->
+  <div
+    id="ai-messages-list"
+    class="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin text-xs font-sans"
+  >
+    <!-- Default Welcome Message from AI Assistant -->
+    <div class="flex items-start gap-2.5">
+      <div class="w-6 h-6 rounded-md flex items-center justify-center font-bold text-[10px] bg-[var(--accent)] text-white shadow-sm shrink-0 mt-0.5">
+        AI
+      </div>
+      <div
+        class="flex-1 max-w-[92%] rounded-xl rounded-tl-none p-3.5 text-xs font-sans transition-colors border"
+        style="background: var(--surface-soft); border-color: var(--border-strong); color: var(--text);"
+      >
+        <div class="flex items-center justify-between pb-1.5 mb-1.5 border-b border-[var(--border)]">
+          <span class="font-semibold text-[11px] text-[var(--text-strong)] flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            Welcome to VoidLAB AI Assistant
+          </span>
+          <span class="text-[9px] font-mono text-[var(--muted)]">Ready</span>
+        </div>
+        <div class="text-[11px] leading-relaxed text-[var(--text)]">
+          Hello! I am your local-first architecture copilot. I can assist you with:
+          <ul class="list-disc pl-4 mt-2 space-y-1">
+            <li><strong>Interactive Stdin & Keystroke Streaming:</strong> Learn how terminal input maps to ephemeral Docker containers.</li>
+            <li><strong>Compilation & Sandboxing:</strong> Understand the 16-language execution pipeline and security resource limits.</li>
+            <li><strong>WebAssembly Client Engine:</strong> Discover zero-latency syntax validation and on-device formatting.</li>
+            <li><strong>Multiplayer Collab:</strong> Share real-time pairing rooms with zero cloud reliance.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Suggested Prompts Strip ── -->
+  <div class="px-4 py-2 border-t border-[var(--border)] bg-[var(--panel-background)]">
+    <div class="text-[10px] font-semibold uppercase tracking-wider mb-1.5 text-[var(--muted)]">Suggested Topics:</div>
+    <div class="flex flex-wrap gap-1.5">
+      <button
+        hx-post="/api/ai/prompt"
+        hx-vals='{"prompt": "How do I run input-output programs correctly?"}'
+        hx-target="#ai-messages-list"
+        hx-swap="beforeend"
+        class="px-2.5 py-1 rounded-full text-[10px] bg-[var(--surface-soft)] hover:bg-[var(--control-hover)] text-[var(--text)] border border-[var(--border)] transition-colors cursor-pointer text-left"
+        type="button"
+      >
+        💬 Handling Stdin & Input
+      </button>
+      <button
+        hx-post="/api/ai/prompt"
+        hx-vals='{"prompt": "Explain Docker sandboxing and security limits"}'
+        hx-target="#ai-messages-list"
+        hx-swap="beforeend"
+        class="px-2.5 py-1 rounded-full text-[10px] bg-[var(--surface-soft)] hover:bg-[var(--control-hover)] text-[var(--text)] border border-[var(--border)] transition-colors cursor-pointer text-left"
+        type="button"
+      >
+        🔒 Container Security Limits
+      </button>
+      <button
+        hx-post="/api/ai/prompt"
+        hx-vals='{"prompt": "How does WebAssembly client formatting work?"}'
+        hx-target="#ai-messages-list"
+        hx-swap="beforeend"
+        class="px-2.5 py-1 rounded-full text-[10px] bg-[var(--surface-soft)] hover:bg-[var(--control-hover)] text-[var(--text)] border border-[var(--border)] transition-colors cursor-pointer text-left"
+        type="button"
+      >
+        ⚡ WASM Validation & Formatting
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Input Prompt Bar ── -->
+  <form
+    hx-post="/api/ai/prompt"
+    hx-target="#ai-messages-list"
+    hx-swap="beforeend"
+    class="p-3 border-t border-[var(--border)] bg-[var(--surface-soft)] flex items-center gap-2"
+    onsubmit="setTimeout(function(){ var list = document.getElementById('ai-messages-list'); if(list) list.scrollTop = list.scrollHeight; }, 100);"
+  >
+    <input
+      type="text"
+      name="prompt"
+      required
+      autocomplete="off"
+      placeholder="Ask about compiler errors, Docker limits, WASM, or code architecture..."
+      class="flex-1 px-3 py-2 text-xs rounded-lg border outline-none transition-colors"
+      style="background: var(--input-background); border-color: var(--border); color: var(--text);"
+    />
+    <input type="hidden" name="lang" value="{{if .ActiveFile}}{{.ActiveFile.Language}}{{else}}python{{end}}">
+    <button
+      type="submit"
+      class="px-4 py-2 rounded-lg text-xs font-semibold text-white shadow-sm transition-all hover:shadow cursor-pointer flex items-center gap-1.5"
+      style="background: var(--action-background);"
+    >
+      <span>Ask</span>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"></line>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+      </svg>
+    </button>
+  </form>
+</div>
+{{end}}
+
+{{define "ai.tmpl"}}
+  {{template "ai" .}}
+{{end}}

@@ -17,8 +17,8 @@
             class="h-full px-3 flex items-center gap-2 text-xs cursor-pointer transition-colors duration-100 {{if .IsActive}}font-semibold{{else}}opacity-75 hover:opacity-100 hover:bg-[var(--control-hover)]{{end}}"
             style="background: {{if .IsActive}}var(--panel-background){{else}}transparent{{end}}; border-right: 1px solid var(--border); border-top: {{if .IsActive}}2px solid var(--accent){{else}}2px solid transparent{{end}}; color: {{if .IsActive}}var(--text-strong){{else}}var(--muted){{end}};"
             hx-get="/api/files/open?path={{.Path}}"
-            hx-target="#editor-pane"
-            hx-swap="outerHTML"
+            hx-target="#main-editor-pane"
+            hx-swap="innerHTML"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: {{if .IsActive}}var(--accent){{else}}var(--muted){{end}};">
               <polyline points="16 18 22 12 16 6"></polyline>
@@ -28,8 +28,8 @@
             <button
               class="rounded p-0.5 opacity-50 hover:opacity-100 hover:bg-[var(--control-hover)] transition-all ml-0.5 cursor-pointer"
               hx-delete="/api/files/close?path={{.Path}}"
-              hx-target="#editor-pane"
-              hx-swap="outerHTML"
+              hx-target="#main-editor-pane"
+              hx-swap="innerHTML"
               title="Close {{.Name}}"
               type="button"
               onclick="event.stopPropagation();"
@@ -206,12 +206,12 @@ if __name__ == "__main__":
   style="background: var(--background-main); color: var(--text);"
 >
   <!-- ========================================================================= -->
-  <!-- 1. TOP NAVBAR (with Logout button & quick actions)                         -->
+  <!-- 1. TOP NAVBAR (with Logout button, Sub-views & quick actions)              -->
   <!-- ========================================================================= -->
   {{template "topbar" .}}
 
   <!-- ========================================================================= -->
-  <!-- 2. MAIN WORKSPACE (3-Column Layout: Explorer, Editor, Terminal)            -->
+  <!-- 2. MAIN WORKSPACE (3-Column Layout: Explorer, Main Editor Pane, Terminal)  -->
   <!-- ========================================================================= -->
   <div
     id="editor-workspace"
@@ -233,8 +233,14 @@ if __name__ == "__main__":
       ></div>
     </div>
 
-    <!-- Middle Column: Main Code Editor (editor.tmpl) -->
-    {{template "editor" .}}
+    <!-- Middle Column: Main Code Editor Host (Target for AI, Collab, Profile, Editor) -->
+    <div
+      id="main-editor-pane"
+      class="flex-1 min-w-[320px] flex flex-col h-full overflow-hidden relative"
+      style="background: var(--background-main);"
+    >
+      {{template "editor" .}}
+    </div>
 
     <!-- Divider 2: Right Splitter (between Editor & Terminal) -->
     <div

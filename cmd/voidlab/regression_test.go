@@ -26,6 +26,7 @@ func TestRegression(t *testing.T) {
 
 	// 1. Contract Test: GET /editor
 	req := httptest.NewRequest(http.MethodGet, "/editor", nil)
+	req.AddCookie(&http.Cookie{Name: "voidlab_session", Value: "Rudra:regression:1234567890"})
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
