@@ -239,7 +239,19 @@ if __name__ == "__main__":
       class="flex-1 min-w-[320px] flex flex-col h-full overflow-hidden relative"
       style="background: var(--background-main);"
     >
-      {{template "editor" .}}
+      {{if eq .SubView "ai"}}
+        {{template "ai" .}}
+      {{else if eq .SubView "collab"}}
+        {{template "collab" .}}
+      {{else if eq .SubView "profile"}}
+        {{template "profile" .}}
+      {{else if eq .SubView "manual"}}
+        {{template "manual" .}}
+      {{else if eq .SubView "github"}}
+        {{template "github" .}}
+      {{else}}
+        {{template "editor" .}}
+      {{end}}
     </div>
 
     <!-- Divider 2: Right Splitter (between Editor & Terminal) -->

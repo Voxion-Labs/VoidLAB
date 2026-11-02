@@ -1,0 +1,8 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- V left leg -->
+  <path d="M18 10 L54 110 L64 90 L36 10 Z" fill="currentColor"/>
+  <!-- V right leg -->
+  <path d="M110 10 L74 110 L64 90 L92 10 Z" fill="currentColor"/>
+  <!-- diagonal slash cutting through the V -->
+  <path d="M80 8 L44 122" stroke="currentColor" stroke-width="7" stroke-linecap="round"/>
+</svg>

@@ -103,10 +103,18 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 	if _, err := os.Stat(publicDir); err == nil {
 		fileServer := http.StripPrefix("/public/", http.FileServer(http.Dir(publicDir)))
 		mux.Handle("GET /public/", fileServer)
+		mux.HandleFunc("GET /favicon.svg", func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, filepath.Join(publicDir, "favicon.svg"))
+		})
+		mux.HandleFunc("GET /favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, filepath.Join(publicDir, "favicon.svg"))
+		})
 
-		showcaseDir := filepath.Join(publicDir, "showcase")
-		if _, err := os.Stat(showcaseDir); err == nil {
-			mux.Handle("GET /showcase/", http.StripPrefix("/showcase/", http.FileServer(http.Dir(showcaseDir))))
+		for _, sub := range []string{"showcase", "manual", "avatars", "assets", "wasm"} {
+			dir := filepath.Join(publicDir, sub)
+			if _, err := os.Stat(dir); err == nil {
+				mux.Handle("GET /"+sub+"/", http.StripPrefix("/"+sub+"/", http.FileServer(http.Dir(dir))))
+			}
 		}
 	}
 
@@ -332,6 +340,8 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		data.IsEditor = true
+		data.SubView = "github"
 		data.Title = "GitHub Sync & Version Control - VoidLAB"
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_ = tmpl.ExecuteTemplate(w, "base.tmpl", data)

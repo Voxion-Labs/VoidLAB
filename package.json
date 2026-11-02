@@ -1,40 +1,23 @@
 {
   "name": "voidlab",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
-  "packageManager": "npm@10.9.0",
+  "description": "High-Performance Cloud Code Editor & Ephemeral Execution Engine (Go + HTMX + TailwindCSS + WASM)",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint .",
-    "format": "prettier --write \"**/*.{ts,tsx,md,js}\""
+    "build": "make build wasm",
+    "test": "make test",
+    "bench": "make bench",
+    "regression": "make regression"
   },
-  "dependencies": {
-    "@monaco-editor/react": "^4.6.0",
-    "clsx": "^2.1.0",
-    "framer-motion": "^11.0.8",
-    "lucide-react": "^0.359.0",
-    "next": "16.2.4",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "tailwind-merge": "^2.2.2"
-  },
-  "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
-    "autoprefixer": "^10.0.1",
-    "eslint": "^9.0.0",
-    "eslint-config-next": "16.2.4",
-    "postcss": "^8",
-    "prettier": "^3.0.0",
-    "tailwindcss": "^3.3.0",
-    "typescript": "^5"
-  },
-  "overrides": {
-    "monaco-editor": {
-      "dompurify": "^3.3.4"
-    }
-  }
+  "keywords": [
+    "cloud-ide",
+    "online-compiler",
+    "golang",
+    "htmx",
+    "webassembly",
+    "docker",
+    "wasm"
+  ],
+  "author": "Voxion Labs",
+  "license": "Proprietary"
 }

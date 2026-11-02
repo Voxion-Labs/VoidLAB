@@ -58,6 +58,82 @@
         </div>
       </section>
 
+      <!-- Figure A: Workspace Blueprint -->
+      <section class="space-y-4" id="workspace-map">
+        <div>
+          <div class="text-xs uppercase tracking-widest accent-text font-semibold">Figure A</div>
+          <h2 class="text-xl font-bold text-[var(--text-strong)] mt-1">Workspace Architecture Map</h2>
+        </div>
+        <div class="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_320px]">
+          <div class="overflow-hidden rounded-xl border p-2" style="border-color: var(--border); background: var(--surface-soft);">
+            <img
+              src="/manual/workspace-blueprint.png"
+              alt="Technical blueprint of the VoidLAB workspace showing the editor, unified console, and tool hub."
+              class="h-auto w-full rounded-lg object-contain shadow-sm"
+              loading="lazy"
+            />
+          </div>
+          <div class="space-y-3">
+            <div class="rounded-lg p-4 border" style="border-color: var(--border); background: var(--control-background);">
+              <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--text-strong)]">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"></path><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"></path><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"></path></svg>
+                Core Zones
+              </div>
+              <div class="mt-2.5 space-y-2 text-xs text-[var(--muted)] leading-relaxed">
+                <p><strong class="text-[var(--text-strong)]">Editor:</strong> Multi-file tabs, syntax highlighting, and reactive buffers.</p>
+                <p><strong class="text-[var(--text-strong)]">Unified Console:</strong> Output logs, xterm.js live terminal, and preview ports.</p>
+                <p><strong class="text-[var(--text-strong)]">Tool Hub:</strong> Manual, GitHub sync, Collaboration, AI Guide, and Profile.</p>
+              </div>
+            </div>
+            <div class="rounded-lg p-4 border" style="border-color: var(--border); background: var(--control-background);">
+              <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--text-strong)]">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="3" rx="2"></rect><line x1="8" x2="16" y1="21" y2="21"></line><line x1="12" x2="12" y1="17" y2="21"></line></svg>
+                Workspace Behavior
+              </div>
+              <div class="mt-2.5 space-y-2 text-xs text-[var(--muted)] leading-relaxed">
+                <p>Files are synchronized in a low-latency Virtual File System (VFS).</p>
+                <p>Folders, tabs, and terminal state persist seamlessly across sessions.</p>
+                <p>The active file automatically drives runtime selection and compilation targets.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Figure B: Execution Flow -->
+      <section class="space-y-4" id="execution-flow">
+        <div>
+          <div class="text-xs uppercase tracking-widest accent-text font-semibold">Figure B</div>
+          <h2 class="text-xl font-bold text-[var(--text-strong)] mt-1">Interactive Execution Flow</h2>
+        </div>
+        <div class="overflow-hidden rounded-xl border p-2" style="border-color: var(--border); background: var(--surface-soft);">
+          <img
+            src="/manual/execution-flow.png"
+            alt="Technical execution diagram showing Run, inline stdin capture, Docker sandbox execution, and structured results."
+            class="h-auto w-full rounded-lg object-contain shadow-sm"
+            loading="lazy"
+          />
+        </div>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="rounded-lg p-3.5 border" style="border-color: var(--border); background: var(--control-background);">
+            <div class="text-xs font-bold text-[var(--text-strong)]">1. Run or Preview</div>
+            <div class="text-[11px] text-[var(--muted)] mt-1.5 leading-relaxed">Compiles & runs inside Docker sandbox; HTML/CSS/JS open directly in live preview canvas.</div>
+          </div>
+          <div class="rounded-lg p-3.5 border" style="border-color: var(--border); background: var(--control-background);">
+            <div class="text-xs font-bold text-[var(--text-strong)]">2. Inline Stdin Stream</div>
+            <div class="text-[11px] text-[var(--muted)] mt-1.5 leading-relaxed">Real-time stdin piping via WebSockets directly into the container process.</div>
+          </div>
+          <div class="rounded-lg p-3.5 border" style="border-color: var(--border); background: var(--control-background);">
+            <div class="text-xs font-bold text-[var(--text-strong)]">3. Ephemeral Isolation</div>
+            <div class="text-[11px] text-[var(--muted)] mt-1.5 leading-relaxed">Runs in strict Alpine/slim containers with 256MB RAM and 0.5 CPU cgroup limits.</div>
+          </div>
+          <div class="rounded-lg p-3.5 border" style="border-color: var(--border); background: var(--control-background);">
+            <div class="text-xs font-bold text-[var(--text-strong)]">4. Structured Output</div>
+            <div class="text-[11px] text-[var(--muted)] mt-1.5 leading-relaxed">Captured stdout, stderr, execution duration, and exit status stream to console.</div>
+          </div>
+        </div>
+      </section>
+
       <!-- Workspace Command Sheet -->
       <section class="space-y-4">
         <div>

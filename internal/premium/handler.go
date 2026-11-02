@@ -279,6 +279,8 @@ func (h *Handler) HandleCollabPage(tmpl *template.Template, exp *explorer.Servic
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		data.IsEditor = true
+		data.SubView = "collab"
 		data.Title = "Multiplayer Collaboration - VoidLAB"
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_ = tmpl.ExecuteTemplate(w, "base.tmpl", data)
@@ -293,6 +295,8 @@ func (h *Handler) HandleAIPage(tmpl *template.Template, exp *explorer.Service) h
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		data.IsEditor = true
+		data.SubView = "ai"
 		data.Title = "Local AI Guide - VoidLAB"
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_ = tmpl.ExecuteTemplate(w, "base.tmpl", data)
@@ -311,6 +315,8 @@ func (h *Handler) HandleProfilePage(tmpl *template.Template, exp *explorer.Servi
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		data.IsEditor = true
+		data.SubView = "profile"
 		data.Title = "Developer Profile - VoidLAB"
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_ = tmpl.ExecuteTemplate(w, "base.tmpl", data)
@@ -325,6 +331,8 @@ func (h *Handler) HandleManualPage(tmpl *template.Template, exp *explorer.Servic
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		data.IsEditor = true
+		data.SubView = "manual"
 		data.Title = "Engineering Manual - VoidLAB"
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_ = tmpl.ExecuteTemplate(w, "base.tmpl", data)

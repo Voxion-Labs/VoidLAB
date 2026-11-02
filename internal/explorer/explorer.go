@@ -59,6 +59,7 @@ type WorkspaceData struct {
 	IsEditor        bool
 	IsLanding       bool
 	User            string
+	SubView         string
 }
 
 // TerminalHistoryItem models command entries in the sandbox shell.

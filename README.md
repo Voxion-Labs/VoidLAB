@@ -18,12 +18,13 @@
 
 VoidLAB is a full-stack cloud coding environment designed to feel like a real premium product, not just a code editor running in the browser. It combines a Monaco-powered workspace, multi-file editing, online code execution, inline stdin handling for interactive programs, GitHub publishing, collaboration-ready tools, a built-in AI guide, and a polished high-end interface.
 
-The project is structured as a standalone Next.js application and utilizes:
+The project is engineered as an ultra-fast, zero-bloat standalone Go engine utilizing:
 
-- a `Next.js` frontend for the complete product interface
-- client-side execution capabilities via WebAssembly (WASM)
-- Docker-based containerization for secure, isolated environments
-- no traditional backend server or database
+- a high-performance `Golang` backend server with streaming HTTP handlers and WebSocket upgrader
+- reactive, zero-JavaScript overhead UI rendered via `HTMX` and `TailwindCSS`
+- client-side syntax validation, formatting, and metrics via `WebAssembly (WASM)` compiled from Go
+- ephemeral containerized sandboxes powered by `Docker` with strict cgroups security limits (256MB RAM, 0.5 CPU)
+- live multi-file Virtual File System (VFS) with path-traversal protection and reactive tab management
 
 ---
 
