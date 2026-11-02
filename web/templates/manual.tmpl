@@ -1,0 +1,140 @@
+{{define "manual"}}
+<div class="h-full flex flex-col font-sans overflow-hidden select-none" style="background: var(--background-main); color: var(--text);">
+  <!-- Sub-View Header -->
+  <div class="h-10 px-4 flex items-center justify-between shrink-0 border-b select-none transition-colors" style="background: var(--surface-soft); border-color: var(--border);">
+    <div class="flex items-center gap-2">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="accent-text"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+      <span class="text-xs font-bold uppercase tracking-wider text-[var(--text-strong)]">Operator Handbook & Engineering Manual</span>
+    </div>
+    <button
+      hx-get="/api/ui/editor"
+      hx-target="#main-editor-pane"
+      hx-swap="innerHTML"
+      class="text-xs px-2.5 py-1 rounded bg-[var(--control-background)] hover:bg-[var(--control-hover)] border border-[var(--border)] text-[var(--text)] transition cursor-pointer flex items-center gap-1.5"
+      type="button"
+    >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      Back to Editor
+    </button>
+  </div>
+
+  <!-- Manual Content -->
+  <div class="flex-1 overflow-y-auto p-5 scrollbar-thin">
+    <div class="max-w-4xl mx-auto space-y-8">
+      <!-- Overview -->
+      <section class="rounded-xl p-6 border shadow-sm" style="border-color: var(--border); background: var(--surface-soft);">
+        <div class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs uppercase tracking-widest accent-text" style="background: var(--accent-soft); border: 1px solid var(--border-strong);">
+          System Overview
+        </div>
+        <h1 class="mt-3 text-3xl font-extrabold tracking-tight text-[var(--text-strong)] display-font">
+          VoidLAB Operator Handbook
+        </h1>
+        <p class="mt-3 text-sm leading-relaxed text-[var(--muted)]">
+          VoidLAB is a modern browser-based coding workspace built around an editor, a multi-file project model, a unified execution console, and focused tool pages for publishing, collaboration, AI guidance, and profile management.
+        </p>
+
+        <div class="grid sm:grid-cols-2 gap-3 mt-5">
+          <div class="rounded-lg p-3.5 border" style="border-color: var(--border); background: var(--control-background);">
+            <div class="text-[11px] uppercase tracking-wider text-[var(--muted)]">Execution Engine</div>
+            <div class="text-sm font-semibold text-[var(--text-strong)] mt-1">Docker Ephemeral Sandboxes + WASM</div>
+          </div>
+          <div class="rounded-lg p-3.5 border" style="border-color: var(--border); background: var(--control-background);">
+            <div class="text-[11px] uppercase tracking-wider text-[var(--muted)]">Workspace Model</div>
+            <div class="text-sm font-semibold text-[var(--text-strong)] mt-1">Multi-file local filesystem with Live VFS</div>
+          </div>
+        </div>
+
+        <div class="mt-5 rounded-lg p-4" style="background: var(--accent-soft); border: 1px solid var(--border-strong);">
+          <div class="text-xs font-bold uppercase tracking-wider accent-text mb-2 flex items-center gap-1.5">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>
+            Fast Start Checklist
+          </div>
+          <div class="space-y-1.5 text-xs text-[var(--text)] leading-relaxed">
+            <p><span class="accent-text font-bold">1.</span> Sign in, land in the editor, and confirm the active file in the workspace header.</p>
+            <p><span class="accent-text font-bold">2.</span> Create files or folders from the explorer, or import an existing set into the local workspace.</p>
+            <p><span class="accent-text font-bold">3.</span> Pick the active language from the top bar, write code, then use Run or Preview.</p>
+            <p><span class="accent-text font-bold">4.</span> Use the unified console to inspect stdout, stderr, compile output, runtime status, and workspace commands.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Workspace Command Sheet -->
+      <section class="space-y-4">
+        <div>
+          <div class="text-xs uppercase tracking-widest accent-text font-semibold">Reference</div>
+          <h2 class="text-xl font-bold text-[var(--text-strong)] mt-1">Workspace Command Reference</h2>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div class="rounded-lg p-3.5 border" style="border-color: var(--border); background: var(--control-background);">
+            <div class="flex items-center gap-2 font-mono text-xs font-bold text-[var(--text-strong)]">
+              <code>help</code>
+            </div>
+            <div class="text-xs text-[var(--muted)] mt-1.5">Shows supported workspace commands available inside the built-in terminal.</div>
+          </div>
+          <div class="rounded-lg p-3.5 border" style="border-color: var(--border); background: var(--control-background);">
+            <div class="flex items-center gap-2 font-mono text-xs font-bold text-[var(--text-strong)]">
+              <code>pwd</code>
+            </div>
+            <div class="text-xs text-[var(--muted)] mt-1.5">Prints the current workspace working directory.</div>
+          </div>
+          <div class="rounded-lg p-3.5 border" style="border-color: var(--border); background: var(--control-background);">
+            <div class="flex items-center gap-2 font-mono text-xs font-bold text-[var(--text-strong)]">
+              <code>ls [path]</code>
+            </div>
+            <div class="text-xs text-[var(--muted)] mt-1.5">Lists files and folders in the current or targeted directory.</div>
+          </div>
+          <div class="rounded-lg p-3.5 border" style="border-color: var(--border); background: var(--control-background);">
+            <div class="flex items-center gap-2 font-mono text-xs font-bold text-[var(--text-strong)]">
+              <code>tree [path]</code>
+            </div>
+            <div class="text-xs text-[var(--muted)] mt-1.5">Renders a folder tree to inspect workspace structure quickly.</div>
+          </div>
+          <div class="rounded-lg p-3.5 border" style="border-color: var(--border); background: var(--control-background);">
+            <div class="flex items-center gap-2 font-mono text-xs font-bold text-[var(--text-strong)]">
+              <code>touch &lt;path&gt;</code>
+            </div>
+            <div class="text-xs text-[var(--muted)] mt-1.5">Creates a new file, infers the language by extension, and opens it.</div>
+          </div>
+          <div class="rounded-lg p-3.5 border" style="border-color: var(--border); background: var(--control-background);">
+            <div class="flex items-center gap-2 font-mono text-xs font-bold text-[var(--text-strong)]">
+              <code>cat &lt;path&gt;</code>
+            </div>
+            <div class="text-xs text-[var(--muted)] mt-1.5">Prints file contents into the Terminal tab.</div>
+          </div>
+          <div class="rounded-lg p-3.5 border" style="border-color: var(--border); background: var(--control-background);">
+            <div class="flex items-center gap-2 font-mono text-xs font-bold text-[var(--text-strong)]">
+              <code>rm &lt;path&gt;</code>
+            </div>
+            <div class="text-xs text-[var(--muted)] mt-1.5">Removes a file or folder path from the workspace.</div>
+          </div>
+          <div class="rounded-lg p-3.5 border" style="border-color: var(--border); background: var(--control-background);">
+            <div class="flex items-center gap-2 font-mono text-xs font-bold text-[var(--text-strong)]">
+              <code>clear</code>
+            </div>
+            <div class="text-xs text-[var(--muted)] mt-1.5">Clears the interactive xterm.js terminal buffer.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Deploy-Ready Habits -->
+      <section class="rounded-xl p-6 border" style="background: rgba(16, 185, 129, 0.06); border-color: rgba(16, 185, 129, 0.25);">
+        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-500">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          Deploy-Ready Checklist
+        </div>
+        <div class="mt-3 space-y-2 text-xs text-[var(--text)] leading-relaxed">
+          <p><strong class="text-emerald-500">1.</strong> Confirm the active file and language before running or exporting.</p>
+          <p><strong class="text-emerald-500">2.</strong> Use Preview for browser-native documents such as HTML, CSS, Markdown, JSON, or XML.</p>
+          <p><strong class="text-emerald-500">3.</strong> If a program needs interactive input, enter stdin directly in the unified terminal box.</p>
+          <p><strong class="text-emerald-500">4.</strong> Review stdout, stderr, compile output, memory, time, and exit metadata in the Output tab.</p>
+          <p><strong class="text-emerald-500">5.</strong> Push clean commits to GitHub using the GitHub panel helper.</p>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{define "manual.tmpl"}}
+{{template "manual" .}}
+{{end}}

@@ -103,6 +103,11 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 	if _, err := os.Stat(publicDir); err == nil {
 		fileServer := http.StripPrefix("/public/", http.FileServer(http.Dir(publicDir)))
 		mux.Handle("GET /public/", fileServer)
+
+		showcaseDir := filepath.Join(publicDir, "showcase")
+		if _, err := os.Stat(showcaseDir); err == nil {
+			mux.Handle("GET /showcase/", http.StripPrefix("/showcase/", http.FileServer(http.Dir(showcaseDir))))
+		}
 	}
 
 	// 2. Full-Page Routes
@@ -166,6 +171,30 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 	mux.HandleFunc("POST /api/explorer/move", explorerHandler.HandleMove) // fallback
 
 	// 4. Dynamic Sub-Views Endpoints (Objective 2 & 3)
+	mux.HandleFunc("GET /api/ui/manual", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+		data, err := explorerService.BuildWorkspaceData()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := tmpl.ExecuteTemplate(w, "manual.tmpl", data); err != nil {
+			_ = tmpl.ExecuteTemplate(w, "manual", data)
+		}
+	}))
+
+	mux.HandleFunc("GET /api/ui/github", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+		data, err := explorerService.BuildWorkspaceData()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := tmpl.ExecuteTemplate(w, "github.tmpl", data); err != nil {
+			_ = tmpl.ExecuteTemplate(w, "github", data)
+		}
+	}))
+
 	mux.HandleFunc("GET /api/ui/ai", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		data, err := explorerService.BuildWorkspaceData()
 		if err != nil {
@@ -232,6 +261,8 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 	// 6. Context Modals & Menu Endpoints (Auth Protected - Objective 3)
 	mux.HandleFunc("GET /api/ui/modal/new-file", requireAuth(explorerHandler.HandleModalNewFile))
 	mux.HandleFunc("GET /api/ui/modal/new-folder", requireAuth(explorerHandler.HandleModalNewFolder))
+	mux.HandleFunc("GET /api/ui/modal/import", requireAuth(explorerHandler.HandleModalImport))
+	mux.HandleFunc("GET /api/ui/modal/import-folder", requireAuth(explorerHandler.HandleModalImportFolder))
 	mux.HandleFunc("GET /api/ui/modal/rename", requireAuth(explorerHandler.HandleModalRename))
 	mux.HandleFunc("GET /api/ui/file/menu", requireAuth(explorerHandler.HandleFileMenu))
 	mux.HandleFunc("GET /api/ui/modal/profile", requireAuth(premiumHandler.HandleProfileModal))
@@ -240,8 +271,35 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 	// 6. Buffer and File Workspace Actions
 	mux.HandleFunc("GET /api/files/open", explorerHandler.HandleOpenFile)
 	mux.HandleFunc("POST /api/files/save", explorerHandler.HandleSaveFile)
+	mux.HandleFunc("POST /api/code/boilerplate", explorerHandler.HandleBoilerplate)
+	mux.HandleFunc("GET /api/files/download", explorerHandler.HandleDownload)
+	mux.HandleFunc("DELETE /api/files/close", explorerHandler.HandleCloseTab)
+	mux.HandleFunc("POST /api/files/close", explorerHandler.HandleCloseTab)
+	mux.HandleFunc("POST /api/files/import", explorerHandler.HandleImport)
 	mux.HandleFunc("GET /preview", explorerHandler.HandlePreview)
 	mux.HandleFunc("GET /api/preview", explorerHandler.HandlePreview)
+
+	// Theme Toggle Endpoint
+	mux.HandleFunc("POST /api/ui/theme", func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie("voidlab_theme")
+		nextTheme := "dark"
+		if err == nil && cookie.Value == "dark" {
+			nextTheme = "light"
+		}
+		http.SetCookie(w, &http.Cookie{
+			Name:     "voidlab_theme",
+			Value:    nextTheme,
+			Path:     "/",
+			MaxAge:   31536000,
+			SameSite: http.SameSiteLaxMode,
+		})
+		referer := r.Header.Get("Referer")
+		if referer == "" {
+			referer = "/editor"
+		}
+		w.Header().Set("HX-Redirect", referer)
+		http.Redirect(w, r, referer, http.StatusSeeOther)
+	})
 
 	// 7. WebSocket Terminal Streaming & Ephemeral Docker Execution
 	mux.HandleFunc("GET /api/ws/terminal", terminalHandler.HandleWebSocket)
@@ -268,6 +326,16 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 	mux.HandleFunc("GET /editor/ai", requireAuth(premiumHandler.HandleAIPage(tmpl, explorerService)))
 	mux.HandleFunc("GET /editor/profile", requireAuth(premiumHandler.HandleProfilePage(tmpl, explorerService)))
 	mux.HandleFunc("GET /editor/manual", requireAuth(premiumHandler.HandleManualPage(tmpl, explorerService)))
+	mux.HandleFunc("GET /editor/github", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+		data, err := explorerService.BuildWorkspaceData()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		data.Title = "GitHub Sync & Version Control - VoidLAB"
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_ = tmpl.ExecuteTemplate(w, "base.tmpl", data)
+	}))
 
 	return mux, explorerService, tmpl, nil
 }

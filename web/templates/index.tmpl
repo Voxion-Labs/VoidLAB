@@ -1,6 +1,6 @@
 {{define "index"}}
 <div class="login-page selection:bg-sky-500 selection:text-white min-h-screen flex flex-col font-sans" style="background: var(--background-main); color: var(--text);">
-  <!-- ── Top Announcement Banner ── -->
+  <!-- ── Top Announcement Banner (Matching Flutter/VoidLAB layout) ── -->
   <aside aria-label="Announcement" class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white text-xs py-2 px-4 text-center font-medium flex items-center justify-center gap-1.5 transition-all">
     <span>VoidLAB 2.0 is here! Client-side runtime and WebAssembly compiler are now active.</span>
     <a href="/editor" class="inline-flex items-center gap-1 underline underline-offset-2 hover:opacity-90 font-semibold ml-1">
@@ -67,32 +67,15 @@
 
       <!-- Theme Switcher -->
       <button
-        hx-post="/api/ui/theme"
-        hx-target="html"
-        hx-swap="outerHTML"
+        onclick="toggleVoidLabTheme()"
         aria-label="Toggle theme"
         class="theme-control inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm theme-text select-none cursor-pointer"
         type="button"
       >
-        {{if eq .Theme "dark"}}
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-400">
-            <circle cx="12" cy="12" r="5"></circle>
-            <line x1="12" y1="1" x2="12" y2="3"></line>
-            <line x1="12" y1="21" x2="12" y2="23"></line>
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-            <line x1="1" y1="12" x2="3" y2="12"></line>
-            <line x1="21" y1="12" x2="23" y2="12"></line>
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-          </svg>
-          <span class="hidden sm:inline theme-muted text-xs">Light</span>
-        {{else}}
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-sky-500">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-          </svg>
-          <span class="hidden sm:inline theme-muted text-xs">Dark</span>
-        {{end}}
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-sky-500">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+        <span class="hidden sm:inline theme-muted text-xs">Theme</span>
       </button>
 
       <a
@@ -104,36 +87,39 @@
     </div>
   </header>
 
-  <!-- ── Main Hero Section ── -->
-  <section class="relative overflow-hidden pt-12 pb-20 sm:pt-16 sm:pb-28 px-6 sm:px-10 lg:px-14 flex-1 flex items-center">
+  <!-- ── 1. Main Hero Section (Faithful to src/app/page.tsx) ── -->
+  <section id="features" class="relative overflow-hidden pt-12 pb-20 sm:pt-16 sm:pb-28 px-6 sm:px-10 lg:px-14">
+    <!-- Subtle Cyan/Sky Angular Graphic Wash -->
     <div
       class="absolute right-0 top-0 w-full lg:w-1/2 h-full pointer-events-none opacity-30 dark:opacity-20 z-0"
       style="background: linear-gradient(135deg, #38bdf8 0%, #0284c7 50%, #0369a1 100%); clip-path: polygon(100% 0, 15% 0, 100% 85%);"
     ></div>
 
-    <div class="max-w-7xl mx-auto grid lg:grid-cols-12 gap-12 lg:gap-8 items-center relative z-10 w-full">
-      <!-- Left Column: Headline Copy -->
+    <div class="max-w-7xl mx-auto grid lg:grid-cols-12 gap-12 lg:gap-8 items-center relative z-10">
+      <!-- Left Column: Headline Copy strictly matching Flutter.dev design -->
       <div class="lg:col-span-7 space-y-6">
         <div class="text-[#0284c7] font-semibold text-base sm:text-lg tracking-normal">
           Development
         </div>
 
+        <!-- Giant Display Headline -->
         <h1 class="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-[var(--text-strong)] leading-[1.08] font-display">
           Reach users on<br />
           every screen
         </h1>
 
+        <!-- Subtitle description -->
         <p class="text-lg sm:text-xl text-[var(--muted)] leading-relaxed max-w-xl font-normal">
           Deploy to multiple devices from a single codebase: mobile, web, desktop, and embedded devices.
         </p>
 
-        <!-- Action Buttons -->
+        <!-- Action Buttons (Flutter Pill Style) -->
         <div class="flex flex-wrap items-center gap-4 pt-2">
           <a
-            href="/editor"
+            href="#showcase"
             class="rounded-full border-2 border-[#0284c7] text-[#0284c7] hover:bg-[#0284c7]/5 px-7 py-3 text-sm font-semibold transition-all inline-flex items-center gap-2"
           >
-            Launch Web IDE
+            See the target platforms
           </a>
           <a
             href="#login-section"
@@ -147,74 +133,470 @@
         <div class="pt-6 flex flex-wrap items-center gap-3 text-xs text-[var(--muted)]">
           <span class="font-semibold text-[var(--text-strong)]">Supported Runtimes:</span>
           <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--surface-soft)] border border-[var(--border)]">
-            <svg class="text-blue-500" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+            <svg class="text-blue-500" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
             Web (HTML/JS/TS)
           </span>
           <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--surface-soft)] border border-[var(--border)]">
-            <svg class="text-emerald-500" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+            <svg class="text-emerald-500" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="4 17 10 11 4 5"></polyline>
+              <line x1="12" y1="19" x2="20" y2="19"></line>
+            </svg>
             Python / C++ / Java
           </span>
           <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--surface-soft)] border border-[var(--border)]">
-            <svg class="text-purple-500" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+            <svg class="text-purple-500" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+              <rect x="9" y="9" width="6" height="6"></rect>
+              <line x1="9" y1="1" x2="9" y2="4"></line>
+              <line x1="15" y1="1" x2="15" y2="4"></line>
+              <line x1="9" y1="20" x2="9" y2="23"></line>
+              <line x1="15" y1="20" x2="15" y2="23"></line>
+              <line x1="20" y1="9" x2="23" y2="9"></line>
+              <line x1="20" y1="14" x2="23" y2="14"></line>
+              <line x1="1" y1="9" x2="4" y2="9"></line>
+              <line x1="1" y1="14" x2="4" y2="14"></line>
+            </svg>
             WebAssembly (WASM)
           </span>
         </div>
       </div>
 
-      <!-- Right Column: Login Card (Objective 1) -->
+      <!-- Right Column: Sleek Login & Create Account Card (1:1 with LoginForm.tsx) -->
       <div id="login-section" class="lg:col-span-5 w-full">
         <div class="relative">
+          <!-- Soft decorative background glow -->
           <div class="absolute -inset-1 rounded-3xl bg-gradient-to-r from-sky-400/20 to-blue-600/20 blur-xl opacity-70 pointer-events-none"></div>
-          <div class="relative rounded-2xl p-6 sm:p-8 shadow-xl border" style="background: var(--panel-background); border-color: var(--border);">
-            <div class="space-y-4">
-              <div>
-                <h2 class="text-xl font-bold font-display" style="color: var(--text-strong);">Sign in to VoidLAB</h2>
-                <p class="text-xs mt-1" style="color: var(--muted);">Choose your authentication method to access your workspace.</p>
+
+          <div class="relative login-card shadow-2xl">
+            <div class="flex items-center justify-between mb-2">
+              <p class="login-card-label m-0">Local workspace</p>
+              <span class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                Private Session
+              </span>
+            </div>
+
+            <!-- Tab Switcher: Sign In vs Create Account -->
+            <div class="flex items-center gap-2 mb-4 p-1 rounded-lg bg-[var(--surface-strong)] border border-[var(--border)] text-xs font-semibold">
+              <button
+                type="button"
+                id="tab-btn-signin"
+                onclick="voidlabSwitchAuthTab('signin')"
+                class="flex-1 py-1.5 px-3 rounded-md transition-all text-center cursor-pointer shadow-sm"
+                style="background: var(--background-main); color: var(--text-strong);"
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                id="tab-btn-register"
+                onclick="voidlabSwitchAuthTab('register')"
+                class="flex-1 py-1.5 px-3 rounded-md transition-all text-center cursor-pointer text-[var(--muted)] hover:text-[var(--text-strong)]"
+              >
+                Create Account
+              </button>
+            </div>
+
+            <h2 id="auth-form-title" class="login-card-title">Sign in to VoidLAB</h2>
+            <p id="auth-form-subtitle" class="login-card-subtitle">
+              Enter your local developer profile credentials to access your workspace.
+            </p>
+
+            <form hx-post="/api/auth/login" hx-target="#login-error" hx-swap="innerHTML" class="space-y-0">
+              <input type="hidden" name="auth_mode" id="auth-mode-input" value="signin">
+
+              <!-- Full Name (Shown in Create Account) -->
+              <div id="field-fullname" class="lf-wrap relative hidden">
+                <span class="lf-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </span>
+                <input
+                  type="text"
+                  name="name"
+                  id="lf-input-name"
+                  placeholder=" "
+                  value="{{if .User}}{{.User}}{{else}}Rudra Jena{{end}}"
+                  class="lf-input"
+                />
+                <label class="lf-label">Full name</label>
               </div>
 
-              <!-- HTMX Authenticated Login Form -->
-              <form hx-post="/api/auth/login" class="space-y-3">
-                <div>
-                  <label class="block text-xs font-medium mb-1" style="color: var(--muted-strong);">Username or Email</label>
-                  <input
-                    type="text"
-                    name="username"
-                    id="login-username"
-                    required
-                    value="Rudra"
-                    placeholder="engineer@voxion.dev"
-                    class="w-full px-3 py-2 text-xs rounded-lg border outline-none transition-colors"
-                    style="background: var(--input-background); border-color: var(--border); color: var(--text);"
-                  />
-                </div>
-                <div>
-                  <label class="block text-xs font-medium mb-1" style="color: var(--muted-strong);">Password</label>
-                  <input
-                    type="password"
-                    name="password"
-                    required
-                    value="••••••••••••"
-                    placeholder="••••••••••••"
-                    class="w-full px-3 py-2 text-xs rounded-lg border outline-none transition-colors"
-                    style="background: var(--input-background); border-color: var(--border); color: var(--text);"
-                  />
-                </div>
-                <div id="login-response"></div>
+              <!-- Username -->
+              <div class="lf-wrap relative">
+                <span class="lf-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"></circle><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"></path></svg>
+                </span>
+                <input
+                  type="text"
+                  name="username"
+                  id="lf-input-username"
+                  placeholder=" "
+                  required
+                  value="{{if .User}}{{.User}}{{else}}Rudra{{end}}"
+                  class="lf-input"
+                />
+                <label class="lf-label">Username</label>
+              </div>
+
+              <!-- Email (Shown in Create Account or optional in Sign In) -->
+              <div id="field-email" class="lf-wrap relative hidden">
+                <span class="lf-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                </span>
+                <input
+                  type="email"
+                  name="email"
+                  id="lf-input-email"
+                  placeholder=" "
+                  value="engineer@voxion.dev"
+                  class="lf-input"
+                />
+                <label class="lf-label">Email address</label>
+              </div>
+
+              <!-- Password with Eye Toggle -->
+              <div class="lf-wrap relative">
+                <span class="lf-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                </span>
+                <input
+                  type="password"
+                  name="password"
+                  id="lf-input-password"
+                  placeholder=" "
+                  required
+                  value="voidlab-secure-pass"
+                  class="lf-input pr-10"
+                />
+                <label class="lf-label">Password</label>
+                <button
+                  type="button"
+                  onclick="voidlabTogglePasswordVisibility()"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-sm z-10 p-1 text-[var(--muted)] hover:text-[var(--text-strong)] cursor-pointer"
+                  title="Toggle password visibility"
+                >
+                  <svg id="eye-icon-show" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <svg id="eye-icon-hide" class="hidden" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Region / Location (Shown in Create Account) -->
+              <div id="field-region" class="lf-wrap relative hidden">
+                <span class="lf-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="7" r="3"></circle></svg>
+                </span>
+                <input
+                  type="text"
+                  name="region"
+                  id="lf-input-region"
+                  placeholder=" "
+                  value="Global / Asia-South"
+                  class="lf-input"
+                />
+                <label class="lf-label">Region / Location</label>
+              </div>
+
+              <!-- Action Bar (Note + Submit) -->
+              <div class="login-action-bar">
+                <p class="login-action-note">
+                  Saved securely in your browser session.
+                </p>
                 <button
                   type="submit"
-                  class="w-full py-2.5 px-4 rounded-lg text-xs font-semibold text-white shadow-sm transition-all hover:shadow cursor-pointer"
-                  style="background: var(--action-background);"
+                  id="auth-submit-btn"
+                  class="login-submit-btn"
                 >
-                  Sign In to IDE
+                  <span id="auth-submit-text">Launch IDE</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
                 </button>
-              </form>
-            </div>
+              </div>
+
+              <!-- Response or Error Container -->
+              <div id="login-error"></div>
+            </form>
           </div>
         </div>
       </div>
     </div>
   </section>
+
+  <!-- ── 2. Multi-Screen Target Platforms Showcase (Exact 1:1 from src/app/page.tsx) ── -->
+  <section id="showcase" class="border-t border-[var(--border)] bg-[var(--surface-soft)] py-20 px-6 sm:px-10">
+    <div class="max-w-6xl mx-auto">
+      <!-- Section Header -->
+      <div class="text-center max-w-2xl mx-auto mb-16">
+        <div class="text-sm font-bold uppercase tracking-widest text-[#0284c7] mb-2">
+          Cross-Platform Ecosystem
+        </div>
+        <h2 class="display-font text-3xl sm:text-4xl font-extrabold text-[var(--text-strong)] tracking-tight">
+          One unified workspace for every screen
+        </h2>
+        <p class="text-[var(--muted)] text-base mt-3 leading-relaxed">
+          From desktop browser compilation to mobile live-previews and collaborative terminals.
+        </p>
+      </div>
+
+      <!-- Device Mockup Collage Presentation -->
+      <div class="grid md:grid-cols-3 gap-8 mb-16">
+        <!-- Desktop Screen -->
+        <div class="border border-[var(--border)] bg-[var(--background-main)] rounded-2xl p-5 shadow-sm space-y-4 hover:shadow-md transition-shadow">
+          <div class="flex items-center justify-between">
+            <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0284c7]">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+              Desktop IDE
+            </span>
+            <span class="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+              Monaco Engine
+            </span>
+          </div>
+          <div class="rounded-xl overflow-hidden border border-[var(--border)] aspect-[16/10] bg-slate-950 flex items-center justify-center">
+            <img 
+              src="/showcase/demo-workspace-home.png" 
+              alt="Desktop IDE" 
+              class="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </div>
+          <h3 class="font-bold text-base text-[var(--text-strong)]">Full-Featured Workspace</h3>
+          <p class="text-xs text-[var(--muted)] leading-relaxed">
+            Multi-tab editing, auto-completion, keyboard shortcuts, and file explorer running in-browser.
+          </p>
+        </div>
+
+        <!-- Terminal / Interactive Screen -->
+        <div class="border border-[var(--border)] bg-[var(--background-main)] rounded-2xl p-5 shadow-sm space-y-4 hover:shadow-md transition-shadow">
+          <div class="flex items-center justify-between">
+            <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+              Interactive Console
+            </span>
+            <span class="text-[11px] font-medium text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full">
+              Stdin Capture
+            </span>
+          </div>
+          <div class="rounded-xl overflow-hidden border border-[var(--border)] aspect-[16/10] bg-slate-950 flex items-center justify-center">
+            <img 
+              src="/showcase/demo-terminal-legacy.png" 
+              alt="Terminal & Execution" 
+              class="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </div>
+          <h3 class="font-bold text-base text-[var(--text-strong)]">Unified Execution Output</h3>
+          <p class="text-xs text-[var(--muted)] leading-relaxed">
+            Live stdin input routing, memory profiling, execution timing, and compiler logs.
+          </p>
+        </div>
+
+        <!-- Mobile / Collaboration Screen -->
+        <div class="border border-[var(--border)] bg-[var(--background-main)] rounded-2xl p-5 shadow-sm space-y-4 hover:shadow-md transition-shadow">
+          <div class="flex items-center justify-between">
+            <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-600 dark:text-purple-400">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+              Mobile & Team
+            </span>
+            <span class="text-[11px] font-medium text-purple-600 dark:text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full">
+              Live Rooms
+            </span>
+          </div>
+          <div class="rounded-xl overflow-hidden border border-[var(--border)] aspect-[16/10] bg-slate-950 flex items-center justify-center">
+            <img 
+              src="/showcase/demo-collaboration.png" 
+              alt="Collaboration & Mobile" 
+              class="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </div>
+          <h3 class="font-bold text-base text-[var(--text-strong)]">Pair Programming & Sync</h3>
+          <p class="text-xs text-[var(--muted)] leading-relaxed">
+            Generate instant room codes, invite teammates, and pair program in real time from any device.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 3. Feature Highlights (Exact 1:1 from src/app/page.tsx) ── -->
+  <section id="capabilities" class="py-20 px-6 sm:px-10 border-t border-[var(--border)] bg-[var(--background-main)]">
+    <div class="max-w-6xl mx-auto">
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="space-y-3">
+          <div class="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center text-[#0284c7]">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="2" y1="20" x2="22" y2="20"></line></svg>
+          </div>
+          <h3 class="text-lg font-bold text-[var(--text-strong)]">Fast, client-side runtime</h3>
+          <p class="text-sm text-[var(--muted)] leading-relaxed">
+            Code execution executes via WebAssembly with sub-millisecond response. Zero cloud cold starts.
+          </p>
+          <div class="pt-1 flex items-center gap-1.5 text-xs font-semibold text-[#0284c7]">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            Browser sandboxed
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <div class="h-10 w-10 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-600 dark:text-purple-400">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path><circle cx="12" cy="13" r="2"></circle><path d="M12 15v5"></path></svg>
+          </div>
+          <h3 class="text-lg font-bold text-[var(--text-strong)]">Seamless GitHub publishing</h3>
+          <p class="text-sm text-[var(--muted)] leading-relaxed">
+            Connect your account and publish directly to GitHub repositories without touching git CLI credentials.
+          </p>
+          <div class="pt-1 flex items-center gap-1.5 text-xs font-semibold text-purple-600 dark:text-purple-400">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            Direct sync
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <div class="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>
+          </div>
+          <h3 class="text-lg font-bold text-[var(--text-strong)]">AI Guide & Smart Walkthroughs</h3>
+          <p class="text-sm text-[var(--muted)] leading-relaxed">
+            Get architecture guidance, debugging direction, and input-output routing support directly in your workflow.
+          </p>
+          <div class="pt-1 flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            Built-in intelligence
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 4. Sleek Enterprise Footer with Copyright Mark ── -->
+  <footer class="border-t border-[var(--border)] bg-[var(--surface-soft)] py-12 px-6 sm:px-10">
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+      <div class="flex items-center gap-3">
+        <svg
+          width="26"
+          height="26"
+          viewBox="0 0 128 128"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          class="brand-logo-fill flex-shrink-0"
+          aria-hidden="true"
+        >
+          <path d="M18 10 L54 110 L64 90 L36 10 Z" fill="currentColor" />
+          <path d="M110 10 L74 110 L64 90 L92 10 Z" fill="currentColor" />
+          <path d="M80 8 L44 122" stroke="currentColor" stroke-width="7" stroke-linecap="round" />
+        </svg>
+        <span class="font-display font-bold text-[var(--text-strong)] tracking-tight text-lg">VoidLAB</span>
+        <span class="text-xs text-[var(--muted)]">· Build apps for any screen</span>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-6 text-xs font-medium text-[var(--muted)]">
+        <a href="/editor" class="hover:text-[var(--text-strong)] transition-colors">
+          Development
+        </a>
+        <a href="#capabilities" class="hover:text-[var(--text-strong)] transition-colors">
+          Ecosystem
+        </a>
+        <a href="/editor/manual" class="hover:text-[var(--text-strong)] transition-colors">
+          Documentation
+        </a>
+        <a href="/editor/profile" class="hover:text-[var(--text-strong)] transition-colors">
+          Account Profile
+        </a>
+        <a 
+          href="https://github.com/Voxion-Labs/VoidLAB" 
+          target="_blank" 
+          rel="noreferrer"
+          class="hover:text-[var(--text-strong)] transition-colors"
+        >
+          GitHub
+        </a>
+      </div>
+
+      <div class="text-xs text-[var(--muted)] text-center md:text-right font-medium">
+        © 2026 Voxion Labs. All rights reserved.
+      </div>
+    </div>
+  </footer>
 </div>
+
+<!-- Dynamic Client-Side Logic for Sign In / Create Account Tabs and Password Toggle -->
+<script>
+  function voidlabSwitchAuthTab(tab) {
+    var isRegister = tab === 'register';
+    var signinBtn = document.getElementById('tab-btn-signin');
+    var regBtn = document.getElementById('tab-btn-register');
+    var modeInput = document.getElementById('auth-mode-input');
+    var title = document.getElementById('auth-form-title');
+    var subtitle = document.getElementById('auth-form-subtitle');
+    var submitText = document.getElementById('auth-submit-text');
+
+    var fieldName = document.getElementById('field-fullname');
+    var fieldEmail = document.getElementById('field-email');
+    var fieldRegion = document.getElementById('field-region');
+
+    if (isRegister) {
+      signinBtn.style.background = 'transparent';
+      signinBtn.style.color = 'var(--muted)';
+      signinBtn.classList.remove('shadow-sm');
+
+      regBtn.style.background = 'var(--background-main)';
+      regBtn.style.color = 'var(--text-strong)';
+      regBtn.classList.add('shadow-sm');
+
+      if (modeInput) modeInput.value = 'register';
+      if (title) title.innerText = 'Create VoidLAB Account';
+      if (subtitle) subtitle.innerText = 'Set up your developer profile to initialize local storage & workspace.';
+      if (submitText) submitText.innerText = 'Create & Launch';
+
+      if (fieldName) fieldName.classList.remove('hidden');
+      if (fieldEmail) fieldEmail.classList.remove('hidden');
+      if (fieldRegion) fieldRegion.classList.remove('hidden');
+    } else {
+      regBtn.style.background = 'transparent';
+      regBtn.style.color = 'var(--muted)';
+      regBtn.classList.remove('shadow-sm');
+
+      signinBtn.style.background = 'var(--background-main)';
+      signinBtn.style.color = 'var(--text-strong)';
+      signinBtn.classList.add('shadow-sm');
+
+      if (modeInput) modeInput.value = 'signin';
+      if (title) title.innerText = 'Sign in to VoidLAB';
+      if (subtitle) subtitle.innerText = 'Enter your local developer profile credentials to access your workspace.';
+      if (submitText) submitText.innerText = 'Launch IDE';
+
+      if (fieldName) fieldName.classList.add('hidden');
+      if (fieldEmail) fieldEmail.classList.add('hidden');
+      if (fieldRegion) fieldRegion.classList.add('hidden');
+    }
+  }
+
+  function voidlabTogglePasswordVisibility() {
+    var passInput = document.getElementById('lf-input-password');
+    var showIcon = document.getElementById('eye-icon-show');
+    var hideIcon = document.getElementById('eye-icon-hide');
+    if (!passInput) return;
+
+    if (passInput.type === 'password') {
+      passInput.type = 'text';
+      if (showIcon) showIcon.classList.add('hidden');
+      if (hideIcon) hideIcon.classList.remove('hidden');
+    } else {
+      passInput.type = 'password';
+      if (showIcon) showIcon.classList.remove('hidden');
+      if (hideIcon) hideIcon.classList.add('hidden');
+    }
+  }
+</script>
 {{end}}
 
 {{define "index.tmpl"}}

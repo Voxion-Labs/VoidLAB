@@ -1,0 +1,193 @@
+{{define "github"}}
+<div class="h-full flex flex-col font-sans overflow-hidden select-none" style="background: var(--background-main); color: var(--text);">
+  <!-- Sub-View Header -->
+  <div class="h-10 px-4 flex items-center justify-between shrink-0 border-b select-none transition-colors" style="background: var(--surface-soft); border-color: var(--border);">
+    <div class="flex items-center gap-2">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="accent-text"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+      <span class="text-xs font-bold uppercase tracking-wider text-[var(--text-strong)]">GitHub Sync & Version Control Reference</span>
+    </div>
+    <button
+      hx-get="/api/ui/editor"
+      hx-target="#main-editor-pane"
+      hx-swap="innerHTML"
+      class="text-xs px-2.5 py-1 rounded bg-[var(--control-background)] hover:bg-[var(--control-hover)] border border-[var(--border)] text-[var(--text)] transition cursor-pointer flex items-center gap-1.5"
+      type="button"
+    >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      Back to Editor
+    </button>
+  </div>
+
+  <!-- Content -->
+  <div class="flex-1 overflow-y-auto p-5 scrollbar-thin">
+    <div class="max-w-4xl mx-auto space-y-6">
+      <!-- Quick Publish Box -->
+      <section class="rounded-xl p-5 border shadow-sm" style="border-color: var(--border); background: var(--surface-soft);">
+        <div class="flex items-center justify-between mb-3">
+          <div class="text-xs font-bold uppercase tracking-wider accent-text flex items-center gap-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg>
+            Quick Publish to Remote
+          </div>
+          <span class="text-[10px] font-mono text-[var(--muted)]">Local Helper</span>
+        </div>
+
+        <div class="grid sm:grid-cols-2 gap-3 mb-4">
+          <div>
+            <label class="block text-[11px] font-semibold text-[var(--muted)] mb-1">Remote Repository URL</label>
+            <input
+              type="text"
+              id="git-repo-url"
+              placeholder="https://github.com/Voxion-Labs/VoidLAB.git"
+              value="https://github.com/Voxion-Labs/VoidLAB.git"
+              oninput="voidlabUpdateGitCommands()"
+              class="w-full text-xs font-mono px-3 py-2 rounded-lg border outline-none"
+              style="background: var(--input-background); border-color: var(--border); color: var(--text);"
+            />
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-[var(--muted)] mb-1">Target Branch</label>
+            <input
+              type="text"
+              id="git-target-branch"
+              placeholder="main"
+              value="main"
+              oninput="voidlabUpdateGitCommands()"
+              class="w-full text-xs font-mono px-3 py-2 rounded-lg border outline-none"
+              style="background: var(--input-background); border-color: var(--border); color: var(--text);"
+            />
+          </div>
+        </div>
+
+        <!-- Generated Commands Block -->
+        <div class="rounded-lg p-3 border relative font-mono text-xs" style="background: var(--panel-background); border-color: var(--border);">
+          <div class="flex items-center justify-between mb-2 pb-1 border-b" style="border-color: var(--border);">
+            <span class="text-[11px] text-[var(--muted)]">Terminal Commands:</span>
+            <button
+              type="button"
+              onclick="voidlabCopyGitBlock()"
+              id="git-copy-btn"
+              class="text-[10px] px-2 py-0.5 rounded bg-[var(--control-background)] hover:bg-[var(--control-hover)] border border-[var(--border)] text-[var(--text)] transition cursor-pointer"
+            >
+              Copy All
+            </button>
+          </div>
+          <pre id="git-commands-block" class="whitespace-pre-wrap leading-relaxed text-[var(--text-strong)] text-[11px]">git init
+git add .
+git commit -m "Ship from VoidLAB"
+git remote add origin https://github.com/Voxion-Labs/VoidLAB.git
+git push -u origin main</pre>
+        </div>
+      </section>
+
+      <!-- Git Reference Commands Cheatsheet -->
+      <section class="space-y-4">
+        <div>
+          <div class="text-xs uppercase tracking-widest accent-text font-semibold">Reference</div>
+          <h2 class="text-lg font-bold text-[var(--text-strong)] mt-1">Git Command Cheatsheet</h2>
+        </div>
+
+        <div class="grid sm:grid-cols-2 gap-3 text-xs">
+          <!-- Setup -->
+          <div class="rounded-lg p-3.5 border" style="border-color: var(--border); background: var(--control-background);">
+            <div class="font-bold text-[var(--text-strong)] mb-2 flex items-center gap-1.5">
+              <span>⚙️</span> Setup & Config
+            </div>
+            <div class="space-y-2 text-[11px]">
+              <div>
+                <code class="font-bold text-[var(--text-strong)]">git init</code>
+                <div class="text-[var(--muted)]">Initialize a new local git repository</div>
+              </div>
+              <div>
+                <code class="font-bold text-[var(--text-strong)]">git clone &lt;url&gt;</code>
+                <div class="text-[var(--muted)]">Clone a remote repository locally</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Staging -->
+          <div class="rounded-lg p-3.5 border" style="border-color: var(--border); background: var(--control-background);">
+            <div class="font-bold text-[var(--text-strong)] mb-2 flex items-center gap-1.5">
+              <span>📦</span> Staging & Commits
+            </div>
+            <div class="space-y-2 text-[11px]">
+              <div>
+                <code class="font-bold text-[var(--text-strong)]">git add .</code>
+                <div class="text-[var(--muted)]">Stage all modified files for commit</div>
+              </div>
+              <div>
+                <code class="font-bold text-[var(--text-strong)]">git commit -m "..."</code>
+                <div class="text-[var(--muted)]">Commit staged changes with a message</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Branching -->
+          <div class="rounded-lg p-3.5 border" style="border-color: var(--border); background: var(--control-background);">
+            <div class="font-bold text-[var(--text-strong)] mb-2 flex items-center gap-1.5">
+              <span>🌿</span> Branching & Merging
+            </div>
+            <div class="space-y-2 text-[11px]">
+              <div>
+                <code class="font-bold text-[var(--text-strong)]">git checkout -b &lt;branch&gt;</code>
+                <div class="text-[var(--muted)]">Create and switch to a new branch</div>
+              </div>
+              <div>
+                <code class="font-bold text-[var(--text-strong)]">git merge &lt;branch&gt;</code>
+                <div class="text-[var(--muted)]">Merge target branch into current branch</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Remote & Push -->
+          <div class="rounded-lg p-3.5 border" style="border-color: var(--border); background: var(--control-background);">
+            <div class="font-bold text-[var(--text-strong)] mb-2 flex items-center gap-1.5">
+              <span>🚀</span> Remote Sync
+            </div>
+            <div class="space-y-2 text-[11px]">
+              <div>
+                <code class="font-bold text-[var(--text-strong)]">git pull --rebase</code>
+                <div class="text-[var(--muted)]">Fetch and rebase local commits on remote</div>
+              </div>
+              <div>
+                <code class="font-bold text-[var(--text-strong)]">git push origin &lt;branch&gt;</code>
+                <div class="text-[var(--muted)]">Push local branch commits to remote</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+  function voidlabUpdateGitCommands() {
+    var url = (document.getElementById('git-repo-url').value || '').trim() || '<repo-url>';
+    var branch = (document.getElementById('git-target-branch').value || '').trim() || 'main';
+    var block = document.getElementById('git-commands-block');
+    if (block) {
+      block.innerText = "git init\n" +
+        "git add .\n" +
+        'git commit -m "Ship from VoidLAB"\n' +
+        "git remote add origin " + url + "\n" +
+        "git push -u origin " + branch;
+    }
+  }
+
+  function voidlabCopyGitBlock() {
+    var block = document.getElementById('git-commands-block');
+    var btn = document.getElementById('git-copy-btn');
+    if (block) {
+      navigator.clipboard.writeText(block.innerText);
+      if (btn) {
+        btn.innerText = 'Copied!';
+        setTimeout(function() { btn.innerText = 'Copy All'; }, 1500);
+      }
+    }
+  }
+</script>
+{{end}}
+
+{{define "github.tmpl"}}
+{{template "github" .}}
+{{end}}

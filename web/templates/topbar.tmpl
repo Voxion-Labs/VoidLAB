@@ -101,7 +101,7 @@
     </span>
   </div>
 
-  <!-- Right: Sub-Views Navigation (Editor, Collab, AI Guide), Logout, Switcher & Profile -->
+  <!-- Right: Sub-Views Navigation (Editor, Manual, GitHub, Collab, AI Guide), Logout, Switcher & Profile -->
   <div class="flex items-center gap-2.5">
     <nav class="flex items-center gap-1 text-xs font-medium font-sans">
       <!-- Switch back to Code Editor -->
@@ -117,30 +117,33 @@
         Editor
       </button>
 
-      <a
-        href="/editor/manual"
-        class="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)]"
+      <!-- Manual Handbook Button (Dynamic Sub-View) -->
+      <button
+        hx-get="/api/ui/manual"
+        hx-target="#main-editor-pane"
+        hx-swap="innerHTML"
+        class="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)] cursor-pointer"
         style="color: var(--muted);"
+        title="Operator Handbook & Reference Manual"
+        type="button"
       >
         Manual
-      </a>
+      </button>
 
-      <a
-        href="https://github.com/Voxion-Labs/VoidLAB"
-        target="_blank"
-        rel="noreferrer"
-        class="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)] flex items-center gap-1"
+      <!-- GitHub Sync Button (Dynamic Sub-View) -->
+      <button
+        hx-get="/api/ui/github"
+        hx-target="#main-editor-pane"
+        hx-swap="innerHTML"
+        class="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)] cursor-pointer flex items-center gap-1 font-sans"
         style="color: var(--muted);"
+        title="GitHub Sync & Command Cheatsheet"
+        type="button"
       >
         GitHub
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.7;">
-          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-          <polyline points="15 3 21 3 21 9"></polyline>
-          <line x1="10" y1="14" x2="21" y2="3"></line>
-        </svg>
-      </a>
+      </button>
 
-      <!-- Collab Button (Dynamic Sub-View, Objective 2) -->
+      <!-- Collab Button (Dynamic Sub-View) -->
       <button
         hx-get="/api/ui/collab"
         hx-target="#main-editor-pane"
@@ -154,7 +157,7 @@
         Collab
       </button>
 
-      <!-- AI Guide Button (Dynamic Sub-View, Objective 2) -->
+      <!-- AI Guide Button (Dynamic Sub-View) -->
       <button
         hx-get="/api/ui/ai"
         hx-target="#main-editor-pane"
@@ -172,6 +175,7 @@
 
     <!-- Dual Theme Switcher (Light / Dark) -->
     <button
+      onclick="toggleVoidLabTheme()"
       hx-post="/api/ui/theme"
       hx-target="html"
       hx-swap="outerHTML"
@@ -179,25 +183,10 @@
       class="theme-control inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm theme-text select-none cursor-pointer"
       type="button"
     >
-      {{if eq .Theme "dark"}}
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="accent-text text-amber-400">
-          <circle cx="12" cy="12" r="5"></circle>
-          <line x1="12" y1="1" x2="12" y2="3"></line>
-          <line x1="12" y1="21" x2="12" y2="23"></line>
-          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-          <line x1="1" y1="12" x2="3" y2="12"></line>
-          <line x1="21" y1="12" x2="23" y2="12"></line>
-          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-        </svg>
-        <span class="hidden sm:inline theme-muted text-xs">Light</span>
-      {{else}}
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="accent-text text-sky-500">
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-        </svg>
-        <span class="hidden sm:inline theme-muted text-xs">Dark</span>
-      {{end}}
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="accent-text text-sky-500">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+      </svg>
+      <span class="hidden sm:inline theme-muted text-xs">Theme</span>
     </button>
 
     <!-- Settings Trigger -->
@@ -216,7 +205,7 @@
       </svg>
     </button>
 
-    <!-- User Profile Avatar Button (Dynamic Sub-View, Objective 2) -->
+    <!-- User Profile Avatar Button (Dynamic Sub-View) -->
     <button
       hx-get="/api/ui/profile"
       hx-target="#main-editor-pane"
@@ -229,7 +218,7 @@
       {{if .UserInitial}}{{.UserInitial}}{{else}}R{{end}}
     </button>
 
-    <!-- Logout Button (Objective 1) -->
+    <!-- Logout Button -->
     <button
       hx-post="/api/auth/logout"
       class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-colors text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 cursor-pointer font-sans"

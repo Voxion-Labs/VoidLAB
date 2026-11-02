@@ -41,6 +41,19 @@ func TestRootRouteRendersLandingPage(t *testing.T) {
 	if strings.Contains(body, `id="editor-workspace"`) {
 		t.Errorf("root route GET / must NOT render the editor workspace")
 	}
+	// Verify full scrollable sections: showcase, capabilities, footer
+	if !strings.Contains(body, `id="showcase"`) {
+		t.Errorf("expected root landing page to contain #showcase section")
+	}
+	if !strings.Contains(body, `id="capabilities"`) {
+		t.Errorf("expected root landing page to contain #capabilities section")
+	}
+	if !strings.Contains(body, "2026 Voxion Labs. All rights reserved.") {
+		t.Errorf("expected root landing page to contain copyright footer")
+	}
+	if !strings.Contains(body, "tab-btn-signin") || !strings.Contains(body, "tab-btn-register") {
+		t.Errorf("expected root landing page to contain Sign In and Create Account tabs")
+	}
 }
 
 func TestServerSetupAndEditorRoute(t *testing.T) {
@@ -187,6 +200,30 @@ func TestDynamicSubViewsAndAuthState(t *testing.T) {
 	}
 	if !strings.Contains(editorRec.Body.String(), `id="editor-pane"`) {
 		t.Errorf("expected Editor fragment to contain #editor-pane")
+	}
+
+	// 5. Manual Sub-View (/api/ui/manual)
+	manualReq := httptest.NewRequest(http.MethodGet, "/api/ui/manual", nil)
+	manualReq.AddCookie(authCookie)
+	manualRec := httptest.NewRecorder()
+	mux.ServeHTTP(manualRec, manualReq)
+	if manualRec.Code != http.StatusOK {
+		t.Errorf("expected 200 OK for /api/ui/manual, got %d", manualRec.Code)
+	}
+	if !strings.Contains(manualRec.Body.String(), "Operator Handbook") {
+		t.Errorf("expected Manual fragment to contain 'Operator Handbook'")
+	}
+
+	// 6. GitHub Sub-View (/api/ui/github)
+	githubReq := httptest.NewRequest(http.MethodGet, "/api/ui/github", nil)
+	githubReq.AddCookie(authCookie)
+	githubRec := httptest.NewRecorder()
+	mux.ServeHTTP(githubRec, githubReq)
+	if githubRec.Code != http.StatusOK {
+		t.Errorf("expected 200 OK for /api/ui/github, got %d", githubRec.Code)
+	}
+	if !strings.Contains(githubRec.Body.String(), "Git Command Cheatsheet") {
+		t.Errorf("expected GitHub fragment to contain 'Git Command Cheatsheet'")
 	}
 }
 

@@ -60,12 +60,12 @@ clean:
 ## test: Runs test suite with data race detection and coverage profile
 test:
 	@echo "==> Running test suite..."
-	$(GO) test $(GOFLAGS) -cover -coverprofile=$(COVER_OUTPUT) $(TEST_PKG)
+	$(GO) test $(GOFLAGS) -cover -coverprofile="$(COVER_OUTPUT)" $(TEST_PKG)
 
 ## bench: Executes benchmarks with memory allocations and writes metrics to file
 bench:
 	@echo "==> Executing performance benchmarks..."
-	$(GO) test -run=none -bench=. -benchmem $(TEST_PKG) > $(BENCH_OUTPUT)
+	$(GO) test -run=none -bench="." -benchmem $(TEST_PKG) > $(BENCH_OUTPUT)
 	@$(PRINT_CMD)
 
 ## regression: Critical testing protocol validating TS/JS -> Go API and behavior contracts

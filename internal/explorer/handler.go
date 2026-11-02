@@ -542,3 +542,192 @@ func ternary(cond bool, a, b string) string {
 	}
 	return b
 }
+
+// HandleBoilerplate inserts fresh boilerplate code for the active file.
+func (h *Handler) HandleBoilerplate(w http.ResponseWriter, r *http.Request) {
+	data, err := h.service.BuildWorkspaceData()
+	if err != nil || data.ActiveFile == nil {
+		http.Error(w, "no active file", http.StatusBadRequest)
+		return
+	}
+
+	lang := data.ActiveFile.LanguageLabel
+	boilerplate := getBoilerplateForLanguage(lang)
+	_ = h.service.WriteFileContent(data.ActiveFile.Path, []byte(boilerplate))
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprintf(w, `<textarea
+      id="code-editor"
+      name="content"
+      data-active-path="%s"
+      data-active-lang="%s"
+      hx-post="/api/files/save"
+      hx-trigger="keyup changed delay:1000ms"
+      hx-target="#status-message"
+      hx-swap="innerHTML"
+      spellcheck="false"
+      class="flex-1 h-full p-3 font-mono text-xs leading-6 bg-transparent outline-none resize-none scrollbar-thin transition-colors"
+      style="color: var(--text);"
+      placeholder="# Write code here or select a file..."
+      oninput="voidlabHandleEditorInput(this)"
+      onscroll="voidlabSyncGutterScroll(this)"
+      onkeydown="voidlabHandleEditorKeydown(event, this)"
+    >%s</textarea>`, html.EscapeString(data.ActiveFile.Path), html.EscapeString(data.ActiveFile.LanguageLabel), html.EscapeString(boilerplate))
+}
+
+// HandleDownload streams the active or requested file as an attachment.
+func (h *Handler) HandleDownload(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimSpace(r.URL.Query().Get("path"))
+	if path == "" {
+		data, err := h.service.BuildWorkspaceData()
+		if err == nil && data.ActiveFile != nil {
+			path = data.ActiveFile.Path
+		}
+	}
+	if path == "" {
+		http.Error(w, "no file specified", http.StatusBadRequest)
+		return
+	}
+
+	content, err := h.service.ReadFileContent(path)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("file not found: %v", err), http.StatusNotFound)
+		return
+	}
+
+	filename := filepath.Base(path)
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(content)))
+	_, _ = w.Write([]byte(content))
+}
+
+// HandleCloseTab closes the current tab and reopens editor canvas.
+func (h *Handler) HandleCloseTab(w http.ResponseWriter, r *http.Request) {
+	data, err := h.service.BuildWorkspaceData()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_ = h.templates.ExecuteTemplate(w, "editor", data)
+}
+
+// HandleModalImport renders the file import dialog.
+func (h *Handler) HandleModalImport(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprint(w, `<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onclick="if(event.target===this) this.remove()">
+  <div class="w-full max-w-md rounded-xl p-6 shadow-2xl transition-colors font-sans" style="background: var(--panel-background); border: 1px solid var(--border-strong); color: var(--text);">
+    <div class="flex items-center justify-between pb-3 mb-4 border-b border-[var(--border)]">
+      <div class="flex items-center gap-2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent);"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+        <div class="font-bold text-sm text-[var(--text-strong)]">Import File into Workspace</div>
+      </div>
+      <button onclick="this.closest('.fixed').remove()" class="p-1 rounded opacity-70 hover:opacity-100 cursor-pointer" type="button">✕</button>
+    </div>
+
+    <form hx-post="/api/files/import" hx-target="#file-tree" hx-swap="innerHTML" hx-encoding="multipart/form-data" hx-on::after-request="this.closest('.fixed').remove()" class="space-y-4 text-xs font-sans">
+      <div>
+        <label class="block text-[11px] font-semibold text-[var(--muted)] mb-1">Target File Name or Path</label>
+        <input name="name" id="import-file-name" placeholder="e.g. data.json, app.py" class="w-full rounded px-2.5 py-1.5 border border-[var(--border)] bg-[var(--input-background)] text-[var(--text)] outline-none font-mono" required />
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-semibold text-[var(--muted)] mb-1">Choose Local File (or paste below)</label>
+        <input type="file" name="file" onchange="if(this.files[0]) document.getElementById('import-file-name').value = this.files[0].name" class="w-full text-xs text-[var(--muted)]" />
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-semibold text-[var(--muted)] mb-1">Or Paste File Content</label>
+        <textarea name="content" rows="5" placeholder="Paste code or data here..." class="w-full rounded p-2 border border-[var(--border)] bg-[var(--input-background)] text-[var(--text)] font-mono text-xs outline-none"></textarea>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-3 border-t border-[var(--border)]">
+        <button type="button" onclick="this.closest('.fixed').remove()" class="px-3.5 py-1.5 rounded-md text-xs font-medium bg-[var(--control-background)] hover:bg-[var(--control-hover)] border border-[var(--border)] text-[var(--text)] cursor-pointer">Cancel</button>
+        <button type="submit" class="px-3.5 py-1.5 rounded-md text-xs font-semibold bg-[var(--action-background)] text-[var(--action-foreground)] shadow-sm cursor-pointer">Import File</button>
+      </div>
+    </form>
+  </div>
+</div>`)
+}
+
+// HandleModalImportFolder renders the folder import dialog.
+func (h *Handler) HandleModalImportFolder(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprint(w, `<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onclick="if(event.target===this) this.remove()">
+  <div class="w-full max-w-sm rounded-xl p-5 shadow-2xl transition-colors font-sans" style="background: var(--panel-background); border: 1px solid var(--border-strong); color: var(--text);">
+    <div class="flex items-center justify-between mb-4 pb-2 border-b border-[var(--border)]">
+      <div class="text-xs font-semibold uppercase tracking-wider flex items-center gap-2" style="color: var(--text-strong);">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent);"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><polyline points="12 11 12 17"></polyline><polyline points="9 14 12 11 15 14"></polyline></svg>
+        Create Workspace Folder
+      </div>
+      <button onclick="this.closest('.fixed').remove()" class="p-1 rounded opacity-70 hover:opacity-100 cursor-pointer" type="button">✕</button>
+    </div>
+    <form hx-post="/api/explorer/new" hx-target="#file-tree" hx-swap="innerHTML" hx-on::after-request="this.closest('.fixed').remove()">
+      <input type="hidden" name="kind" value="folder">
+      <label class="text-[11px] mb-1 block" style="color: var(--muted);">Folder Name or Path:</label>
+      <input name="path" autofocus class="w-full rounded-md px-3 py-2 text-xs outline-none mb-4 transition-colors font-mono" style="background: var(--input-background); border: 1px solid var(--border); color: var(--text);" placeholder="e.g. src/modules, tests" required>
+      <div class="flex gap-2 justify-end pt-2 border-t border-[var(--border)]">
+        <button type="button" onclick="this.closest('.fixed').remove()" class="rounded-md px-3 py-1.5 text-xs font-medium cursor-pointer" style="background: var(--control-background); border: 1px solid var(--border); color: var(--text);">Cancel</button>
+        <button type="submit" class="rounded-md px-3.5 py-1.5 text-xs font-semibold shadow-sm cursor-pointer" style="background: var(--action-background); color: var(--action-foreground);">Create Folder</button>
+      </div>
+    </form>
+  </div>
+</div>`)
+}
+
+// HandleImport processes file uploads or pasted content into the workspace.
+func (h *Handler) HandleImport(w http.ResponseWriter, r *http.Request) {
+	_ = r.ParseMultipartForm(10 << 20) // 10 MB ceiling
+	name := strings.TrimSpace(r.FormValue("name"))
+	if name == "" {
+		name = "imported_file.txt"
+	}
+
+	var fileBytes []byte
+	file, _, err := r.FormFile("file")
+	if err == nil && file != nil {
+		defer file.Close()
+		fileBytes, _ = io.ReadAll(file)
+	} else {
+		content := r.FormValue("content")
+		fileBytes = []byte(content)
+	}
+
+	if err := h.service.WriteFileContent(name, fileBytes); err != nil {
+		http.Error(w, fmt.Sprintf("failed to save imported file: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	h.service.SetActiveFile(name)
+	h.RenderTreeFragment(w)
+}
+
+func getBoilerplateForLanguage(lang string) string {
+	switch strings.ToLower(lang) {
+	case "python", "py":
+		return "# Python 3 - VoidLAB Sandbox\nage = int(input().strip())\nname = input().strip()\n\nprint(f\"Age: {age}\")\nprint(f\"Name: {name}\")\n"
+	case "go", "golang":
+		return "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Println(\"Welcome to VoidLAB\")\n}\n"
+	case "rust", "rs":
+		return "fn main() {\n    println!(\"Welcome to VoidLAB\");\n}\n"
+	case "cpp", "c++":
+		return "#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << \"Welcome to VoidLAB\" << endl;\n    return 0;\n}\n"
+	case "c":
+		return "#include <stdio.h>\n\nint main() {\n    printf(\"Welcome to VoidLAB\\n\");\n    return 0;\n}\n"
+	case "javascript", "js":
+		return "console.log(\"Welcome to VoidLAB\");\n"
+	case "typescript", "ts":
+		return "const greeting: string = \"Welcome to VoidLAB\";\nconsole.log(greeting);\n"
+	case "java":
+		return "class Main {\n    public static void main(String[] args) {\n        System.out.println(\"Welcome to VoidLAB\");\n    }\n}\n"
+	case "html", "htm":
+		return "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>VoidLAB Preview</title>\n</head>\n<body>\n    <h1>Welcome to VoidLAB</h1>\n</body>\n</html>\n"
+	case "css":
+		return "body {\n    font-family: sans-serif;\n    background: #111;\n    color: #fff;\n}\n"
+	case "sql":
+		return "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);\nINSERT INTO users (name) VALUES ('Rudra');\nSELECT * FROM users;\n"
+	default:
+		return "print(\"Welcome to VoidLAB\")\n"
+	}
+}

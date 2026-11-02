@@ -237,3 +237,60 @@ func TestHandlePreview(t *testing.T) {
 		t.Errorf("expected 404 for traversal attempt, got: %d", recSec.Code)
 	}
 }
+
+func TestBoilerplateAndDownloadAndImport(t *testing.T) {
+	svc, tmpl := setupTestWorkspace(t)
+	handler := NewHandler(svc, tmpl)
+
+	// Create test python file
+	_ = svc.CreateItem("src/main.py", false)
+	svc.SetActiveFile("src/main.py")
+
+	// 1. Boilerplate handler
+	bReq := httptest.NewRequest(http.MethodPost, "/api/code/boilerplate", nil)
+	bRec := httptest.NewRecorder()
+	handler.HandleBoilerplate(bRec, bReq)
+	if bRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK for boilerplate, got %d", bRec.Code)
+	}
+	if !strings.Contains(bRec.Body.String(), "Python 3 - VoidLAB Sandbox") {
+		t.Errorf("expected boilerplate to contain Python template, got: %s", bRec.Body.String())
+	}
+
+	// 2. Download handler
+	dReq := httptest.NewRequest(http.MethodGet, "/api/files/download?path=src/main.py", nil)
+	dRec := httptest.NewRecorder()
+	handler.HandleDownload(dRec, dReq)
+	if dRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK for download, got %d", dRec.Code)
+	}
+	if !strings.Contains(dRec.Header().Get("Content-Disposition"), "attachment") {
+		t.Errorf("expected Content-Disposition attachment header, got: %s", dRec.Header().Get("Content-Disposition"))
+	}
+
+	// 3. Import modal
+	mReq := httptest.NewRequest(http.MethodGet, "/api/ui/modal/import", nil)
+	mRec := httptest.NewRecorder()
+	handler.HandleModalImport(mRec, mReq)
+	if mRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK for import modal, got %d", mRec.Code)
+	}
+	if !strings.Contains(mRec.Body.String(), "Import File into Workspace") {
+		t.Errorf("expected import modal HTML fragment, got: %s", mRec.Body.String())
+	}
+
+	// 4. Import action with text content
+	impForm := url.Values{}
+	impForm.Set("name", "config.json")
+	impForm.Set("content", `{"version": 2}`)
+	iReq := httptest.NewRequest(http.MethodPost, "/api/files/import", strings.NewReader(impForm.Encode()))
+	iReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	iRec := httptest.NewRecorder()
+	handler.HandleImport(iRec, iReq)
+	if iRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK for import, got %d", iRec.Code)
+	}
+	if !strings.Contains(iRec.Body.String(), "config.json") {
+		t.Errorf("expected imported file to appear in tree, got: %s", iRec.Body.String())
+	}
+}
