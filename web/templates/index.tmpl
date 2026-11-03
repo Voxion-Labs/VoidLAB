@@ -205,7 +205,7 @@
               Enter your local developer profile credentials to access your workspace.
             </p>
 
-            <form hx-post="/api/auth/login" hx-target="#login-error" hx-swap="innerHTML" class="space-y-0">
+            <form hx-post="/api/auth/login" hx-target="#login-error" hx-swap="innerHTML" class="space-y-0" onsubmit="var u = document.getElementById('lf-input-username').value.trim(); if(u && window.voidlabSaveProfile) { window.voidlabSaveProfile(u); }">
               <input type="hidden" name="auth_mode" id="auth-mode-input" value="signin">
 
               <!-- Full Name (Shown in Create Account) -->
@@ -596,6 +596,16 @@
       if (hideIcon) hideIcon.classList.add('hidden');
     }
   }
+  // Restore username from localStorage if available
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.voidlabGetProfile) {
+      var p = window.voidlabGetProfile();
+      if (p && p.username) {
+        var input = document.getElementById('lf-input-username');
+        if (input) input.value = p.username;
+      }
+    }
+  });
 </script>
 {{end}}
 

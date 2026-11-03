@@ -20,56 +20,68 @@
       </span>
     </div>
 
-    <!-- Back to Editor Button -->
+    <!-- Close Side Panel Button (Directive 1) -->
     <button
-      hx-get="/api/ui/editor"
-      hx-target="#main-editor-pane"
-      hx-swap="innerHTML"
-      class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-colors hover:bg-[var(--control-hover)] border border-[var(--border)] cursor-pointer"
-      style="color: var(--text);"
-      title="Return to code editor"
+      onclick="closeSidePanel()"
+      class="inline-flex items-center justify-center w-6 h-6 rounded text-xs font-medium hover:bg-[var(--control-hover)] transition-colors cursor-pointer text-[var(--muted)] hover:text-[var(--text-strong)]"
+      title="Close Profile side-panel"
       type="button"
     >
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="16 18 22 12 16 6"></polyline>
-        <polyline points="8 6 2 12 8 18"></polyline>
-      </svg>
-      <span>Editor</span>
+      <span>✕</span>
     </button>
   </div>
 
   <!-- ── Profile Main Content ── -->
   <div class="flex-1 overflow-y-auto p-5 space-y-5 scrollbar-thin text-xs font-sans">
-    <!-- User Card -->
-    <div class="p-5 rounded-2xl border flex items-center gap-4 transition-colors shadow-sm" style="background: var(--surface-soft); border-color: var(--border);">
-      <div class="w-14 h-14 rounded-full bg-[var(--accent)] text-white font-extrabold text-xl flex items-center justify-center shadow-md shrink-0">
-        {{if .UserInitial}}{{.UserInitial}}{{else}}R{{end}}
+    <!-- User Card (Stateless: Preserved in browser localStorage) -->
+    <div class="p-4 rounded-xl border flex items-center gap-3.5 transition-colors shadow-sm" style="background: var(--surface-soft); border-color: var(--border);">
+      <div class="w-12 h-12 rounded-full bg-[var(--accent)] text-white font-extrabold text-lg flex items-center justify-center shadow-md shrink-0 voidlab-user-initial">
+        {{if .UserInitial}}{{.UserInitial}}{{else}}D{{end}}
       </div>
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-2">
-          <h2 class="text-base font-bold font-display" style="color: var(--text-strong);">
-            {{if .User}}{{.User}}{{else}}Rudra{{end}}
+          <h2 class="text-sm font-bold font-display voidlab-user-name" style="color: var(--text-strong);">
+            {{if .User}}{{.User}}{{else}}Developer{{end}}
           </h2>
           <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-            Active
+            Browser Local
           </span>
         </div>
-        <div class="text-xs mt-0.5" style="color: var(--muted);">Voxion Labs Principal Engineer</div>
-        <div class="text-[11px] font-mono mt-1 text-[var(--accent)]">engineer@voxion.dev</div>
+        <div class="text-[11px] mt-0.5 text-[var(--muted)]">100% Stateless: Zero Server Database</div>
       </div>
     </div>
 
-    <!-- Session Security Details -->
-    <div class="p-4 rounded-xl border border-[var(--border)] bg-[var(--panel-background)] space-y-2">
-      <div class="font-bold text-xs flex items-center gap-1.5" style="color: var(--text-strong);">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-500">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-        </svg>
-        Session Security Guard
+    <!-- Edit Local Identity Form -->
+    <form onsubmit="event.preventDefault(); var u = document.getElementById('edit-profile-username').value.trim(); if(u) { window.voidlabSaveProfile(u); alert('Profile updated in browser localStorage!'); }" class="p-3.5 rounded-xl border border-[var(--border)] bg-[var(--panel-background)] space-y-3">
+      <div class="font-bold text-xs text-[var(--text-strong)] flex items-center gap-1.5">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+        Edit Local Username
+      </div>
+      <div>
+        <label class="block text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">Username</label>
+        <input
+          id="edit-profile-username"
+          type="text"
+          value="{{if .User}}{{.User}}{{else}}Developer{{end}}"
+          class="w-full px-2.5 py-1.5 rounded text-xs bg-[var(--input-background)] border border-[var(--border)] text-[var(--text)] outline-none focus:border-[var(--accent)] font-sans"
+        />
+      </div>
+      <button
+        type="submit"
+        class="w-full py-1.5 px-3 rounded text-xs font-semibold bg-[var(--action-background)] text-[var(--action-foreground)] shadow-sm hover:opacity-90 transition-all cursor-pointer"
+      >
+        Save to LocalStorage
+      </button>
+    </form>
+
+    <!-- Stateless Storage Details -->
+    <div class="p-3.5 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] space-y-1.5">
+      <div class="font-bold text-xs flex items-center gap-1.5 text-emerald-500">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        Stateless Architecture
       </div>
       <p class="text-[11px] leading-relaxed text-[var(--muted)]">
-        This session is guarded by a secure HTTP-Only cookie (<code class="font-mono text-emerald-500">voidlab_session</code>). JavaScript execution cannot access or manipulate the authentication credentials, completely mitigating XSS token extraction.
+        VoidLAB runs with <strong>0 server-side database</strong>. All identity tokens, workspaces, and preferences reside locally in <code>localStorage</code>.
       </p>
     </div>
 
@@ -91,7 +103,7 @@
     <!-- Account Actions -->
     <div class="pt-2 flex items-center gap-3">
       <button
-        hx-post="/api/auth/logout"
+        hx-post="/api/auth/logout" onclick="window.voidlabLogout()"
         class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg transition-colors text-white bg-rose-600 hover:bg-rose-700 shadow-sm cursor-pointer"
         type="button"
       >

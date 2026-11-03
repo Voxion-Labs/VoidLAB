@@ -107,7 +107,7 @@
       <!-- Switch back to Code Editor -->
       <button
         hx-get="/api/ui/editor"
-        hx-target="#main-editor-pane"
+        hx-target="#side-panel-container"
         hx-swap="innerHTML"
         class="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)] cursor-pointer"
         style="color: var(--muted);"
@@ -120,7 +120,7 @@
       <!-- Manual Handbook Button (Dynamic Sub-View) -->
       <button
         hx-get="/api/ui/manual"
-        hx-target="#main-editor-pane"
+        hx-target="#side-panel-container"
         hx-swap="innerHTML"
         class="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)] cursor-pointer"
         style="color: var(--muted);"
@@ -133,7 +133,7 @@
       <!-- GitHub Sync Button (Dynamic Sub-View) -->
       <button
         hx-get="/api/ui/github"
-        hx-target="#main-editor-pane"
+        hx-target="#side-panel-container"
         hx-swap="innerHTML"
         class="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)] cursor-pointer flex items-center gap-1 font-sans"
         style="color: var(--muted);"
@@ -146,7 +146,7 @@
       <!-- Collab Button (Dynamic Sub-View) -->
       <button
         hx-get="/api/ui/collab"
-        hx-target="#main-editor-pane"
+        hx-target="#side-panel-container"
         hx-swap="innerHTML"
         class="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)] flex items-center gap-1.5 cursor-pointer font-sans"
         style="color: var(--muted);"
@@ -160,7 +160,7 @@
       <!-- AI Guide Button (Dynamic Sub-View) -->
       <button
         hx-get="/api/ui/ai"
-        hx-target="#main-editor-pane"
+        hx-target="#side-panel-container"
         hx-swap="innerHTML"
         class="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)] cursor-pointer font-sans"
         style="color: var(--muted);"
@@ -205,12 +205,13 @@
       </svg>
     </button>
 
-    <!-- User Profile Avatar Button (Dynamic Sub-View) -->
+    <!-- User Profile Avatar Button (Dynamic Sub-View into Side-Panel or Modal) -->
     <button
       hx-get="/api/ui/profile"
-      hx-target="#main-editor-pane"
+      hx-target="#side-panel-container"
       hx-swap="innerHTML"
-      class="h-6 w-6 rounded-md flex items-center justify-center text-[10px] font-semibold transition-all hover:scale-105 cursor-pointer"
+      class="h-6 w-6 rounded-md flex items-center justify-center text-[10px] font-semibold transition-all hover:scale-105 cursor-pointer voidlab-user-initial"
+      id="navbar-user-initial"
       style="background: var(--surface-soft); border: 1px solid var(--border); color: var(--text-strong);"
       title="Developer Profile & Identity"
       type="button"
@@ -218,9 +219,10 @@
       {{if .UserInitial}}{{.UserInitial}}{{else}}R{{end}}
     </button>
 
-    <!-- Logout Button -->
+    <!-- Logout Button (Stateless: clears localStorage and cookie) -->
     <button
       hx-post="/api/auth/logout"
+      onclick="window.voidlabLogout()"
       class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-colors text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 cursor-pointer font-sans"
       title="Sign out of VoidLAB"
       type="button"

@@ -406,6 +406,50 @@
   <!-- Global Modal Host for HTMX Dynamic Dialogs -->
   <div id="modal-container"></div>
 
+  <!-- Client-side LocalStorage Auth Modal (100% Stateless - Directive 1) -->
+  <div id="voidlab-auth-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+    <div class="w-full max-w-sm rounded-2xl p-6 shadow-2xl transition-colors font-sans border" style="background: var(--panel-background); border-color: var(--border-strong); color: var(--text);">
+      <div class="text-center space-y-3">
+        <div class="w-12 h-12 mx-auto rounded-xl flex items-center justify-center bg-[var(--accent)] text-white shadow-lg">
+          <svg width="24" height="24" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 10 L54 110 L64 90 L36 10 Z" fill="currentColor" />
+            <path d="M110 10 L74 110 L64 90 L92 10 Z" fill="currentColor" />
+            <path d="M80 8 L44 122" stroke="currentColor" stroke-width="7" stroke-linecap="round" />
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold tracking-tight text-[var(--text-strong)] display-font">Welcome to VoidLAB</h3>
+          <p class="text-xs text-[var(--muted)] mt-1">100% Stateless & Local-First Browser IDE</p>
+        </div>
+      </div>
+
+      <form id="voidlab-auth-form" onsubmit="handleVoidlabAuthSubmit(event)" class="mt-5 space-y-4">
+        <div>
+          <label class="block text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-1.5">Choose your Username</label>
+          <input
+            id="voidlab-username-input"
+            type="text"
+            placeholder="e.g. Rudra"
+            autocomplete="off"
+            required
+            class="w-full px-3.5 py-2.5 rounded-lg text-sm bg-[var(--input-background)] border border-[var(--border)] text-[var(--text)] outline-none focus:border-[var(--accent)] transition-all font-sans"
+          />
+        </div>
+
+        <div class="p-2.5 rounded-lg bg-[var(--surface-soft)] border border-[var(--border)] text-[11px] text-[var(--muted)] leading-relaxed">
+          🔒 No database or remote login. Your identity and workspace persist exclusively in your browser via <code>localStorage</code>.
+        </div>
+
+        <button
+          type="submit"
+          class="w-full py-2.5 px-4 rounded-lg text-xs font-bold uppercase tracking-wider bg-[var(--action-background)] text-[var(--action-foreground)] shadow-sm hover:opacity-95 transition-all cursor-pointer"
+        >
+          Enter Workspace
+        </button>
+      </form>
+    </div>
+  </div>
+
   <script>
     function toggleVoidLabTheme() {
       var html = document.documentElement;
@@ -415,6 +459,98 @@
       localStorage.setItem('voidlab_theme', next);
       document.cookie = "voidlab_theme=" + next + "; path=/; max-age=31536000";
     }
+
+    // --- 100% Stateless LocalStorage Auth & Profile Management (Directive 1) ---
+    function handleVoidlabAuthSubmit(e) {
+      if (e) e.preventDefault();
+      var input = document.getElementById('voidlab-username-input');
+      var username = (input ? input.value.trim() : '') || 'Developer';
+      window.voidlabSaveProfile(username);
+      var modal = document.getElementById('voidlab-auth-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    window.voidlabSaveProfile = function(username, bio) {
+      var profile = {
+        username: username,
+        bio: bio || 'Voxion Labs Principal Engineer',
+        updatedAt: new Date().toISOString()
+      };
+      localStorage.setItem('voidlab_profile', JSON.stringify(profile));
+      document.cookie = "voidlab_session=" + encodeURIComponent(username) + ":local:session; path=/; max-age=31536000";
+      window.voidlabApplyProfile(profile);
+    };
+
+    window.voidlabGetProfile = function() {
+      var raw = localStorage.getItem('voidlab_profile');
+      if (!raw) return null;
+      try {
+        var p = JSON.parse(raw);
+        if (p && typeof p === 'object') return p;
+        return { username: raw };
+      } catch (e) {
+        return { username: raw };
+      }
+    };
+
+    window.voidlabApplyProfile = function(profile) {
+      if (!profile || !profile.username) return;
+      var u = profile.username;
+      var initial = u.charAt(0).toUpperCase();
+      document.querySelectorAll('.voidlab-user-name').forEach(function(el) { el.textContent = u; });
+      document.querySelectorAll('.voidlab-user-initial').forEach(function(el) { el.textContent = initial; });
+      var tagUser = document.getElementById('navbar-user-initial');
+      if (tagUser) tagUser.textContent = initial;
+    };
+
+    window.voidlabLogout = function() {
+      localStorage.removeItem('voidlab_profile');
+      document.cookie = "voidlab_session=; path=/; max-age=0";
+      var modal = document.getElementById('voidlab-auth-modal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        var input = document.getElementById('voidlab-username-input');
+        if (input) { input.value = ''; input.focus(); }
+      }
+    };
+
+    // --- Dynamic Side-Panel Helpers (Directive 1) ---
+    window.closeSidePanel = function() {
+      var panel = document.getElementById('side-panel-container');
+      if (panel) {
+        panel.classList.add('hidden');
+        panel.innerHTML = '';
+      }
+    };
+
+    // Auto-reveal side panel when HTMX swaps content into it
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+      if (evt.detail.target.id === 'side-panel-container') {
+        evt.detail.target.classList.remove('hidden');
+        var profile = window.voidlabGetProfile();
+        if (profile) window.voidlabApplyProfile(profile);
+      }
+    });
+
+    // Check localStorage.getItem('voidlab_profile') on load
+    document.addEventListener('DOMContentLoaded', function() {
+      var profile = window.voidlabGetProfile();
+      if (!profile || !profile.username) {
+        // Only trigger modal if not already authenticated via cookie in existing session
+        var hasCookie = document.cookie.indexOf('voidlab_session=') !== -1;
+        if (!hasCookie) {
+          var modal = document.getElementById('voidlab-auth-modal');
+          if (modal) {
+            modal.classList.remove('hidden');
+            var input = document.getElementById('voidlab-username-input');
+            if (input) input.focus();
+          }
+        }
+      } else {
+        window.voidlabApplyProfile(profile);
+        document.cookie = "voidlab_session=" + encodeURIComponent(profile.username) + ":local:session; path=/; max-age=31536000";
+      }
+    });
 
     // Restore saved theme on load
     (function() {

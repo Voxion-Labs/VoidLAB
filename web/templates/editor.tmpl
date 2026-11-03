@@ -233,11 +233,20 @@ if __name__ == "__main__":
       ></div>
     </div>
 
-    <!-- Middle Column: Main Code Editor Host (Target for AI, Collab, Profile, Editor) -->
+    <!-- Middle Column: Main Code Editor Host (Untouched Editor Pane) -->
     <div
       id="main-editor-pane"
       class="flex-1 min-w-[320px] flex flex-col h-full overflow-hidden relative"
       style="background: var(--background-main);"
+    >
+      {{template "editor" .}}
+    </div>
+
+    <!-- Dynamic Side Panel (Target for AI, Collab, Profile, etc. leaving Editor untouched) -->
+    <div
+      id="side-panel-container"
+      class="{{if and .SubView (ne .SubView "editor")}}flex{{else}}hidden{{end}} w-80 lg:w-96 flex flex-col h-full overflow-hidden border-l border-[var(--border)] transition-all duration-150 z-20 shrink-0 shadow-lg"
+      style="background: var(--panel-background);"
     >
       {{if eq .SubView "ai"}}
         {{template "ai" .}}
@@ -249,8 +258,6 @@ if __name__ == "__main__":
         {{template "manual" .}}
       {{else if eq .SubView "github"}}
         {{template "github" .}}
-      {{else}}
-        {{template "editor" .}}
       {{end}}
     </div>
 

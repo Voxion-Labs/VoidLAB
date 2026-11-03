@@ -17,21 +17,14 @@
       </span>
     </div>
 
-    <!-- Back to Editor Button -->
+    <!-- Close Side Panel Button (Directive 1) -->
     <button
-      hx-get="/api/ui/editor"
-      hx-target="#main-editor-pane"
-      hx-swap="innerHTML"
-      class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-colors hover:bg-[var(--control-hover)] border border-[var(--border)] cursor-pointer"
-      style="color: var(--text);"
-      title="Return to code editor"
+      onclick="closeSidePanel()"
+      class="inline-flex items-center justify-center w-6 h-6 rounded text-xs font-medium hover:bg-[var(--control-hover)] transition-colors cursor-pointer text-[var(--muted)] hover:text-[var(--text-strong)]"
+      title="Close Collab side-panel"
       type="button"
     >
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="16 18 22 12 16 6"></polyline>
-        <polyline points="8 6 2 12 8 18"></polyline>
-      </svg>
-      <span>Editor</span>
+      <span>✕</span>
     </button>
   </div>
 

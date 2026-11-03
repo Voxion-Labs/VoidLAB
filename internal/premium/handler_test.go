@@ -212,3 +212,55 @@ func TestModalAndPageRoutes(t *testing.T) {
 		t.Errorf("expected 200 OK for /editor/collaboration, got %d", rec.Code)
 	}
 }
+
+
+func TestEphemeralCollabRoomVanishing(t *testing.T) {
+	cm := NewCollabManager()
+
+	// 1. Create in-memory room
+	_ = cm.GetOrCreateRoom("TEST-ROOM", "Alice")
+	if !cm.RoomExists("TEST-ROOM") {
+		t.Fatalf("expected room TEST-ROOM to exist in memory")
+	}
+	if cm.ActiveRoomCount() != 1 {
+		t.Fatalf("expected 1 active room, got %d", cm.ActiveRoomCount())
+	}
+
+	// 2. Peer leaves room
+	cm.LeaveRoom("TEST-ROOM", "Alice")
+
+	// 3. Room vanishes from memory when empty
+	if cm.RoomExists("TEST-ROOM") {
+		t.Errorf("expected room TEST-ROOM to vanish from memory after last user left")
+	}
+	if cm.ActiveRoomCount() != 0 {
+		t.Errorf("expected 0 active rooms, got %d", cm.ActiveRoomCount())
+	}
+}
+
+func TestAIStreamSSE(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/api/ai/stream?prompt=how+to+debug", nil)
+	rec := httptest.NewRecorder()
+
+	HandleAIStream(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK for SSE stream, got %d", rec.Code)
+	}
+
+	contentType := rec.Header().Get("Content-Type")
+	if !strings.Contains(contentType, "text/event-stream") {
+		t.Errorf("expected text/event-stream content type, got %q", contentType)
+	}
+
+	body := rec.Body.String()
+	if !strings.Contains(body, "event: start") {
+		t.Errorf("expected SSE body to contain 'event: start', got: %s", body)
+	}
+	if !strings.Contains(body, "event: chunk") {
+		t.Errorf("expected SSE body to contain 'event: chunk', got: %s", body)
+	}
+	if !strings.Contains(body, "event: done") {
+		t.Errorf("expected SSE body to contain 'event: done', got: %s", body)
+	}
+}

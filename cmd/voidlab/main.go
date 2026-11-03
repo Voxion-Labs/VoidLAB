@@ -178,88 +178,14 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 	mux.HandleFunc("PATCH /api/explorer/move", explorerHandler.HandleMove)
 	mux.HandleFunc("POST /api/explorer/move", explorerHandler.HandleMove) // fallback
 
-	// 4. Dynamic Sub-Views Endpoints (Objective 2 & 3)
-	mux.HandleFunc("GET /api/ui/manual", requireAuth(func(w http.ResponseWriter, r *http.Request) {
-		data, err := explorerService.BuildWorkspaceData()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if err := tmpl.ExecuteTemplate(w, "manual.tmpl", data); err != nil {
-			_ = tmpl.ExecuteTemplate(w, "manual", data)
-		}
-	}))
-
-	mux.HandleFunc("GET /api/ui/github", requireAuth(func(w http.ResponseWriter, r *http.Request) {
-		data, err := explorerService.BuildWorkspaceData()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if err := tmpl.ExecuteTemplate(w, "github.tmpl", data); err != nil {
-			_ = tmpl.ExecuteTemplate(w, "github", data)
-		}
-	}))
-
-	mux.HandleFunc("GET /api/ui/ai", requireAuth(func(w http.ResponseWriter, r *http.Request) {
-		data, err := explorerService.BuildWorkspaceData()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if err := tmpl.ExecuteTemplate(w, "ai.tmpl", data); err != nil {
-			_ = tmpl.ExecuteTemplate(w, "ai", data)
-		}
-	}))
-
-	mux.HandleFunc("GET /api/ui/collab", requireAuth(func(w http.ResponseWriter, r *http.Request) {
-		data, err := explorerService.BuildWorkspaceData()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if user, ok := premium.GetAuthenticatedUser(r); ok {
-			data.User = user
-			if len(user) > 0 {
-				data.UserInitial = strings.ToUpper(string(user[0]))
-			}
-		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if err := tmpl.ExecuteTemplate(w, "collab.tmpl", data); err != nil {
-			_ = tmpl.ExecuteTemplate(w, "collab", data)
-		}
-	}))
-
-	mux.HandleFunc("GET /api/ui/profile", requireAuth(func(w http.ResponseWriter, r *http.Request) {
-		data, err := explorerService.BuildWorkspaceData()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if user, ok := premium.GetAuthenticatedUser(r); ok {
-			data.User = user
-			if len(user) > 0 {
-				data.UserInitial = strings.ToUpper(string(user[0]))
-			}
-		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if err := tmpl.ExecuteTemplate(w, "profile.tmpl", data); err != nil {
-			_ = tmpl.ExecuteTemplate(w, "profile", data)
-		}
-	}))
-
-	mux.HandleFunc("GET /api/ui/editor", requireAuth(func(w http.ResponseWriter, r *http.Request) {
-		data, err := explorerService.BuildWorkspaceData()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_ = tmpl.ExecuteTemplate(w, "editor", data)
-	}))
+	// 4. Sub-views & Side-Panel Endpoints (HTMX Side-Panels and Fragments)
+	mux.HandleFunc("GET /api/ui/manual", requireAuth(premiumHandler.HandleUIManual(tmpl)))
+	mux.HandleFunc("GET /api/ui/github", requireAuth(premiumHandler.HandleUIGitHub(tmpl)))
+	mux.HandleFunc("GET /api/ui/ai", requireAuth(premiumHandler.HandleUIAI(tmpl)))
+	mux.HandleFunc("GET /api/ui/collab", requireAuth(premiumHandler.HandleUICollab(tmpl)))
+	mux.HandleFunc("GET /api/ui/profile", requireAuth(premiumHandler.HandleUIProfile(tmpl)))
+	mux.HandleFunc("GET /api/ui/editor", requireAuth(premiumHandler.HandleUIEditor(tmpl)))
+	mux.HandleFunc("GET /api/ui/empty", requireAuth(premiumHandler.HandleEmpty))
 
 	// 5. Explorer Tree Fragments & Folder Toggles (Auth Protected - Objective 3)
 	mux.HandleFunc("GET /api/explorer", requireAuth(explorerHandler.HandleGetTree))
@@ -323,6 +249,9 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 	// AI Guide Prompts & Suggestions
 	mux.HandleFunc("GET /api/ai/prompt", premiumHandler.HandleAIPrompt)
 	mux.HandleFunc("POST /api/ai/prompt", premiumHandler.HandleAIPrompt)
+	mux.HandleFunc("GET /api/ai/stream", premiumHandler.HandleAIStream)
+	mux.HandleFunc("POST /api/ai/stream", premiumHandler.HandleAIStream)
+	mux.HandleFunc("GET /api/ws/ai", premiumHandler.HandleAIWebSocket)
 
 	// Authentication & Secure HTTP-Only Cookie Session Management
 	mux.HandleFunc("POST /api/auth/login", premiumHandler.HandleLogin)

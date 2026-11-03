@@ -1,10 +1,15 @@
 package premium
 
 import (
+	"encoding/json"
 	"fmt"
 	"html"
+	"log"
+	"net/http"
 	"strings"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 // AIPromptResponse maps common programming and VoidLAB environment questions to precise guidance.
@@ -45,9 +50,9 @@ STATUS: Exited (code 1) | TIME: 0.04s | MEMORY: 1840KB`,
 voidlabFormatCode(); // Calls voidlabWASM.format(content, lang)`,
 	},
 	{
-		QueryKeywords: []string{"local", "local-first", "storage", "offline"},
-		Title:         "Local-First Workspace Architecture",
-		Answer:        "VoidLAB operates with zero cloud database dependency. Your files, folders, terminal history, and active sessions live in your local file system and are served directly via Go's hyper-optimized standard library net/http server.",
+		QueryKeywords: []string{"local", "local-first", "storage", "offline", "stateless"},
+		Title:         "100% Stateless & Local-First Architecture",
+		Answer:        "VoidLAB operates with a 100% stateless backend and zero database dependency. All your profile data, user settings, workspace states, and history are preserved locally in the browser (localStorage and IndexedDB).",
 	},
 	{
 		QueryKeywords: []string{"html", "css", "preview", "web", "browser"},
@@ -70,12 +75,134 @@ func GenerateAIResponse(prompt string, lang string) (string, string, string) {
 	}
 
 	// Dynamic fallback
-	title := "VoidLAB Engineering Guidance"
+	title := "VoidLAB Stateless Copilot Guidance"
 	answer := fmt.Sprintf(
-		"Regarding \"%s\": In VoidLAB's local-first architecture, your workspace files are directly managed on your filesystem. Use the topbar Run pill button or execute 'run <file>' in the terminal to spawn an isolated container. You can also format code instantly with WASM using the Format button.",
+		"Regarding \"%s\": VoidLAB is engineered as a 100%% stateless coding engine. Your workspace is stored locally in the browser, while execution runs inside ephemeral Alpine/slim containers with 256MB RAM and 0.5 CPU limits. Use the Run button (Ctrl+Enter) to trigger execution or WASM Format to clean up syntax.",
 		html.EscapeString(prompt),
 	)
 	return title, answer, ""
+}
+
+// HandleAIStream streams an AI response back via Server-Sent Events (SSE).
+// 100% stateless: proxies prompt without storing any chat history on the server.
+func HandleAIStream(w http.ResponseWriter, r *http.Request) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no")
+
+	_ = r.ParseForm()
+	prompt := strings.TrimSpace(r.FormValue("prompt"))
+	if prompt == "" {
+		prompt = strings.TrimSpace(r.URL.Query().Get("prompt"))
+	}
+	lang := strings.TrimSpace(r.FormValue("lang"))
+
+	if prompt == "" {
+		prompt = "Welcome to VoidLAB"
+	}
+
+	title, answer, snippet := GenerateAIResponse(prompt, lang)
+	fullText := answer
+	if snippet != "" {
+		fullText += "\n\n```" + lang + "\n" + snippet + "\n```"
+	}
+
+	// Stream initial title event
+	metaEvent, _ := json.Marshal(map[string]any{
+		"title": title,
+		"time":  time.Now().Format("15:04:05"),
+	})
+	fmt.Fprintf(w, "event: start\ndata: %s\n\n", metaEvent)
+	flusher.Flush()
+
+	// Stream response tokens chunk-by-chunk
+	words := strings.Fields(fullText)
+	for i, word := range words {
+		chunk := word
+		if i < len(words)-1 {
+			chunk += " "
+		}
+
+		payload, _ := json.Marshal(map[string]any{
+			"chunk": chunk,
+			"done":  false,
+		})
+		fmt.Fprintf(w, "event: chunk\ndata: %s\n\n", payload)
+		flusher.Flush()
+	}
+
+	// Stream completion event
+	donePayload, _ := json.Marshal(map[string]any{
+		"chunk": "",
+		"done":  true,
+	})
+	fmt.Fprintf(w, "event: done\ndata: %s\n\n", donePayload)
+	flusher.Flush()
+}
+
+// HandleAIWebSocket handles streaming LLM responses over WebSockets.
+func HandleAIWebSocket(w http.ResponseWriter, r *http.Request) {
+	upgrader := websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool { return true },
+	}
+
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("[AI WS] upgrade error: %v", err)
+		return
+	}
+	defer conn.Close()
+
+	for {
+		var req map[string]string
+		if err := conn.ReadJSON(&req); err != nil {
+			break
+		}
+
+		prompt := strings.TrimSpace(req["prompt"])
+		lang := strings.TrimSpace(req["lang"])
+		if prompt == "" {
+			continue
+		}
+
+		title, answer, snippet := GenerateAIResponse(prompt, lang)
+		fullText := answer
+		if snippet != "" {
+			fullText += "\n\n```" + lang + "\n" + snippet + "\n```"
+		}
+
+		_ = conn.WriteJSON(map[string]any{
+			"type":  "start",
+			"title": title,
+			"time":  time.Now().Format("15:04:05"),
+		})
+
+		words := strings.Fields(fullText)
+		for i, word := range words {
+			chunk := word
+			if i < len(words)-1 {
+				chunk += " "
+			}
+
+			_ = conn.WriteJSON(map[string]any{
+				"type":  "chunk",
+				"chunk": chunk,
+				"done":  false,
+			})
+		}
+
+		_ = conn.WriteJSON(map[string]any{
+			"type": "done",
+			"done": true,
+		})
+	}
 }
 
 // RenderAIPromptFragment generates the HTMX HTML message pair (user message + assistant message).

@@ -22,6 +22,7 @@ type CollabMessage struct {
 }
 
 // CollabRoom represents an active peer room for collaborative editing.
+// All rooms are held strictly in memory (ephemeral, zero database).
 type CollabRoom struct {
 	ID           string
 	Name         string
@@ -32,7 +33,8 @@ type CollabRoom struct {
 	mu           sync.RWMutex
 }
 
-// CollabManager manages multiplayer rooms and WebSockets.
+// CollabManager manages ephemeral in-memory multiplayer rooms and WebSockets.
+// When the last user leaves a room, the room vanishes from server memory completely.
 type CollabManager struct {
 	rooms    map[string]*CollabRoom
 	upgrader websocket.Upgrader
@@ -86,7 +88,7 @@ func (cm *CollabManager) GetOrCreateRoom(id string, host string) *CollabRoom {
 		Messages: []CollabMessage{
 			{
 				Author:    "System",
-				Text:      fmt.Sprintf("Room %s initialized. Share the room code to start multiplayer peer sync.", id),
+				Text:      fmt.Sprintf("Room %s initialized. Share code to start multiplayer peer sync.", id),
 				Timestamp: time.Now(),
 			},
 		},
@@ -97,6 +99,84 @@ func (cm *CollabManager) GetOrCreateRoom(id string, host string) *CollabRoom {
 	return room
 }
 
+// RemoveClient removes a client connection from an ephemeral room.
+// CRITICAL: When the last client/participant leaves, the room vanishes from memory completely (100% stateless).
+func (cm *CollabManager) RemoveClient(roomID string, conn *websocket.Conn, username string) {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
+	roomID = strings.ToUpper(strings.TrimSpace(roomID))
+	room, exists := cm.rooms[roomID]
+	if !exists {
+		return
+	}
+
+	room.mu.Lock()
+	delete(room.Clients, conn)
+	clientCount := len(room.Clients)
+
+	if username != "" {
+		filtered := make([]string, 0, len(room.Participants))
+		for _, p := range room.Participants {
+			if p != username {
+				filtered = append(filtered, p)
+			}
+		}
+		room.Participants = filtered
+	}
+	participantCount := len(room.Participants)
+	room.mu.Unlock()
+
+	// When the last user leaves, room vanishes from memory completely
+	if clientCount == 0 || participantCount == 0 {
+		delete(cm.rooms, roomID)
+		log.Printf("[Collab WS] Last user left room %s: room vanished from memory", roomID)
+	}
+}
+
+// LeaveRoom removes a participant via HTTP. If empty, the room vanishes from server memory.
+func (cm *CollabManager) LeaveRoom(roomID string, username string) {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
+	roomID = strings.ToUpper(strings.TrimSpace(roomID))
+	room, exists := cm.rooms[roomID]
+	if !exists {
+		return
+	}
+
+	room.mu.Lock()
+	filtered := make([]string, 0, len(room.Participants))
+	for _, p := range room.Participants {
+		if p != username {
+			filtered = append(filtered, p)
+		}
+	}
+	room.Participants = filtered
+	isEmpty := len(room.Participants) == 0 && len(room.Clients) == 0
+	room.mu.Unlock()
+
+	if isEmpty {
+		delete(cm.rooms, roomID)
+		log.Printf("[Collab] Ephemeral room %s vanished from server memory", roomID)
+	}
+}
+
+// RoomExists checks if an ephemeral room currently exists in server memory.
+func (cm *CollabManager) RoomExists(id string) bool {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+	_, exists := cm.rooms[strings.ToUpper(strings.TrimSpace(id))]
+	return exists
+}
+
+// ActiveRoomCount returns the count of active in-memory rooms.
+func (cm *CollabManager) ActiveRoomCount() int {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+	return len(cm.rooms)
+}
+
 // HandleWebSocketConnection handles multiplayer WebSocket streaming for collaborative sync.
 func (cm *CollabManager) HandleWebSocketConnection(w http.ResponseWriter, r *http.Request) {
 	roomID := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("room")))
@@ -105,7 +185,7 @@ func (cm *CollabManager) HandleWebSocketConnection(w http.ResponseWriter, r *htt
 		if authUser, ok := GetAuthenticatedUser(r); ok {
 			username = authUser
 		} else {
-			username = "Guest-" + GenerateRoomCode()[5:]
+			username = "Peer-" + GenerateRoomCode()[5:]
 		}
 	}
 
@@ -132,10 +212,9 @@ func (cm *CollabManager) HandleWebSocketConnection(w http.ResponseWriter, r *htt
 	}
 	room.mu.Unlock()
 
+	// Ensure cleanup when connection disconnects: room vanishes if last user leaves
 	defer func() {
-		room.mu.Lock()
-		delete(room.Clients, conn)
-		room.mu.Unlock()
+		cm.RemoveClient(room.ID, conn, username)
 	}()
 
 	// Initial welcome message over WebSocket
@@ -229,7 +308,7 @@ func (cm *CollabManager) RenderRoomCard(room *CollabRoom, currentUser string) st
         Copy Code
       </button>
       <button
-        hx-post="/api/collab/room?action=leave"
+        hx-post="/api/collab/room?action=leave&room_id=%s"
         hx-target="#collab-room-container"
         hx-swap="outerHTML"
         class="px-2 py-1 rounded bg-[var(--control-background)] hover:bg-rose-500/10 text-rose-500 text-[10px] font-medium border border-[var(--border)] cursor-pointer"
@@ -252,83 +331,75 @@ func (cm *CollabManager) RenderRoomCard(room *CollabRoom, currentUser string) st
     </div>
   </div>
 
-  <form hx-post="/api/collab/room" hx-target="#collab-room-container" hx-swap="outerHTML" class="flex gap-2">
-    <input type="hidden" name="action" value="message">
-    <input type="hidden" name="room_id" value="%s">
+  <!-- Send Message Box -->
+  <form
+    hx-post="/api/collab/room?action=message&room_id=%s"
+    hx-target="#collab-room-container"
+    hx-swap="outerHTML"
+    class="flex items-center gap-2 pt-1"
+  >
     <input
+      type="text"
       name="message"
-      class="flex-1 px-3 py-1.5 text-xs rounded border border-[var(--border)] bg-[var(--input-background)] text-[var(--text)] outline-none font-sans"
-      placeholder="Type a peer message or sync note..."
+      placeholder="Broadcast message to room..."
       autocomplete="off"
       required
-    >
+      class="flex-1 px-2.5 py-1.5 rounded text-xs bg-[var(--input-background)] border border-[var(--border)] text-[var(--text)] outline-none focus:border-[var(--accent)] font-sans"
+    />
     <button
       type="submit"
-      class="px-3 py-1.5 rounded font-semibold text-xs bg-[var(--action-background)] text-[var(--action-foreground)] shadow-sm hover:opacity-95 cursor-pointer"
+      class="px-3 py-1.5 rounded text-xs font-semibold bg-[var(--action-background)] text-[var(--action-foreground)] cursor-pointer shadow-sm active:scale-95 transition-all"
     >
       Send
     </button>
   </form>
 </div>
-`, room.ID, room.ID, room.ID, len(room.Participants), participantsHTML.String(), messagesHTML.String(), room.ID)
+`, room.ID, room.ID, room.ID, room.ID, len(room.Participants), participantsHTML.String(), messagesHTML.String(), room.ID)
 }
 
-// RenderLauncherCard renders the initial multiplayer lobby card.
+// RenderLauncherCard renders the idle room creator & joiner form.
 func (cm *CollabManager) RenderLauncherCard() string {
 	return `
-<div id="collab-room-container" class="rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] p-4 font-sans text-xs space-y-4 transition-colors shadow-sm">
-  <div class="flex items-center justify-between border-b border-[var(--border)] pb-2">
-    <div class="flex items-center gap-2">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[var(--accent)]"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-      <span class="font-bold text-xs uppercase tracking-wider text-[var(--text-strong)]">Multiplayer Peer Collaboration</span>
-    </div>
-    <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-500 font-medium">Ready</span>
-  </div>
-
-  <p class="text-xs text-[var(--muted)] leading-relaxed">
-    Collaborate with other developers in real-time. Spawn a private local room or join an existing session code with zero cloud database dependencies.
+<div id="collab-room-container" class="rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] p-4 font-sans text-xs space-y-3 transition-colors shadow-sm">
+  <div class="font-bold text-xs uppercase tracking-wider text-[var(--text-strong)]">Multiplayer Peer Collaboration</div>
+  <p class="text-[11px] text-[var(--muted)] leading-relaxed">
+    100% Stateless & In-Memory: Rooms live exclusively in ephemeral server memory. When the last participant leaves, the room vanishes completely.
   </p>
 
-  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-    <!-- Action 1: Create New Room -->
-    <div class="p-3 rounded-lg border border-[var(--border)] bg-[var(--panel-background)] space-y-2 flex flex-col justify-between">
-      <div>
-        <div class="font-semibold text-xs text-[var(--text-strong)]">Start New Session</div>
-        <div class="text-[11px] text-[var(--muted)]">Generate a unique session token and host a peer sync room.</div>
-      </div>
-      <form hx-post="/api/collab/room" hx-target="#collab-room-container" hx-swap="outerHTML">
-        <input type="hidden" name="action" value="create">
-        <button
-          type="submit"
-          class="w-full py-1.5 px-3 rounded font-semibold text-xs bg-[var(--action-background)] text-[var(--action-foreground)] shadow-sm hover:opacity-90 cursor-pointer"
-        >
-          Create Room
-        </button>
-      </form>
-    </div>
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+    <!-- Spawn New Room -->
+    <button
+      hx-post="/api/collab/room?action=create"
+      hx-target="#collab-room-container"
+      hx-swap="outerHTML"
+      class="w-full py-2 px-3 rounded text-xs font-semibold bg-[var(--action-background)] text-[var(--action-foreground)] shadow-sm hover:opacity-95 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+      type="button"
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+      <span>Spawn New Room</span>
+    </button>
 
-    <!-- Action 2: Join Existing Room -->
-    <div class="p-3 rounded-lg border border-[var(--border)] bg-[var(--panel-background)] space-y-2 flex flex-col justify-between">
-      <div>
-        <div class="font-semibold text-xs text-[var(--text-strong)]">Join With Code</div>
-        <div class="text-[11px] text-[var(--muted)]">Enter the 6-character room token provided by your peer.</div>
-      </div>
-      <form hx-post="/api/collab/room" hx-target="#collab-room-container" hx-swap="outerHTML" class="flex gap-1.5">
-        <input type="hidden" name="action" value="join">
-        <input
-          name="room_id"
-          class="flex-1 px-2.5 py-1 text-xs rounded border border-[var(--border)] bg-[var(--input-background)] text-[var(--text)] font-mono uppercase outline-none"
-          placeholder="VOID-XXXX"
-          required
-        >
-        <button
-          type="submit"
-          class="py-1 px-3 rounded font-semibold text-xs bg-[var(--control-background)] hover:bg-[var(--control-hover)] text-[var(--text)] border border-[var(--border)] cursor-pointer"
-        >
-          Join
-        </button>
-      </form>
-    </div>
+    <!-- Join Existing Room -->
+    <form
+      hx-post="/api/collab/room?action=join"
+      hx-target="#collab-room-container"
+      hx-swap="outerHTML"
+      class="flex items-center gap-1.5"
+    >
+      <input
+        type="text"
+        name="room_id"
+        placeholder="Room Code (e.g. VOID-1A2B)"
+        required
+        class="w-full px-2.5 py-1.5 rounded text-xs bg-[var(--input-background)] border border-[var(--border)] text-[var(--text)] outline-none focus:border-[var(--accent)] font-mono uppercase"
+      />
+      <button
+        type="submit"
+        class="px-3 py-1.5 rounded text-xs font-semibold bg-[var(--control-background)] hover:bg-[var(--control-hover)] border border-[var(--border)] text-[var(--text)] cursor-pointer"
+      >
+        Join
+      </button>
+    </form>
   </div>
 </div>
 `

@@ -11,7 +11,7 @@ import (
 	"github.com/Voxion-Labs/VoidLAB/internal/explorer"
 )
 
-// Handler serves premium feature routes (Multiplayer Collaboration, AI Guide, and Authentication).
+// Handler serves premium feature routes (Multiplayer Collaboration, AI Guide, and Profile/Auth).
 type Handler struct {
 	collabManager *CollabManager
 	explorerSvc   *explorer.Service
@@ -23,6 +23,11 @@ func NewHandler(exp *explorer.Service) *Handler {
 		collabManager: NewCollabManager(),
 		explorerSvc:   exp,
 	}
+}
+
+// CollabManager returns the active ephemeral in-memory collaboration manager.
+func (h *Handler) CollabManager() *CollabManager {
+	return h.collabManager
 }
 
 // HandleCollabRoom handles /api/collab/room for both multiplayer WebSockets and HTMX HTML fragments.
@@ -89,6 +94,13 @@ func (h *Handler) HandleCollabRoom(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, h.collabManager.RenderRoomCard(room, currentUser))
 
 	case "leave":
+		roomID := strings.TrimSpace(r.FormValue("room_id"))
+		if roomID == "" {
+			roomID = strings.TrimSpace(r.URL.Query().Get("room_id"))
+		}
+		if roomID != "" {
+			h.collabManager.LeaveRoom(roomID, currentUser)
+		}
 		fmt.Fprint(w, h.collabManager.RenderLauncherCard())
 
 	default:
@@ -96,10 +108,14 @@ func (h *Handler) HandleCollabRoom(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// HandleAIPrompt handles /api/ai/prompt returning rich HTML fragments for the AI Guide.
+// HandleAIPrompt handles /api/ai/prompt returning rich HTML fragments or SSE streams.
 func (h *Handler) HandleAIPrompt(w http.ResponseWriter, r *http.Request) {
-	_ = r.ParseForm()
+	if strings.Contains(r.Header.Get("Accept"), "text/event-stream") || r.URL.Query().Get("stream") == "true" {
+		HandleAIStream(w, r)
+		return
+	}
 
+	_ = r.ParseForm()
 	prompt := strings.TrimSpace(r.FormValue("prompt"))
 	if prompt == "" {
 		prompt = strings.TrimSpace(r.URL.Query().Get("prompt"))
@@ -109,7 +125,6 @@ func (h *Handler) HandleAIPrompt(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 	if prompt == "" {
-		// Return suggestions palette if prompt is empty
 		fmt.Fprint(w, RenderAISuggestionsFragment())
 		return
 	}
@@ -117,7 +132,129 @@ func (h *Handler) HandleAIPrompt(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, RenderAIPromptFragment(prompt, lang))
 }
 
-// HandleLogin authenticates a user, sets a secure HTTP-only cookie, and redirects to /editor.
+// HandleAIStream serves the Server-Sent Events (SSE) streaming proxy.
+func (h *Handler) HandleAIStream(w http.ResponseWriter, r *http.Request) {
+	HandleAIStream(w, r)
+}
+
+// HandleAIWebSocket serves the WebSocket streaming proxy.
+func (h *Handler) HandleAIWebSocket(w http.ResponseWriter, r *http.Request) {
+	HandleAIWebSocket(w, r)
+}
+
+// HandleUICollab returns the collab.tmpl HTMX fragment.
+func (h *Handler) HandleUICollab(tmpl *template.Template) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data, err := h.explorerSvc.BuildWorkspaceData()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if user, ok := GetAuthenticatedUser(r); ok {
+			data.User = user
+			if len(user) > 0 {
+				data.UserInitial = strings.ToUpper(string(user[0]))
+			}
+		}
+		data.IsEditor = true
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := tmpl.ExecuteTemplate(w, "collab.tmpl", data); err != nil {
+			_ = tmpl.ExecuteTemplate(w, "collab", data)
+		}
+	}
+}
+
+// HandleUIAI returns the ai.tmpl HTMX fragment.
+func (h *Handler) HandleUIAI(tmpl *template.Template) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data, err := h.explorerSvc.BuildWorkspaceData()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		data.IsEditor = true
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := tmpl.ExecuteTemplate(w, "ai.tmpl", data); err != nil {
+			_ = tmpl.ExecuteTemplate(w, "ai", data)
+		}
+	}
+}
+
+// HandleUIProfile returns the profile.tmpl HTMX fragment.
+func (h *Handler) HandleUIProfile(tmpl *template.Template) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data, err := h.explorerSvc.BuildWorkspaceData()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if user, ok := GetAuthenticatedUser(r); ok {
+			data.User = user
+			if len(user) > 0 {
+				data.UserInitial = strings.ToUpper(string(user[0]))
+			}
+		}
+		data.IsEditor = true
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := tmpl.ExecuteTemplate(w, "profile.tmpl", data); err != nil {
+			_ = tmpl.ExecuteTemplate(w, "profile", data)
+		}
+	}
+}
+
+// HandleUIManual returns the manual.tmpl HTMX fragment.
+func (h *Handler) HandleUIManual(tmpl *template.Template) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data, err := h.explorerSvc.BuildWorkspaceData()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		data.IsEditor = true
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := tmpl.ExecuteTemplate(w, "manual.tmpl", data); err != nil {
+			_ = tmpl.ExecuteTemplate(w, "manual", data)
+		}
+	}
+}
+
+// HandleUIGitHub returns the github.tmpl HTMX fragment.
+func (h *Handler) HandleUIGitHub(tmpl *template.Template) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data, err := h.explorerSvc.BuildWorkspaceData()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		data.IsEditor = true
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := tmpl.ExecuteTemplate(w, "github.tmpl", data); err != nil {
+			_ = tmpl.ExecuteTemplate(w, "github", data)
+		}
+	}
+}
+
+// HandleUIEditor returns the editor.tmpl fragment.
+func (h *Handler) HandleUIEditor(tmpl *template.Template) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data, err := h.explorerSvc.BuildWorkspaceData()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		data.IsEditor = true
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_ = tmpl.ExecuteTemplate(w, "editor", data)
+	}
+}
+
+// HandleEmpty returns an empty fragment to close dynamic side panels.
+func (h *Handler) HandleEmpty(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+}
+
+// HandleLogin authenticates a user and redirects to /editor via HX-Redirect.
 func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	_ = r.ParseForm()
 	username := strings.TrimSpace(r.FormValue("username"))
@@ -131,10 +268,8 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		username = username[:idx]
 	}
 
-	// Issue secure HTTP-only cookie
 	SetAuthCookie(w, r, username)
 
-	// Use HX-Redirect for HTMX clients to redirect to /editor
 	w.Header().Set("HX-Redirect", "/editor")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
@@ -145,7 +280,6 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	ClearAuthCookie(w, r)
 
-	// Use HX-Redirect for HTMX clients to redirect to /
 	w.Header().Set("HX-Redirect", "/")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
@@ -192,16 +326,16 @@ func (h *Handler) HandleProfileModal(w http.ResponseWriter, r *http.Request) {
           <div class="text-[11px] text-[var(--muted)]">Voxion Labs Principal Engineer</div>
           <div class="inline-flex items-center gap-1 mt-1 text-[10px] text-emerald-500 font-medium">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            HTTP-Only Cookie Authenticated
+            Stateless Browser Storage
           </div>
         </div>
       </div>
 
-      <!-- Session Security Card -->
+      <!-- Stateless Architecture Note -->
       <div class="p-3 rounded-lg border border-[var(--border)] space-y-1.5 bg-[var(--panel-background)]">
-        <div class="font-semibold text-[11px] text-[var(--text-strong)]">Security Architecture</div>
+        <div class="font-semibold text-[11px] text-[var(--text-strong)]">Stateless Architecture</div>
         <div class="text-[11px] text-[var(--muted)] leading-relaxed">
-          Authentication credentials are stored exclusively in an HTTP-only, SameSite=Lax cookie (<code>voidlab_session</code>). No client-side JavaScript can inspect or tamper with session tokens.
+          Zero external database. Profile, settings, and workspace data are saved locally in your browser via <code>localStorage</code>.
         </div>
       </div>
 
