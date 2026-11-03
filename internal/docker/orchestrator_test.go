@@ -73,6 +73,29 @@ func Test16LanguagesMapping(t *testing.T) {
 		if cfg.Name == "" || cfg.Extension == "" || cfg.Timeout <= 0 {
 			t.Errorf("invalid config fields for language: %s", lang)
 		}
+		if cfg.MemoryLimit != "256m" {
+			t.Errorf("expected MemoryLimit=256m for %s, got %s", lang, cfg.MemoryLimit)
+		}
+		if cfg.CPULimit != "0.5" {
+			t.Errorf("expected CPULimit=0.5 for %s, got %s", lang, cfg.CPULimit)
+		}
+	}
+
+	orc, err := NewOrchestrator(t.TempDir())
+	if err != nil {
+		t.Fatalf("failed to create orchestrator: %v", err)
+	}
+	for _, lang := range expectedLanguages {
+		prof, ok := orc.profiles[lang]
+		if !ok {
+			t.Errorf("missing profile for %s", lang)
+		}
+		if prof.MemoryLimit != "256m" {
+			t.Errorf("expected profile MemoryLimit=256m for %s, got %s", lang, prof.MemoryLimit)
+		}
+		if prof.CPULimit != "0.5" {
+			t.Errorf("expected profile CPULimit=0.5 for %s, got %s", lang, prof.CPULimit)
+		}
 	}
 }
 

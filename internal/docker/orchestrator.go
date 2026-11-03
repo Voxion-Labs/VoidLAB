@@ -96,8 +96,8 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		CompileCmd:  "g++ -O2 -Wall main.cpp -o app",
 		RunCmd:      "./app",
 		Timeout:     30 * time.Second,
-		MemoryLimit: "512m",
-		CPULimit:    "1.0",
+		MemoryLimit: "256m",
+		CPULimit:    "0.5",
 	},
 	"c": {
 		ID:          "c",
@@ -107,8 +107,8 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		CompileCmd:  "gcc -O2 -Wall main.c -o app",
 		RunCmd:      "./app",
 		Timeout:     30 * time.Second,
-		MemoryLimit: "512m",
-		CPULimit:    "1.0",
+		MemoryLimit: "256m",
+		CPULimit:    "0.5",
 	},
 	"rust": {
 		ID:          "rust",
@@ -118,8 +118,8 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		CompileCmd:  "rustc main.rs -o app",
 		RunCmd:      "./app",
 		Timeout:     60 * time.Second,
-		MemoryLimit: "512m",
-		CPULimit:    "1.0",
+		MemoryLimit: "256m",
+		CPULimit:    "0.5",
 	},
 	"python": {
 		ID:          "python",
@@ -130,7 +130,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		RunCmd:      "python -u main.py",
 		Timeout:     30 * time.Second,
 		MemoryLimit: "256m",
-		CPULimit:    "1.0",
+		CPULimit:    "0.5",
 	},
 	"go": {
 		ID:          "go",
@@ -140,8 +140,8 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		CompileCmd:  "",
 		RunCmd:      "go run main.go",
 		Timeout:     45 * time.Second,
-		MemoryLimit: "512m",
-		CPULimit:    "1.0",
+		MemoryLimit: "256m",
+		CPULimit:    "0.5",
 	},
 	"javascript": {
 		ID:          "javascript",
@@ -152,7 +152,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		RunCmd:      "node main.js",
 		Timeout:     30 * time.Second,
 		MemoryLimit: "256m",
-		CPULimit:    "1.0",
+		CPULimit:    "0.5",
 	},
 	"typescript": {
 		ID:          "typescript",
@@ -162,8 +162,8 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		CompileCmd:  "",
 		RunCmd:      "npx tsx main.ts",
 		Timeout:     45 * time.Second,
-		MemoryLimit: "512m",
-		CPULimit:    "1.0",
+		MemoryLimit: "256m",
+		CPULimit:    "0.5",
 	},
 	"java": {
 		ID:          "java",
@@ -173,8 +173,8 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		CompileCmd:  "javac Main.java",
 		RunCmd:      "java Main",
 		Timeout:     45 * time.Second,
-		MemoryLimit: "512m",
-		CPULimit:    "1.0",
+		MemoryLimit: "256m",
+		CPULimit:    "0.5",
 	},
 	"csharp": {
 		ID:          "csharp",
@@ -184,8 +184,8 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		CompileCmd:  "dotnet build -o /tmp/out",
 		RunCmd:      "dotnet /tmp/out/app.dll",
 		Timeout:     45 * time.Second,
-		MemoryLimit: "512m",
-		CPULimit:    "1.0",
+		MemoryLimit: "256m",
+		CPULimit:    "0.5",
 	},
 	"php": {
 		ID:          "php",
@@ -196,7 +196,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		RunCmd:      "php main.php",
 		Timeout:     30 * time.Second,
 		MemoryLimit: "256m",
-		CPULimit:    "1.0",
+		CPULimit:    "0.5",
 	},
 	"ruby": {
 		ID:          "ruby",
@@ -207,7 +207,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		RunCmd:      "ruby main.rb",
 		Timeout:     30 * time.Second,
 		MemoryLimit: "256m",
-		CPULimit:    "1.0",
+		CPULimit:    "0.5",
 	},
 	"swift": {
 		ID:          "swift",
@@ -217,8 +217,8 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		CompileCmd:  "swiftc main.swift -o app",
 		RunCmd:      "./app",
 		Timeout:     60 * time.Second,
-		MemoryLimit: "512m",
-		CPULimit:    "1.0",
+		MemoryLimit: "256m",
+		CPULimit:    "0.5",
 	},
 	"kotlin": {
 		ID:          "kotlin",
@@ -228,8 +228,8 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		CompileCmd:  "kotlinc main.kt -include-runtime -d app.jar",
 		RunCmd:      "java -jar app.jar",
 		Timeout:     45 * time.Second,
-		MemoryLimit: "512m",
-		CPULimit:    "1.0",
+		MemoryLimit: "256m",
+		CPULimit:    "0.5",
 	},
 	"lua": {
 		ID:          "lua",
@@ -239,7 +239,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		CompileCmd:  "",
 		RunCmd:      "lua main.lua",
 		Timeout:     20 * time.Second,
-		MemoryLimit: "128m",
+		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
 	"shell": {
@@ -250,7 +250,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		CompileCmd:  "",
 		RunCmd:      "sh main.sh",
 		Timeout:     20 * time.Second,
-		MemoryLimit: "128m",
+		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
 	"powershell": {
@@ -262,7 +262,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		RunCmd:      "pwsh -File main.ps1",
 		Timeout:     30 * time.Second,
 		MemoryLimit: "256m",
-		CPULimit:    "1.0",
+		CPULimit:    "0.5",
 	},
 	"sql": {
 		ID:          "sql",
@@ -649,7 +649,7 @@ func (o *Orchestrator) initProfiles() {
 		Image:       LanguageImageMap["python"],
 		Timeout:     30 * time.Second,
 		MemoryLimit: "256m",
-		CPULimit:    "1.0",
+		CPULimit:    "0.5",
 		Command: func(path string) []string {
 			return []string{"python", "-u", path}
 		},
@@ -660,8 +660,8 @@ func (o *Orchestrator) initProfiles() {
 		Name:        "C++",
 		Image:       LanguageImageMap["cpp"],
 		Timeout:     30 * time.Second,
-		MemoryLimit: "512m",
-		CPULimit:    "1.0",
+		MemoryLimit: "256m",
+		CPULimit:    "0.5",
 		Command: func(path string) []string {
 			cmd := fmt.Sprintf("g++ -O2 -Wall %s -o /tmp/app && /tmp/app", path)
 			return []string{"sh", "-c", cmd}
@@ -673,8 +673,8 @@ func (o *Orchestrator) initProfiles() {
 		Name:        "C",
 		Image:       LanguageImageMap["c"],
 		Timeout:     30 * time.Second,
-		MemoryLimit: "512m",
-		CPULimit:    "1.0",
+		MemoryLimit: "256m",
+		CPULimit:    "0.5",
 		Command: func(path string) []string {
 			cmd := fmt.Sprintf("gcc -O2 -Wall %s -o /tmp/app && /tmp/app", path)
 			return []string{"sh", "-c", cmd}
@@ -686,8 +686,8 @@ func (o *Orchestrator) initProfiles() {
 		Name:        "Rust",
 		Image:       LanguageImageMap["rust"],
 		Timeout:     60 * time.Second,
-		MemoryLimit: "512m",
-		CPULimit:    "1.0",
+		MemoryLimit: "256m",
+		CPULimit:    "0.5",
 		Command: func(path string) []string {
 			cmd := fmt.Sprintf("rustc %s -o /tmp/app && /tmp/app", path)
 			return []string{"sh", "-c", cmd}
@@ -699,8 +699,8 @@ func (o *Orchestrator) initProfiles() {
 		Name:        "Go",
 		Image:       LanguageImageMap["go"],
 		Timeout:     45 * time.Second,
-		MemoryLimit: "512m",
-		CPULimit:    "1.0",
+		MemoryLimit: "256m",
+		CPULimit:    "0.5",
 		Command: func(path string) []string {
 			return []string{"go", "run", path}
 		},
@@ -712,7 +712,7 @@ func (o *Orchestrator) initProfiles() {
 		Image:       LanguageImageMap["javascript"],
 		Timeout:     30 * time.Second,
 		MemoryLimit: "256m",
-		CPULimit:    "1.0",
+		CPULimit:    "0.5",
 		Command: func(path string) []string {
 			return []string{"node", path}
 		},
@@ -723,8 +723,8 @@ func (o *Orchestrator) initProfiles() {
 		Name:        "TypeScript",
 		Image:       LanguageImageMap["typescript"],
 		Timeout:     45 * time.Second,
-		MemoryLimit: "512m",
-		CPULimit:    "1.0",
+		MemoryLimit: "256m",
+		CPULimit:    "0.5",
 		Command: func(path string) []string {
 			cmd := fmt.Sprintf("npx tsx %s || node %s", path, path)
 			return []string{"sh", "-c", cmd}
@@ -736,8 +736,8 @@ func (o *Orchestrator) initProfiles() {
 		Name:        "Java",
 		Image:       LanguageImageMap["java"],
 		Timeout:     45 * time.Second,
-		MemoryLimit: "512m",
-		CPULimit:    "1.0",
+		MemoryLimit: "256m",
+		CPULimit:    "0.5",
 		Command: func(path string) []string {
 			cmd := fmt.Sprintf("javac %s -d /tmp && java -cp /tmp Main", path)
 			return []string{"sh", "-c", cmd}
@@ -749,8 +749,8 @@ func (o *Orchestrator) initProfiles() {
 		Name:        "C#",
 		Image:       LanguageImageMap["csharp"],
 		Timeout:     45 * time.Second,
-		MemoryLimit: "512m",
-		CPULimit:    "1.0",
+		MemoryLimit: "256m",
+		CPULimit:    "0.5",
 		Command: func(path string) []string {
 			return []string{"dotnet", "run", path}
 		},
@@ -762,7 +762,7 @@ func (o *Orchestrator) initProfiles() {
 		Image:       LanguageImageMap["php"],
 		Timeout:     30 * time.Second,
 		MemoryLimit: "256m",
-		CPULimit:    "1.0",
+		CPULimit:    "0.5",
 		Command: func(path string) []string {
 			return []string{"php", path}
 		},
@@ -774,7 +774,7 @@ func (o *Orchestrator) initProfiles() {
 		Image:       LanguageImageMap["ruby"],
 		Timeout:     30 * time.Second,
 		MemoryLimit: "256m",
-		CPULimit:    "1.0",
+		CPULimit:    "0.5",
 		Command: func(path string) []string {
 			return []string{"ruby", path}
 		},
@@ -785,8 +785,8 @@ func (o *Orchestrator) initProfiles() {
 		Name:        "Swift",
 		Image:       LanguageImageMap["swift"],
 		Timeout:     60 * time.Second,
-		MemoryLimit: "512m",
-		CPULimit:    "1.0",
+		MemoryLimit: "256m",
+		CPULimit:    "0.5",
 		Command: func(path string) []string {
 			cmd := fmt.Sprintf("swiftc %s -o /tmp/app && /tmp/app", path)
 			return []string{"sh", "-c", cmd}
@@ -798,8 +798,8 @@ func (o *Orchestrator) initProfiles() {
 		Name:        "Kotlin",
 		Image:       LanguageImageMap["kotlin"],
 		Timeout:     45 * time.Second,
-		MemoryLimit: "512m",
-		CPULimit:    "1.0",
+		MemoryLimit: "256m",
+		CPULimit:    "0.5",
 		Command: func(path string) []string {
 			cmd := fmt.Sprintf("kotlinc %s -include-runtime -d /tmp/app.jar && java -jar /tmp/app.jar", path)
 			return []string{"sh", "-c", cmd}
@@ -811,7 +811,7 @@ func (o *Orchestrator) initProfiles() {
 		Name:        "Lua",
 		Image:       LanguageImageMap["lua"],
 		Timeout:     20 * time.Second,
-		MemoryLimit: "128m",
+		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 		Command: func(path string) []string {
 			return []string{"lua", path}
@@ -823,7 +823,7 @@ func (o *Orchestrator) initProfiles() {
 		Name:        "Shell",
 		Image:       LanguageImageMap["shell"],
 		Timeout:     20 * time.Second,
-		MemoryLimit: "128m",
+		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 		Command: func(path string) []string {
 			return []string{"sh", path}
@@ -836,7 +836,7 @@ func (o *Orchestrator) initProfiles() {
 		Image:       LanguageImageMap["powershell"],
 		Timeout:     30 * time.Second,
 		MemoryLimit: "256m",
-		CPULimit:    "1.0",
+		CPULimit:    "0.5",
 		Command: func(path string) []string {
 			return []string{"pwsh", "-File", path}
 		},
