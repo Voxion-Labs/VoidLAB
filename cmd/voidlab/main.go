@@ -245,16 +245,16 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 	mux.HandleFunc("POST /api/terminal/exec", terminalHandler.HandleTerminalExec)
 	mux.HandleFunc("POST /api/terminal/clear", terminalHandler.HandleClear)
 
-	// 8. Collaboration & Multiplayer WebSockets
-	mux.HandleFunc("GET /api/collab/room", collabHandler.HandleCollabRoom)
-	mux.HandleFunc("POST /api/collab/room", collabHandler.HandleCollabRoom)
+	// 8. Collaboration & Multiplayer WebSockets (Protected via JWT Middleware)
+	mux.HandleFunc("GET /api/collab/room", auth.RequireJWT(collabHandler.HandleCollabRoom))
+	mux.HandleFunc("POST /api/collab/room", auth.RequireJWT(collabHandler.HandleCollabRoom))
 
-	// AI Guide Prompts & Streaming
-	mux.HandleFunc("GET /api/ai/prompt", aiHandler.HandleAIPrompt)
-	mux.HandleFunc("POST /api/ai/prompt", aiHandler.HandleAIPrompt)
-	mux.HandleFunc("GET /api/ai/stream", aiHandler.HandleAIStream)
-	mux.HandleFunc("POST /api/ai/stream", aiHandler.HandleAIStream)
-	mux.HandleFunc("GET /api/ws/ai", aiHandler.HandleAIWebSocket)
+	// AI Guide Prompts & Streaming (Protected via JWT Middleware)
+	mux.HandleFunc("GET /api/ai/prompt", auth.RequireJWT(aiHandler.HandleAIPrompt))
+	mux.HandleFunc("POST /api/ai/prompt", auth.RequireJWT(aiHandler.HandleAIPrompt))
+	mux.HandleFunc("GET /api/ai/stream", auth.RequireJWT(aiHandler.HandleAIStream))
+	mux.HandleFunc("POST /api/ai/stream", auth.RequireJWT(aiHandler.HandleAIStream))
+	mux.HandleFunc("GET /api/ws/ai", auth.RequireJWT(aiHandler.HandleAIWebSocket))
 
 	// Authentication & Secure HTTP-Only Cookie Session Management
 	mux.HandleFunc("POST /api/auth/login", authHandler.HandleLogin)

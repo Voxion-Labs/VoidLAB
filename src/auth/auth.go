@@ -1,23 +1,28 @@
 package auth
 
 import (
-	"crypto/rand"
-	"encoding/hex"
+	"errors"
 	"fmt"
 	"html"
 	"html/template"
+	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/Voxion-Labs/VoidLAB/src/explorer"
 )
 
 const (
-	// SessionCookieName is the secure HTTP-only cookie name used for authentication.
+	// SessionCookieName is the secure HTTP-only cookie name used for JWT authentication.
 	SessionCookieName = "voidlab_session"
 	// DefaultUsername used for single-user local-first developer environments.
 	DefaultUsername = "Rudra"
+	// DefaultSecretFallback ensures safe zero-config local development and testing.
+	DefaultSecretFallback = "voidlab-render-stateless-jwt-secret-key-32b-min"
 )
 
 // UserSession represents an authenticated VoidLAB user profile.
@@ -29,6 +34,13 @@ type UserSession struct {
 	Location    string    `json:"location"`
 	CreatedAt   time.Time `json:"created_at"`
 	IsProtected bool      `json:"is_protected"`
+}
+
+// JWTClaims wraps standard registered JWT claims with VoidLAB profile metadata.
+type JWTClaims struct {
+	Username string `json:"username"`
+	Role     string `json:"role,omitempty"`
+	jwt.RegisteredClaims
 }
 
 // Handler manages user authentication, cookie sessions, and profile modals.
@@ -45,32 +57,90 @@ func NewHandler(exp *explorer.Service, tmpl *template.Template) *Handler {
 	}
 }
 
-// SetAuthCookie issues a secure, HTTP-only cookie mitigating XSS access.
-func SetAuthCookie(w http.ResponseWriter, r *http.Request, username string) string {
-	if strings.TrimSpace(username) == "" {
+// GetSessionSecret loads the HMAC signing key from SESSION_SECRET or JWT_SECRET.
+func GetSessionSecret() []byte {
+	secret := os.Getenv("SESSION_SECRET")
+	if secret == "" {
+		secret = os.Getenv("JWT_SECRET")
+	}
+	if secret == "" {
+		secret = DefaultSecretFallback
+	}
+	return []byte(secret)
+}
+
+// GenerateJWT signs a new HS256 JWT containing the username and standard expiration.
+func GenerateJWT(username string) (string, error) {
+	username = strings.TrimSpace(username)
+	if username == "" {
 		username = DefaultUsername
 	}
-	username = strings.TrimSpace(username)
 
-	tokenBytes := make([]byte, 16)
-	_, _ = rand.Read(tokenBytes)
-	token := hex.EncodeToString(tokenBytes)
+	now := time.Now()
+	claims := JWTClaims{
+		Username: username,
+		Role:     "Developer",
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    "voidlab",
+			Subject:   username,
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(7 * 24 * time.Hour)), // 7 days expiration
+		},
+	}
 
-	// Format: username:token:timestamp
-	cookieVal := fmt.Sprintf("%s:%s:%d", username, token, time.Now().Unix())
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(GetSessionSecret())
+}
+
+// ValidateJWT verifies the cryptographic signature and claims of a JWT string.
+func ValidateJWT(tokenString string) (*JWTClaims, error) {
+	tokenString = strings.TrimSpace(tokenString)
+	if tokenString == "" {
+		return nil, errors.New("empty token")
+	}
+
+	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return GetSessionSecret(), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if claims, ok := token.Claims.(*JWTClaims); ok && token.Valid {
+		return claims, nil
+	}
+
+	return nil, errors.New("invalid or expired token")
+}
+
+// SetAuthCookie signs a JWT containing the username and issues an HTTP-only secure cookie.
+func SetAuthCookie(w http.ResponseWriter, r *http.Request, username string) string {
+	token, err := GenerateJWT(username)
+	if err != nil {
+		log.Printf("[Auth] Failed to generate JWT: %v", err)
+		token = username
+	}
+
 	isSecure := r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https"
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     SessionCookieName,
-		Value:    cookieVal,
+		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   isSecure,
 		SameSite: http.SameSiteLaxMode,
-		MaxAge:   86400 * 7, // 7 days expiration
+		MaxAge:   86400 * 7, // 7 days
 	})
 
-	return cookieVal
+	// Also surface Bearer header for programmatic or HTMX clients
+	w.Header().Set("Authorization", "Bearer "+token)
+
+	return token
 }
 
 // ClearAuthCookie clears the session cookie to securely log out the user.
@@ -88,16 +158,40 @@ func ClearAuthCookie(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// GetAuthenticatedUser inspects incoming HTTP-only cookies and returns the active username.
+// GetAuthenticatedUser inspects incoming requests and returns the verified username from a valid JWT.
+// It checks the HTTP-only cookie, Authorization Bearer header, and HX-Auth-Token header.
 func GetAuthenticatedUser(r *http.Request) (string, bool) {
-	cookie, err := r.Cookie(SessionCookieName)
-	if err != nil || cookie.Value == "" {
+	var tokenString string
+
+	// 1. Check HTTP-only cookie
+	if cookie, err := r.Cookie(SessionCookieName); err == nil && cookie.Value != "" {
+		tokenString = cookie.Value
+	}
+
+	// 2. Fallback to Authorization: Bearer <token>
+	if tokenString == "" {
+		authHeader := r.Header.Get("Authorization")
+		if strings.HasPrefix(strings.ToLower(authHeader), "bearer ") {
+			tokenString = strings.TrimSpace(authHeader[7:])
+		}
+	}
+
+	// 3. Fallback to custom HTMX header
+	if tokenString == "" {
+		tokenString = r.Header.Get("HX-Auth-Token")
+	}
+
+	if tokenString == "" {
 		return "", false
 	}
 
-	parts := strings.Split(cookie.Value, ":")
-	if len(parts) >= 1 && strings.TrimSpace(parts[0]) != "" {
-		return parts[0], true
+	claims, err := ValidateJWT(tokenString)
+	if err != nil {
+		return "", false
+	}
+
+	if strings.TrimSpace(claims.Username) != "" {
+		return claims.Username, true
 	}
 
 	return "", false
@@ -121,7 +215,7 @@ func RenderAuthenticatedBadge(username string) string {
       <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
       <span class="font-semibold text-[var(--text-strong)] truncate">%s</span>
     </div>
-    <div class="text-[10px] text-[var(--muted)]">Authenticated via HTTP-only cookie</div>
+    <div class="text-[10px] text-[var(--muted)]">Verified via signed JWT (Stateless Render)</div>
   </div>
   <button
     hx-post="/api/auth/logout"
@@ -158,7 +252,7 @@ func RenderUnauthenticatedBadge() string {
 `
 }
 
-// HandleLogin authenticates a user and redirects to /editor via HX-Redirect.
+// HandleLogin authenticates a user by signing a JWT and redirects to /editor via HX-Redirect.
 func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	LoginHandler(w, r)
 }
@@ -168,7 +262,7 @@ func (h *Handler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	LogoutHandler(w, r)
 }
 
-// HandleAuthStatus checks the session cookie and returns the appropriate status fragment.
+// HandleAuthStatus checks the JWT cookie and returns the appropriate status fragment.
 func (h *Handler) HandleAuthStatus(w http.ResponseWriter, r *http.Request) {
 	AuthStatusHandler(w, r)
 }
@@ -189,6 +283,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	SetAuthCookie(w, r, username)
 
+	w.Header().Set("X-Authenticated-User", username)
 	w.Header().Set("HX-Redirect", "/editor")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
@@ -209,8 +304,10 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 func AuthStatusHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if user, ok := GetAuthenticatedUser(r); ok {
+		w.Header().Set("X-Authenticated-User", user)
 		fmt.Fprint(w, RenderAuthenticatedBadge(user))
 	} else {
+		w.WriteHeader(http.StatusUnauthorized)
 		fmt.Fprint(w, RenderUnauthenticatedBadge())
 	}
 }
@@ -250,16 +347,16 @@ func ProfileModalHandler(w http.ResponseWriter, r *http.Request) {
           <div class="text-[11px] text-[var(--muted)]">Voxion Labs Principal Engineer</div>
           <div class="inline-flex items-center gap-1 mt-1 text-[10px] text-emerald-500 font-medium">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            Stateless Browser Storage
+            Stateless JWT Validated
           </div>
         </div>
       </div>
 
       <!-- Stateless Architecture Note -->
       <div class="p-3 rounded-lg border border-[var(--border)] space-y-1.5 bg-[var(--panel-background)]">
-        <div class="font-semibold text-[11px] text-[var(--text-strong)]">Stateless Architecture</div>
+        <div class="font-semibold text-[11px] text-[var(--text-strong)]">Stateless JWT Architecture</div>
         <div class="text-[11px] text-[var(--muted)] leading-relaxed">
-          Zero external database. Profile, settings, and workspace data are saved locally in your browser via <code>localStorage</code>.
+          Zero external database. Identity is cryptographically signed with HMAC-SHA256 JWTs stored in secure HTTP-only cookies.
         </div>
       </div>
 

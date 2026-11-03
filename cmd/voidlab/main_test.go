@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/Voxion-Labs/VoidLAB/src/auth"
 )
 
 func TestRootRouteRendersLandingPage(t *testing.T) {
@@ -79,8 +81,13 @@ func TestServerSetupAndEditorRoute(t *testing.T) {
 	}
 
 	// 2. Authenticated GET /editor renders the full workspace (Objective 1 & 2)
+	token, err := auth.GenerateJWT("Rudra")
+	if err != nil {
+		t.Fatalf("failed to generate JWT for test: %v", err)
+	}
+
 	req := httptest.NewRequest(http.MethodGet, "/editor", nil)
-	req.AddCookie(&http.Cookie{Name: "voidlab_session", Value: "Rudra:token:1234567890"})
+	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: token})
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 
@@ -122,7 +129,11 @@ func TestDynamicSubViewsAndAuthState(t *testing.T) {
 		t.Fatalf("setupServer failed: %v", err)
 	}
 
-	authCookie := &http.Cookie{Name: "voidlab_session", Value: "Rudra:token:1234567890"}
+	token, err := auth.GenerateJWT("Rudra")
+	if err != nil {
+		t.Fatalf("failed to generate JWT for test: %v", err)
+	}
+	authCookie := &http.Cookie{Name: auth.SessionCookieName, Value: token}
 
 	// 1. AI Guide Sub-View (/api/ui/ai)
 	// Unauthenticated
@@ -248,23 +259,47 @@ func TestFeatureRoutesWiring(t *testing.T) {
 		t.Fatalf("setupServer failed: %v", err)
 	}
 
-	// 1. Collab Room endpoint
+	// 1. Collab Room endpoint (Protected by JWT Middleware)
+	// Unauthenticated -> 401 Unauthorized
+	unauthCollabReq := httptest.NewRequest(http.MethodGet, "/api/collab/room", nil)
+	unauthCollabRec := httptest.NewRecorder()
+	mux.ServeHTTP(unauthCollabRec, unauthCollabReq)
+	if unauthCollabRec.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401 Unauthorized for unauthenticated /api/collab/room, got %d", unauthCollabRec.Code)
+	}
+
+	// Authenticated with valid JWT cookie -> 200 OK
+	token, err := auth.GenerateJWT("Tester")
+	if err != nil {
+		t.Fatalf("failed to generate JWT for test: %v", err)
+	}
 	req := httptest.NewRequest(http.MethodGet, "/api/collab/room", nil)
+	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: token})
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
-		t.Errorf("expected 200 OK for /api/collab/room, got %d", rec.Code)
+		t.Errorf("expected 200 OK for authenticated /api/collab/room, got %d", rec.Code)
 	}
 	if !strings.Contains(rec.Body.String(), "Multiplayer Peer Collaboration") {
 		t.Errorf("expected collab HTML fragment, got: %s", rec.Body.String())
 	}
 
-	// 2. AI Prompt endpoint
+	// 2. AI Prompt endpoint (Protected by JWT Middleware)
+	// Unauthenticated -> 401 Unauthorized
+	unauthAIReq := httptest.NewRequest(http.MethodGet, "/api/ai/prompt", nil)
+	unauthAIRec := httptest.NewRecorder()
+	mux.ServeHTTP(unauthAIRec, unauthAIReq)
+	if unauthAIRec.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401 Unauthorized for unauthenticated /api/ai/prompt, got %d", unauthAIRec.Code)
+	}
+
+	// Authenticated with Bearer token header -> 200 OK
 	req = httptest.NewRequest(http.MethodGet, "/api/ai/prompt", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
 	rec = httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
-		t.Errorf("expected 200 OK for /api/ai/prompt, got %d", rec.Code)
+		t.Errorf("expected 200 OK for authenticated /api/ai/prompt, got %d", rec.Code)
 	}
 	if !strings.Contains(rec.Body.String(), "ai-suggestions-palette") {
 		t.Errorf("expected AI suggestions fragment, got: %s", rec.Body.String())
@@ -317,8 +352,9 @@ func BenchmarkVoidLABServerEditor(b *testing.B) {
 		b.Fatalf("setupServer failed: %v", err)
 	}
 
+	token, _ := auth.GenerateJWT("Rudra")
 	req := httptest.NewRequest(http.MethodGet, "/editor", nil)
-	req.AddCookie(&http.Cookie{Name: "voidlab_session", Value: "Rudra:bench:1234567890"})
+	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: token})
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

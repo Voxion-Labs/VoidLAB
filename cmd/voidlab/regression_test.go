@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/Voxion-Labs/VoidLAB/src/auth"
 )
 
 // TestRegression executes contract and behavior validation ensuring 1:1 parity with the legacy stack.
@@ -25,8 +27,12 @@ func TestRegression(t *testing.T) {
 	}
 
 	// 1. Contract Test: GET /editor
+	token, err := auth.GenerateJWT("Rudra")
+	if err != nil {
+		t.Fatalf("failed to generate JWT for regression test: %v", err)
+	}
 	req := httptest.NewRequest(http.MethodGet, "/editor", nil)
-	req.AddCookie(&http.Cookie{Name: "voidlab_session", Value: "Rudra:regression:1234567890"})
+	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: token})
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {

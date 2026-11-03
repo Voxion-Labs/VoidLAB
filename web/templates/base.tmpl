@@ -460,25 +460,64 @@
       document.cookie = "voidlab_theme=" + next + "; path=/; max-age=31536000";
     }
 
-    // --- 100% Stateless LocalStorage Auth & Profile Management (Directive 1) ---
+    // --- 100% Stateless JWT Auth & Local Storage Cache Strategy (Directive 1 & 2) ---
     function handleVoidlabAuthSubmit(e) {
       if (e) e.preventDefault();
       var input = document.getElementById('voidlab-username-input');
-      var username = (input ? input.value.trim() : '') || 'Developer';
-      window.voidlabSaveProfile(username);
-      var modal = document.getElementById('voidlab-auth-modal');
-      if (modal) modal.classList.add('hidden');
+      var username = (input ? input.value.trim() : '') || 'Rudra';
+
+      // Request signed JWT session cookie from backend (Stateless HMAC-SHA256)
+      fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'HX-Request': 'true'
+        },
+        body: 'username=' + encodeURIComponent(username)
+      })
+      .then(function(res) {
+        if (res.ok) {
+          // Persist ONLY non-sensitive UI profile state locally
+          window.voidlabSaveProfile(username, null, false);
+          var modal = document.getElementById('voidlab-auth-modal');
+          if (modal) modal.classList.add('hidden');
+
+          // If on landing page, navigate to editor
+          if (window.location.pathname === '/' || window.location.pathname === '') {
+            window.location.href = '/editor';
+          }
+        } else {
+          console.error('[VoidLAB Auth] Failed to sign JWT session');
+        }
+      })
+      .catch(function(err) {
+        console.error('[VoidLAB Auth] Network error during login:', err);
+      });
     }
 
-    window.voidlabSaveProfile = function(username, bio) {
+    window.voidlabSaveProfile = function(username, bio, syncBackend) {
       var profile = {
         username: username,
         bio: bio || 'Voxion Labs Principal Engineer',
         updatedAt: new Date().toISOString()
       };
+      // Save non-sensitive UI state to localStorage
       localStorage.setItem('voidlab_profile', JSON.stringify(profile));
-      document.cookie = "voidlab_session=" + encodeURIComponent(username) + ":local:session; path=/; max-age=31536000";
       window.voidlabApplyProfile(profile);
+
+      // If requested (e.g. username updated from settings or profile edit), refresh backend JWT
+      if (syncBackend) {
+        fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'HX-Request': 'true'
+          },
+          body: 'username=' + encodeURIComponent(username)
+        }).catch(function(err) {
+          console.warn('[VoidLAB Auth] Session refresh failed:', err);
+        });
+      }
     };
 
     window.voidlabGetProfile = function() {
@@ -504,14 +543,26 @@
     };
 
     window.voidlabLogout = function() {
+      // Clear non-sensitive UI cache
       localStorage.removeItem('voidlab_profile');
-      document.cookie = "voidlab_session=; path=/; max-age=0";
-      var modal = document.getElementById('voidlab-auth-modal');
-      if (modal) {
-        modal.classList.remove('hidden');
-        var input = document.getElementById('voidlab-username-input');
-        if (input) { input.value = ''; input.focus(); }
-      }
+
+      // Tell backend to clear the secure HTTP-only JWT cookie
+      fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'HX-Request': 'true' }
+      })
+      .finally(function() {
+        if (window.location.pathname !== '/') {
+          window.location.href = '/';
+        } else {
+          var modal = document.getElementById('voidlab-auth-modal');
+          if (modal) {
+            modal.classList.remove('hidden');
+            var input = document.getElementById('voidlab-username-input');
+            if (input) { input.value = ''; input.focus(); }
+          }
+        }
+      });
     };
 
     // --- Dynamic Side-Panel Helpers (Directive 1) ---
@@ -532,24 +583,38 @@
       }
     });
 
-    // Check localStorage.getItem('voidlab_profile') on load
+    // Check localStorage cache and backend JWT authentication status on load
     document.addEventListener('DOMContentLoaded', function() {
       var profile = window.voidlabGetProfile();
-      if (!profile || !profile.username) {
-        // Only trigger modal if not already authenticated via cookie in existing session
-        var hasCookie = document.cookie.indexOf('voidlab_session=') !== -1;
-        if (!hasCookie) {
-          var modal = document.getElementById('voidlab-auth-modal');
-          if (modal) {
-            modal.classList.remove('hidden');
-            var input = document.getElementById('voidlab-username-input');
-            if (input) input.focus();
-          }
-        }
-      } else {
+      if (profile) {
         window.voidlabApplyProfile(profile);
-        document.cookie = "voidlab_session=" + encodeURIComponent(profile.username) + ":local:session; path=/; max-age=31536000";
       }
+
+      // Check backend JWT session validity
+      fetch('/api/auth/status')
+        .then(function(res) {
+          if (res.ok) {
+            var authenticatedUser = res.headers.get('X-Authenticated-User');
+            if (authenticatedUser && (!profile || profile.username !== authenticatedUser)) {
+              window.voidlabSaveProfile(authenticatedUser, null, false);
+            }
+          } else {
+            // Unauthenticated or expired JWT session
+            if (window.location.pathname.startsWith('/editor')) {
+              var modal = document.getElementById('voidlab-auth-modal');
+              if (modal) {
+                modal.classList.remove('hidden');
+                var input = document.getElementById('voidlab-username-input');
+                if (input) input.focus();
+              }
+            }
+          }
+        })
+        .catch(function() {
+          if (profile) {
+            window.voidlabApplyProfile(profile);
+          }
+        });
     });
 
     // Restore saved theme on load
