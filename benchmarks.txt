@@ -2,24 +2,24 @@ goos: linux
 goarch: amd64
 pkg: github.com/Voxion-Labs/VoidLAB/cmd/voidlab
 cpu: AMD EPYC 9V74 80-Core Processor                
-BenchmarkVoidLABServerEditor-4   	    7828	    129594 ns/op	  198439 B/op	     493 allocs/op
+BenchmarkVoidLABServerEditor-4   	    7820	    150594 ns/op	  203886 B/op	     576 allocs/op
 PASS
-ok  	github.com/Voxion-Labs/VoidLAB/cmd/voidlab	1.050s
+ok  	github.com/Voxion-Labs/VoidLAB/cmd/voidlab	2.048s
 PASS
 ok  	github.com/Voxion-Labs/VoidLAB/src/ai	0.003s
 PASS
 ok  	github.com/Voxion-Labs/VoidLAB/src/auth	0.003s
 PASS
-ok  	github.com/Voxion-Labs/VoidLAB/src/collab	0.003s
+ok  	github.com/Voxion-Labs/VoidLAB/src/collab	0.002s
 PASS
 ok  	github.com/Voxion-Labs/VoidLAB/src/docker	0.002s
 goos: linux
 goarch: amd64
 pkg: github.com/Voxion-Labs/VoidLAB/src/explorer
 cpu: AMD EPYC 9V74 80-Core Processor                
-BenchmarkBuildWorkspaceData-4   	   13975	     86482 ns/op	   69932 B/op	     343 allocs/op
+BenchmarkBuildWorkspaceData-4   	   14019	     85707 ns/op	   69933 B/op	     343 allocs/op
 PASS
-ok  	github.com/Voxion-Labs/VoidLAB/src/explorer	2.090s
+ok  	github.com/Voxion-Labs/VoidLAB/src/explorer	2.079s
 PASS
 ok  	github.com/Voxion-Labs/VoidLAB/src/terminal	0.003s
 PASS
