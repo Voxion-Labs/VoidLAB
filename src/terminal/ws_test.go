@@ -13,8 +13,8 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"github.com/Voxion-Labs/VoidLAB/internal/docker"
-	"github.com/Voxion-Labs/VoidLAB/internal/explorer"
+	"github.com/Voxion-Labs/VoidLAB/src/docker"
+	"github.com/Voxion-Labs/VoidLAB/src/explorer"
 )
 
 func setupTestTerminal(t *testing.T) (*Handler, *httptest.Server) {

@@ -18,8 +18,8 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"github.com/Voxion-Labs/VoidLAB/internal/docker"
-	"github.com/Voxion-Labs/VoidLAB/internal/explorer"
+	"github.com/Voxion-Labs/VoidLAB/src/docker"
+	"github.com/Voxion-Labs/VoidLAB/src/explorer"
 )
 
 // Upgrader implements the WebSocket upgrader configuration for VoidLAB terminal sessions.

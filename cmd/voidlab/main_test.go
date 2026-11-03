@@ -238,7 +238,7 @@ func TestTemplateParsing(t *testing.T) {
 	}
 }
 
-func TestPremiumRoutesWiring(t *testing.T) {
+func TestFeatureRoutesWiring(t *testing.T) {
 	tempDir := t.TempDir()
 	tmplPattern := filepath.Join("..", "..", "web", "templates", "*.tmpl")
 	publicDir := filepath.Join("..", "..", "public")

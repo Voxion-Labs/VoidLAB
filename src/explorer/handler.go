@@ -731,3 +731,71 @@ func getBoilerplateForLanguage(lang string) string {
 		return "print(\"Welcome to VoidLAB\")\n"
 	}
 }
+
+// HandleUIManual returns the manual.tmpl HTMX fragment for the side panel.
+func (h *Handler) HandleUIManual(w http.ResponseWriter, r *http.Request) {
+	data, err := h.service.BuildWorkspaceData()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	data.IsEditor = true
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if h.templates != nil {
+		if err := h.templates.ExecuteTemplate(w, "manual.tmpl", data); err != nil {
+			_ = h.templates.ExecuteTemplate(w, "manual", data)
+		}
+	}
+}
+
+// HandleManualPage renders the full-page VoidLAB engineering manual view.
+func (h *Handler) HandleManualPage(w http.ResponseWriter, r *http.Request) {
+	data, err := h.service.BuildWorkspaceData()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	data.IsEditor = true
+	data.SubView = "manual"
+	data.Title = "Engineering Manual - VoidLAB"
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if h.templates != nil {
+		_ = h.templates.ExecuteTemplate(w, "base.tmpl", data)
+	}
+}
+
+// HandleUIGitHub returns the github.tmpl HTMX fragment for the side panel.
+func (h *Handler) HandleUIGitHub(w http.ResponseWriter, r *http.Request) {
+	data, err := h.service.BuildWorkspaceData()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	data.IsEditor = true
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if h.templates != nil {
+		if err := h.templates.ExecuteTemplate(w, "github.tmpl", data); err != nil {
+			_ = h.templates.ExecuteTemplate(w, "github", data)
+		}
+	}
+}
+
+// HandleUIEditor returns the editor.tmpl fragment.
+func (h *Handler) HandleUIEditor(w http.ResponseWriter, r *http.Request) {
+	data, err := h.service.BuildWorkspaceData()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	data.IsEditor = true
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if h.templates != nil {
+		_ = h.templates.ExecuteTemplate(w, "editor", data)
+	}
+}
+
+// HandleEmpty returns an empty fragment to close dynamic side panels.
+func (h *Handler) HandleEmpty(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+}

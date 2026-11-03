@@ -1,10 +1,11 @@
-package premium
+package collab
 
 import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"html"
+	"html/template"
 	"log"
 	"net/http"
 	"strings"
@@ -12,6 +13,9 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+
+	"github.com/Voxion-Labs/VoidLAB/src/auth"
+	"github.com/Voxion-Labs/VoidLAB/src/explorer"
 )
 
 // CollabMessage represents a chat or synchronization event in a multiplayer session.
@@ -41,6 +45,13 @@ type CollabManager struct {
 	mu       sync.RWMutex
 }
 
+// Handler manages collaboration endpoints and template views.
+type Handler struct {
+	manager     *CollabManager
+	explorerSvc *explorer.Service
+	templates   *template.Template
+}
+
 // NewCollabManager initializes a multiplayer collaboration manager.
 func NewCollabManager() *CollabManager {
 	return &CollabManager{
@@ -53,6 +64,20 @@ func NewCollabManager() *CollabManager {
 			},
 		},
 	}
+}
+
+// NewHandler constructs a collaboration HTTP and WebSocket handler.
+func NewHandler(exp *explorer.Service, tmpl *template.Template) *Handler {
+	return &Handler{
+		manager:     NewCollabManager(),
+		explorerSvc: exp,
+		templates:   tmpl,
+	}
+}
+
+// Manager returns the underlying CollabManager instance.
+func (h *Handler) Manager() *CollabManager {
+	return h.manager
 }
 
 // GenerateRoomCode creates an uppercase 6-character room token.
@@ -77,7 +102,7 @@ func (cm *CollabManager) GetOrCreateRoom(id string, host string) *CollabRoom {
 	}
 
 	if host == "" {
-		host = DefaultUsername
+		host = auth.DefaultUsername
 	}
 
 	room := &CollabRoom{
@@ -182,7 +207,7 @@ func (cm *CollabManager) HandleWebSocketConnection(w http.ResponseWriter, r *htt
 	roomID := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("room")))
 	username := strings.TrimSpace(r.URL.Query().Get("user"))
 	if username == "" {
-		if authUser, ok := GetAuthenticatedUser(r); ok {
+		if authUser, ok := auth.GetAuthenticatedUser(r); ok {
 			username = authUser
 		} else {
 			username = "Peer-" + GenerateRoomCode()[5:]
@@ -403,6 +428,136 @@ func (cm *CollabManager) RenderLauncherCard() string {
   </div>
 </div>
 `
+}
+
+// HandleCollabRoom handles /api/collab/room for multiplayer WebSockets and HTMX fragments.
+func (h *Handler) HandleCollabRoom(w http.ResponseWriter, r *http.Request) {
+	// 1. Upgrade to WebSocket if requested
+	if strings.ToLower(r.Header.Get("Upgrade")) == "websocket" {
+		h.manager.HandleWebSocketConnection(w, r)
+		return
+	}
+
+	_ = r.ParseForm()
+	action := strings.ToLower(strings.TrimSpace(r.FormValue("action")))
+	if action == "" {
+		action = strings.ToLower(strings.TrimSpace(r.URL.Query().Get("action")))
+	}
+
+	currentUser, _ := auth.GetAuthenticatedUser(r)
+	if currentUser == "" {
+		currentUser = auth.DefaultUsername
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	switch action {
+	case "create":
+		room := h.manager.GetOrCreateRoom("", currentUser)
+		fmt.Fprint(w, h.manager.RenderRoomCard(room, currentUser))
+
+	case "join":
+		roomID := strings.TrimSpace(r.FormValue("room_id"))
+		if roomID == "" {
+			roomID = strings.TrimSpace(r.URL.Query().Get("room_id"))
+		}
+		room := h.manager.GetOrCreateRoom(roomID, currentUser)
+		room.mu.Lock()
+		hasUser := false
+		for _, p := range room.Participants {
+			if p == currentUser {
+				hasUser = true
+				break
+			}
+		}
+		if !hasUser {
+			room.Participants = append(room.Participants, currentUser)
+		}
+		room.mu.Unlock()
+
+		fmt.Fprint(w, h.manager.RenderRoomCard(room, currentUser))
+
+	case "message":
+		roomID := strings.TrimSpace(r.FormValue("room_id"))
+		msgText := strings.TrimSpace(r.FormValue("message"))
+		room := h.manager.GetOrCreateRoom(roomID, currentUser)
+
+		if msgText != "" {
+			room.mu.Lock()
+			room.Messages = append(room.Messages, CollabMessage{
+				Author:    currentUser,
+				Text:      msgText,
+				Timestamp: time.Now(),
+			})
+			room.mu.Unlock()
+		}
+		fmt.Fprint(w, h.manager.RenderRoomCard(room, currentUser))
+
+	case "leave":
+		roomID := strings.TrimSpace(r.FormValue("room_id"))
+		if roomID == "" {
+			roomID = strings.TrimSpace(r.URL.Query().Get("room_id"))
+		}
+		if roomID != "" {
+			h.manager.LeaveRoom(roomID, currentUser)
+		}
+		fmt.Fprint(w, h.manager.RenderLauncherCard())
+
+	default:
+		fmt.Fprint(w, h.manager.RenderLauncherCard())
+	}
+}
+
+// HandleUICollab returns the collab.tmpl HTMX fragment for the side panel.
+func (h *Handler) HandleUICollab(w http.ResponseWriter, r *http.Request) {
+	var data *explorer.WorkspaceData
+	if h.explorerSvc != nil {
+		var err error
+		data, err = h.explorerSvc.BuildWorkspaceData()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		data = &explorer.WorkspaceData{}
+	}
+
+	if user, ok := auth.GetAuthenticatedUser(r); ok {
+		data.User = user
+		if len(user) > 0 {
+			data.UserInitial = strings.ToUpper(string(user[0]))
+		}
+	}
+	data.IsEditor = true
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if h.templates != nil {
+		if err := h.templates.ExecuteTemplate(w, "collab.tmpl", data); err != nil {
+			_ = h.templates.ExecuteTemplate(w, "collab", data)
+		}
+	}
+}
+
+// HandleCollabPage renders the full-page collaboration panel view.
+func (h *Handler) HandleCollabPage(w http.ResponseWriter, r *http.Request) {
+	var data *explorer.WorkspaceData
+	if h.explorerSvc != nil {
+		var err error
+		data, err = h.explorerSvc.BuildWorkspaceData()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		data = &explorer.WorkspaceData{}
+	}
+
+	data.IsEditor = true
+	data.SubView = "collab"
+	data.Title = "Multiplayer Collaboration - VoidLAB"
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if h.templates != nil {
+		_ = h.templates.ExecuteTemplate(w, "base.tmpl", data)
+	}
 }
 
 func ternary(cond bool, a, b string) string {

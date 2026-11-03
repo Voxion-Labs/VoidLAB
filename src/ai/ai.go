@@ -1,15 +1,18 @@
-package premium
+package ai
 
 import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"html/template"
 	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
+
+	"github.com/Voxion-Labs/VoidLAB/src/explorer"
 )
 
 // AIPromptResponse maps common programming and VoidLAB environment questions to precise guidance.
@@ -45,7 +48,7 @@ STATUS: Exited (code 1) | TIME: 0.04s | MEMORY: 1840KB`,
 	{
 		QueryKeywords: []string{"wasm", "webassembly", "format", "format code", "prettier"},
 		Title:         "Client-Side WebAssembly Engine",
-		Answer:        "VoidLAB compiles internal/wasmcore into public/wasm/voidlab.wasm. It executes on the browser thread asynchronously, performing zero-lag syntax verification and code formatting on keyup without sending source code over the network.",
+		Answer:        "VoidLAB compiles src/wasmcore into public/wasm/voidlab.wasm. It executes on the browser thread asynchronously, performing zero-lag syntax verification and code formatting on keyup without sending source code over the network.",
 		CodeSnippet: `// Trigger instant WASM format
 voidlabFormatCode(); // Calls voidlabWASM.format(content, lang)`,
 	},
@@ -60,6 +63,20 @@ voidlabFormatCode(); // Calls voidlabWASM.format(content, lang)`,
 		Answer:        "Clicking the Run button while editing an .html or .css file automatically opens a live rendered preview canvas in a new browser tab via /preview?path=... without requiring an external web server.",
 		CodeSnippet: `<button onclick="window.open('/preview?path=index.html', '_blank')">Preview Canvas</button>`,
 	},
+}
+
+// Handler manages AI endpoints and guidance views.
+type Handler struct {
+	explorerSvc *explorer.Service
+	templates   *template.Template
+}
+
+// NewHandler constructs an AI guidance HTTP and WebSocket handler.
+func NewHandler(exp *explorer.Service, tmpl *template.Template) *Handler {
+	return &Handler{
+		explorerSvc: exp,
+		templates:   tmpl,
+	}
 }
 
 // GenerateAIResponse resolves a prompt to an AI Guide response.
@@ -86,6 +103,11 @@ func GenerateAIResponse(prompt string, lang string) (string, string, string) {
 // HandleAIStream streams an AI response back via Server-Sent Events (SSE).
 // 100% stateless: proxies prompt without storing any chat history on the server.
 func HandleAIStream(w http.ResponseWriter, r *http.Request) {
+	StreamHandler(w, r)
+}
+
+// StreamHandler is the package-level handler for streaming AI responses via SSE.
+func StreamHandler(w http.ResponseWriter, r *http.Request) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
@@ -149,6 +171,11 @@ func HandleAIStream(w http.ResponseWriter, r *http.Request) {
 
 // HandleAIWebSocket handles streaming LLM responses over WebSockets.
 func HandleAIWebSocket(w http.ResponseWriter, r *http.Request) {
+	WebSocketHandler(w, r)
+}
+
+// WebSocketHandler is the package-level handler for streaming LLM responses over WebSockets.
+func WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 	upgrader := websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool { return true },
 	}
@@ -296,4 +323,89 @@ func RenderAISuggestionsFragment() string {
   </div>
 </div>
 `
+}
+
+// HandleAIPrompt handles /api/ai/prompt returning rich HTML fragments or SSE streams.
+func (h *Handler) HandleAIPrompt(w http.ResponseWriter, r *http.Request) {
+	PromptHandler(w, r)
+}
+
+// PromptHandler is the package-level handler for /api/ai/prompt.
+func PromptHandler(w http.ResponseWriter, r *http.Request) {
+	if strings.Contains(r.Header.Get("Accept"), "text/event-stream") || r.URL.Query().Get("stream") == "true" {
+		StreamHandler(w, r)
+		return
+	}
+
+	_ = r.ParseForm()
+	prompt := strings.TrimSpace(r.FormValue("prompt"))
+	if prompt == "" {
+		prompt = strings.TrimSpace(r.URL.Query().Get("prompt"))
+	}
+	lang := strings.TrimSpace(r.FormValue("lang"))
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	if prompt == "" {
+		fmt.Fprint(w, RenderAISuggestionsFragment())
+		return
+	}
+
+	fmt.Fprint(w, RenderAIPromptFragment(prompt, lang))
+}
+
+// HandleAIStream serves the Server-Sent Events (SSE) streaming proxy.
+func (h *Handler) HandleAIStream(w http.ResponseWriter, r *http.Request) {
+	StreamHandler(w, r)
+}
+
+// HandleAIWebSocket serves the WebSocket streaming proxy.
+func (h *Handler) HandleAIWebSocket(w http.ResponseWriter, r *http.Request) {
+	WebSocketHandler(w, r)
+}
+
+// HandleUIAI returns the ai.tmpl HTMX fragment for the side panel.
+func (h *Handler) HandleUIAI(w http.ResponseWriter, r *http.Request) {
+	var data *explorer.WorkspaceData
+	if h.explorerSvc != nil {
+		var err error
+		data, err = h.explorerSvc.BuildWorkspaceData()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		data = &explorer.WorkspaceData{}
+	}
+
+	data.IsEditor = true
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if h.templates != nil {
+		if err := h.templates.ExecuteTemplate(w, "ai.tmpl", data); err != nil {
+			_ = h.templates.ExecuteTemplate(w, "ai", data)
+		}
+	}
+}
+
+// HandleAIPage renders the full-page local AI guide view.
+func (h *Handler) HandleAIPage(w http.ResponseWriter, r *http.Request) {
+	var data *explorer.WorkspaceData
+	if h.explorerSvc != nil {
+		var err error
+		data, err = h.explorerSvc.BuildWorkspaceData()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		data = &explorer.WorkspaceData{}
+	}
+
+	data.IsEditor = true
+	data.SubView = "ai"
+	data.Title = "Local AI Guide - VoidLAB"
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if h.templates != nil {
+		_ = h.templates.ExecuteTemplate(w, "base.tmpl", data)
+	}
 }

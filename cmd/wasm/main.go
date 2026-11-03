@@ -8,7 +8,7 @@ import (
 	"strings"
 	"syscall/js"
 
-	"github.com/Voxion-Labs/VoidLAB/internal/wasmcore"
+	"github.com/Voxion-Labs/VoidLAB/src/wasmcore"
 )
 
 func main() {

@@ -13,7 +13,7 @@ endif
 BENCH_OUTPUT ?= benchmarks.txt
 COVER_OUTPUT ?= coverage.out
 MAIN_PKG     ?= ./cmd/voidlab
-TEST_PKG     ?= ./cmd/... ./internal/...
+TEST_PKG     ?= ./cmd/... ./src/...
 WASM_PKG     ?= ./cmd/wasm
 WASM_OUTPUT  ?= public/wasm/voidlab.wasm
 

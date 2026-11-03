@@ -15,10 +15,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Voxion-Labs/VoidLAB/internal/docker"
-	"github.com/Voxion-Labs/VoidLAB/internal/explorer"
-	"github.com/Voxion-Labs/VoidLAB/internal/premium"
-	"github.com/Voxion-Labs/VoidLAB/internal/terminal"
+	"github.com/Voxion-Labs/VoidLAB/src/ai"
+	"github.com/Voxion-Labs/VoidLAB/src/auth"
+	"github.com/Voxion-Labs/VoidLAB/src/collab"
+	"github.com/Voxion-Labs/VoidLAB/src/docker"
+	"github.com/Voxion-Labs/VoidLAB/src/explorer"
+	"github.com/Voxion-Labs/VoidLAB/src/terminal"
 )
 
 const (
@@ -61,7 +63,7 @@ func findDir(dir string) string {
 // If unauthorized, it redirects to / (attaching the HX-Redirect header for HTMX clients).
 func requireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if _, ok := premium.GetAuthenticatedUser(r); !ok {
+		if _, ok := auth.GetAuthenticatedUser(r); !ok {
 			w.Header().Set("HX-Redirect", "/")
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
@@ -90,7 +92,9 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 	}
 
 	terminalHandler := terminal.NewHandler(dockerOrchestrator, explorerService)
-	premiumHandler := premium.NewHandler(explorerService)
+	authHandler := auth.NewHandler(explorerService, tmpl)
+	collabHandler := collab.NewHandler(explorerService, tmpl)
+	aiHandler := ai.NewHandler(explorerService, tmpl)
 
 	// Standard Go 1.22+ multiplexer
 	mux := http.NewServeMux()
@@ -127,7 +131,7 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 		}
 		data.IsEditor = true
 		data.IsLanding = false
-		if user, ok := premium.GetAuthenticatedUser(r); ok {
+		if user, ok := auth.GetAuthenticatedUser(r); ok {
 			data.User = user
 			if len(user) > 0 {
 				data.UserInitial = strings.ToUpper(string(user[0]))
@@ -153,7 +157,7 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 		}
 		data.IsLanding = true
 		data.IsEditor = false
-		if user, ok := premium.GetAuthenticatedUser(r); ok {
+		if user, ok := auth.GetAuthenticatedUser(r); ok {
 			data.User = user
 			if len(user) > 0 {
 				data.UserInitial = strings.ToUpper(string(user[0]))
@@ -179,13 +183,13 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 	mux.HandleFunc("POST /api/explorer/move", explorerHandler.HandleMove) // fallback
 
 	// 4. Sub-views & Side-Panel Endpoints (HTMX Side-Panels and Fragments)
-	mux.HandleFunc("GET /api/ui/manual", requireAuth(premiumHandler.HandleUIManual(tmpl)))
-	mux.HandleFunc("GET /api/ui/github", requireAuth(premiumHandler.HandleUIGitHub(tmpl)))
-	mux.HandleFunc("GET /api/ui/ai", requireAuth(premiumHandler.HandleUIAI(tmpl)))
-	mux.HandleFunc("GET /api/ui/collab", requireAuth(premiumHandler.HandleUICollab(tmpl)))
-	mux.HandleFunc("GET /api/ui/profile", requireAuth(premiumHandler.HandleUIProfile(tmpl)))
-	mux.HandleFunc("GET /api/ui/editor", requireAuth(premiumHandler.HandleUIEditor(tmpl)))
-	mux.HandleFunc("GET /api/ui/empty", requireAuth(premiumHandler.HandleEmpty))
+	mux.HandleFunc("GET /api/ui/manual", requireAuth(explorerHandler.HandleUIManual))
+	mux.HandleFunc("GET /api/ui/github", requireAuth(explorerHandler.HandleUIGitHub))
+	mux.HandleFunc("GET /api/ui/ai", requireAuth(aiHandler.HandleUIAI))
+	mux.HandleFunc("GET /api/ui/collab", requireAuth(collabHandler.HandleUICollab))
+	mux.HandleFunc("GET /api/ui/profile", requireAuth(authHandler.HandleUIProfile))
+	mux.HandleFunc("GET /api/ui/editor", requireAuth(explorerHandler.HandleUIEditor))
+	mux.HandleFunc("GET /api/ui/empty", requireAuth(explorerHandler.HandleEmpty))
 
 	// 5. Explorer Tree Fragments & Folder Toggles (Auth Protected - Objective 3)
 	mux.HandleFunc("GET /api/explorer", requireAuth(explorerHandler.HandleGetTree))
@@ -199,8 +203,8 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 	mux.HandleFunc("GET /api/ui/modal/import-folder", requireAuth(explorerHandler.HandleModalImportFolder))
 	mux.HandleFunc("GET /api/ui/modal/rename", requireAuth(explorerHandler.HandleModalRename))
 	mux.HandleFunc("GET /api/ui/file/menu", requireAuth(explorerHandler.HandleFileMenu))
-	mux.HandleFunc("GET /api/ui/modal/profile", requireAuth(premiumHandler.HandleProfileModal))
-	mux.HandleFunc("GET /api/ui/modal/settings", requireAuth(premiumHandler.HandleSettingsModal))
+	mux.HandleFunc("GET /api/ui/modal/profile", requireAuth(authHandler.HandleProfileModal))
+	mux.HandleFunc("GET /api/ui/modal/settings", requireAuth(authHandler.HandleSettingsModal))
 
 	// 6. Buffer and File Workspace Actions
 	mux.HandleFunc("GET /api/files/open", explorerHandler.HandleOpenFile)
@@ -241,28 +245,27 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 	mux.HandleFunc("POST /api/terminal/exec", terminalHandler.HandleTerminalExec)
 	mux.HandleFunc("POST /api/terminal/clear", terminalHandler.HandleClear)
 
-	// 8. Premium Feature Routes (HTMX HTML Fragments)
-	// Collaboration & Multiplayer WebSockets
-	mux.HandleFunc("GET /api/collab/room", premiumHandler.HandleCollabRoom)
-	mux.HandleFunc("POST /api/collab/room", premiumHandler.HandleCollabRoom)
+	// 8. Collaboration & Multiplayer WebSockets
+	mux.HandleFunc("GET /api/collab/room", collabHandler.HandleCollabRoom)
+	mux.HandleFunc("POST /api/collab/room", collabHandler.HandleCollabRoom)
 
-	// AI Guide Prompts & Suggestions
-	mux.HandleFunc("GET /api/ai/prompt", premiumHandler.HandleAIPrompt)
-	mux.HandleFunc("POST /api/ai/prompt", premiumHandler.HandleAIPrompt)
-	mux.HandleFunc("GET /api/ai/stream", premiumHandler.HandleAIStream)
-	mux.HandleFunc("POST /api/ai/stream", premiumHandler.HandleAIStream)
-	mux.HandleFunc("GET /api/ws/ai", premiumHandler.HandleAIWebSocket)
+	// AI Guide Prompts & Streaming
+	mux.HandleFunc("GET /api/ai/prompt", aiHandler.HandleAIPrompt)
+	mux.HandleFunc("POST /api/ai/prompt", aiHandler.HandleAIPrompt)
+	mux.HandleFunc("GET /api/ai/stream", aiHandler.HandleAIStream)
+	mux.HandleFunc("POST /api/ai/stream", aiHandler.HandleAIStream)
+	mux.HandleFunc("GET /api/ws/ai", aiHandler.HandleAIWebSocket)
 
 	// Authentication & Secure HTTP-Only Cookie Session Management
-	mux.HandleFunc("POST /api/auth/login", premiumHandler.HandleLogin)
-	mux.HandleFunc("POST /api/auth/logout", premiumHandler.HandleLogout)
-	mux.HandleFunc("GET /api/auth/status", premiumHandler.HandleAuthStatus)
+	mux.HandleFunc("POST /api/auth/login", authHandler.HandleLogin)
+	mux.HandleFunc("POST /api/auth/logout", authHandler.HandleLogout)
+	mux.HandleFunc("GET /api/auth/status", authHandler.HandleAuthStatus)
 
 	// Navigation Panel Page Views (Full-page views with HTMX integration)
-	mux.HandleFunc("GET /editor/collaboration", requireAuth(premiumHandler.HandleCollabPage(tmpl, explorerService)))
-	mux.HandleFunc("GET /editor/ai", requireAuth(premiumHandler.HandleAIPage(tmpl, explorerService)))
-	mux.HandleFunc("GET /editor/profile", requireAuth(premiumHandler.HandleProfilePage(tmpl, explorerService)))
-	mux.HandleFunc("GET /editor/manual", requireAuth(premiumHandler.HandleManualPage(tmpl, explorerService)))
+	mux.HandleFunc("GET /editor/collaboration", requireAuth(collabHandler.HandleCollabPage))
+	mux.HandleFunc("GET /editor/ai", requireAuth(aiHandler.HandleAIPage))
+	mux.HandleFunc("GET /editor/profile", requireAuth(authHandler.HandleProfilePage))
+	mux.HandleFunc("GET /editor/manual", requireAuth(explorerHandler.HandleManualPage))
 	mux.HandleFunc("GET /editor/github", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		data, err := explorerService.BuildWorkspaceData()
 		if err != nil {
