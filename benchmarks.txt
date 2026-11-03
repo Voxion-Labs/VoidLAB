@@ -1,22 +1,22 @@
-goos: windows
+goos: linux
 goarch: amd64
 pkg: github.com/Voxion-Labs/VoidLAB/cmd/voidlab
-cpu: Intel(R) Core(TM) 5 210H
-BenchmarkVoidLABServerEditor-12    	    4364	    328456 ns/op	  204954 B/op	     496 allocs/op
+cpu: AMD EPYC 7763 64-Core Processor                
+BenchmarkVoidLABServerEditor-4   	    5796	    178185 ns/op	  198574 B/op	     493 allocs/op
 PASS
-ok  	github.com/Voxion-Labs/VoidLAB/cmd/voidlab	4.403s
+ok  	github.com/Voxion-Labs/VoidLAB/cmd/voidlab	1.077s
 PASS
-ok  	github.com/Voxion-Labs/VoidLAB/internal/docker	0.536s
-goos: windows
+ok  	github.com/Voxion-Labs/VoidLAB/internal/docker	0.003s
+goos: linux
 goarch: amd64
 pkg: github.com/Voxion-Labs/VoidLAB/internal/explorer
-cpu: Intel(R) Core(TM) 5 210H
-BenchmarkBuildWorkspaceData-12    	    2967	    354422 ns/op	   76549 B/op	     351 allocs/op
+cpu: AMD EPYC 7763 64-Core Processor                
+BenchmarkBuildWorkspaceData-4   	   11726	    101909 ns/op	   69914 B/op	     343 allocs/op
 PASS
-ok  	github.com/Voxion-Labs/VoidLAB/internal/explorer	2.234s
+ok  	github.com/Voxion-Labs/VoidLAB/internal/explorer	2.154s
 PASS
-ok  	github.com/Voxion-Labs/VoidLAB/internal/premium	1.070s
+ok  	github.com/Voxion-Labs/VoidLAB/internal/premium	0.004s
 PASS
-ok  	github.com/Voxion-Labs/VoidLAB/internal/terminal	1.369s
+ok  	github.com/Voxion-Labs/VoidLAB/internal/terminal	0.003s
 PASS
-ok  	github.com/Voxion-Labs/VoidLAB/internal/wasmcore	0.590s
+ok  	github.com/Voxion-Labs/VoidLAB/internal/wasmcore	0.002s
