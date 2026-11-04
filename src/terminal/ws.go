@@ -122,7 +122,7 @@ func (h *Handler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	isDocker := h.orchestrator.IsDockerAvailable(r.Context())
-	engineLabel := "Local Sandbox Fallback"
+	engineLabel := "God Image Native Runtime"
 	if isDocker {
 		engineLabel = "Docker Ephemeral Container Engine"
 	}

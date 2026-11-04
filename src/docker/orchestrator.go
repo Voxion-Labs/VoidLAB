@@ -10,21 +10,36 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 )
 
-// LanguageConfig defines container metadata, Alpine/slim images, default extensions, and resource ceilings for a language.
+const (
+	// DefaultExecutionTimeout is strictly enforced to eliminate infinite loops and resource leaks.
+	DefaultExecutionTimeout = 5 * time.Second
+)
+
+var isWindows = runtime.GOOS == "windows"
+
+func exeSuffix(name string) string {
+	if isWindows {
+		return name + ".exe"
+	}
+	return name
+}
+
+// LanguageConfig defines container metadata, default extensions, and resource ceilings for a language.
 type LanguageConfig struct {
 	ID          string        `json:"id"`
 	Name        string        `json:"name"`
-	Image       string        `json:"image"`        // Specific lightweight Alpine or slim Docker image
+	Image       string        `json:"image"`        // Kept for backward compatibility
 	Extension   string        `json:"extension"`    // Standard file extension
 	CompileCmd  string        `json:"compile_cmd"`  // Compilation command (empty for interpreted languages)
 	RunCmd      string        `json:"run_cmd"`      // Execution command
 	Timeout     time.Duration `json:"timeout"`
-	MemoryLimit string        `json:"memory_limit"` // e.g. "256m", "512m"
-	CPULimit    string        `json:"cpu_limit"`    // e.g. "1.0", "0.5"
+	MemoryLimit string        `json:"memory_limit"` // e.g. "256m"
+	CPULimit    string        `json:"cpu_limit"`    // e.g. "0.5"
 }
 
 // ExecutionRequest encapsulates code execution parameters across supported runtimes.
@@ -38,7 +53,7 @@ type ExecutionRequest struct {
 	Timeout       time.Duration `json:"timeout,omitempty"`
 }
 
-// LanguageProfile defines Docker image, compile steps, and execution command per language.
+// LanguageProfile defines language name, compilation, and execution metadata per language.
 type LanguageProfile struct {
 	Name        string
 	Image       string
@@ -59,7 +74,7 @@ type ExecutionResult struct {
 	Stderr   string        `json:"stderr"`
 }
 
-// LanguageImageMap explicitly maps all supported languages to their official lightweight Alpine/slim images.
+// LanguageImageMap provides metadata image mappings for supported languages.
 var LanguageImageMap = map[string]string{
 	"cpp":        "gcc:alpine",
 	"c":          "gcc:alpine",
@@ -86,7 +101,7 @@ var LanguageImageMap = map[string]string{
 	"xml":        "alpine:latest",
 }
 
-// DefaultLanguageConfigs provides full container and execution configurations for all 16 supported runtimes.
+// DefaultLanguageConfigs provides metadata and execution configurations for all 16 supported runtimes.
 var DefaultLanguageConfigs = map[string]LanguageConfig{
 	"cpp": {
 		ID:          "cpp",
@@ -95,7 +110,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		Extension:   ".cpp",
 		CompileCmd:  "g++ -O2 -Wall main.cpp -o app",
 		RunCmd:      "./app",
-		Timeout:     30 * time.Second,
+		Timeout:     DefaultExecutionTimeout,
 		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
@@ -106,7 +121,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		Extension:   ".c",
 		CompileCmd:  "gcc -O2 -Wall main.c -o app",
 		RunCmd:      "./app",
-		Timeout:     30 * time.Second,
+		Timeout:     DefaultExecutionTimeout,
 		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
@@ -117,7 +132,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		Extension:   ".rs",
 		CompileCmd:  "rustc main.rs -o app",
 		RunCmd:      "./app",
-		Timeout:     60 * time.Second,
+		Timeout:     DefaultExecutionTimeout,
 		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
@@ -128,7 +143,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		Extension:   ".py",
 		CompileCmd:  "",
 		RunCmd:      "python -u main.py",
-		Timeout:     30 * time.Second,
+		Timeout:     DefaultExecutionTimeout,
 		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
@@ -139,7 +154,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		Extension:   ".go",
 		CompileCmd:  "",
 		RunCmd:      "go run main.go",
-		Timeout:     45 * time.Second,
+		Timeout:     DefaultExecutionTimeout,
 		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
@@ -150,7 +165,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		Extension:   ".js",
 		CompileCmd:  "",
 		RunCmd:      "node main.js",
-		Timeout:     30 * time.Second,
+		Timeout:     DefaultExecutionTimeout,
 		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
@@ -161,7 +176,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		Extension:   ".ts",
 		CompileCmd:  "",
 		RunCmd:      "npx tsx main.ts",
-		Timeout:     45 * time.Second,
+		Timeout:     DefaultExecutionTimeout,
 		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
@@ -172,7 +187,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		Extension:   ".java",
 		CompileCmd:  "javac Main.java",
 		RunCmd:      "java Main",
-		Timeout:     45 * time.Second,
+		Timeout:     DefaultExecutionTimeout,
 		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
@@ -181,9 +196,9 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		Name:        "C#",
 		Image:       "mcr.microsoft.com/dotnet/sdk:8.0-alpine",
 		Extension:   ".cs",
-		CompileCmd:  "dotnet build -o /tmp/out",
-		RunCmd:      "dotnet /tmp/out/app.dll",
-		Timeout:     45 * time.Second,
+		CompileCmd:  "dotnet build",
+		RunCmd:      "dotnet run",
+		Timeout:     DefaultExecutionTimeout,
 		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
@@ -194,7 +209,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		Extension:   ".php",
 		CompileCmd:  "",
 		RunCmd:      "php main.php",
-		Timeout:     30 * time.Second,
+		Timeout:     DefaultExecutionTimeout,
 		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
@@ -205,7 +220,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		Extension:   ".rb",
 		CompileCmd:  "",
 		RunCmd:      "ruby main.rb",
-		Timeout:     30 * time.Second,
+		Timeout:     DefaultExecutionTimeout,
 		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
@@ -216,7 +231,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		Extension:   ".swift",
 		CompileCmd:  "swiftc main.swift -o app",
 		RunCmd:      "./app",
-		Timeout:     60 * time.Second,
+		Timeout:     DefaultExecutionTimeout,
 		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
@@ -227,7 +242,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		Extension:   ".kt",
 		CompileCmd:  "kotlinc main.kt -include-runtime -d app.jar",
 		RunCmd:      "java -jar app.jar",
-		Timeout:     45 * time.Second,
+		Timeout:     DefaultExecutionTimeout,
 		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
@@ -238,7 +253,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		Extension:   ".lua",
 		CompileCmd:  "",
 		RunCmd:      "lua main.lua",
-		Timeout:     20 * time.Second,
+		Timeout:     DefaultExecutionTimeout,
 		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
@@ -249,7 +264,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		Extension:   ".sh",
 		CompileCmd:  "",
 		RunCmd:      "sh main.sh",
-		Timeout:     20 * time.Second,
+		Timeout:     DefaultExecutionTimeout,
 		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
@@ -260,7 +275,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		Extension:   ".ps1",
 		CompileCmd:  "",
 		RunCmd:      "pwsh -File main.ps1",
-		Timeout:     30 * time.Second,
+		Timeout:     DefaultExecutionTimeout,
 		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
@@ -270,8 +285,8 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		Image:       "alpine:latest",
 		Extension:   ".sql",
 		CompileCmd:  "",
-		RunCmd:      "sh -c \"if command -v sqlite3 >/dev/null 2>&1; then sqlite3 :memory: < main.sql; else apk add --no-cache sqlite >/dev/null 2>&1 && sqlite3 :memory: < main.sql; fi\"",
-		Timeout:     30 * time.Second,
+		RunCmd:      "sqlite3 :memory: < main.sql",
+		Timeout:     DefaultExecutionTimeout,
 		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
@@ -282,7 +297,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		Extension:   ".html",
 		CompileCmd:  "",
 		RunCmd:      "cat index.html",
-		Timeout:     15 * time.Second,
+		Timeout:     DefaultExecutionTimeout,
 		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
@@ -293,7 +308,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		Extension:   ".css",
 		CompileCmd:  "",
 		RunCmd:      "cat style.css",
-		Timeout:     15 * time.Second,
+		Timeout:     DefaultExecutionTimeout,
 		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
@@ -304,7 +319,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		Extension:   ".md",
 		CompileCmd:  "",
 		RunCmd:      "cat README.md",
-		Timeout:     15 * time.Second,
+		Timeout:     DefaultExecutionTimeout,
 		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
@@ -315,7 +330,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		Extension:   ".json",
 		CompileCmd:  "",
 		RunCmd:      "cat data.json",
-		Timeout:     15 * time.Second,
+		Timeout:     DefaultExecutionTimeout,
 		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
@@ -326,7 +341,7 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		Extension:   ".yml",
 		CompileCmd:  "",
 		RunCmd:      "cat config.yml",
-		Timeout:     15 * time.Second,
+		Timeout:     DefaultExecutionTimeout,
 		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
@@ -337,20 +352,20 @@ var DefaultLanguageConfigs = map[string]LanguageConfig{
 		Extension:   ".xml",
 		CompileCmd:  "",
 		RunCmd:      "cat data.xml",
-		Timeout:     15 * time.Second,
+		Timeout:     DefaultExecutionTimeout,
 		MemoryLimit: "256m",
 		CPULimit:    "0.5",
 	},
 }
 
-// Orchestrator manages secure ephemeral container spawning and execution.
+// Orchestrator manages code execution in isolated temporary environments using host binaries.
 type Orchestrator struct {
 	workspaceDir string
 	profiles     map[string]LanguageProfile
 	configs      map[string]LanguageConfig
 }
 
-// NewOrchestrator initializes the Docker execution engine.
+// NewOrchestrator initializes the God Image execution engine.
 func NewOrchestrator(workspaceDir string) (*Orchestrator, error) {
 	absWorkspace, err := filepath.Abs(workspaceDir)
 	if err != nil {
@@ -367,8 +382,7 @@ func NewOrchestrator(workspaceDir string) (*Orchestrator, error) {
 	return orc, nil
 }
 
-// BuildDockerArgs constructs the exact CLI arguments for spawning an ephemeral container with strict resource limits:
-// --rm, --memory=256m, and --cpus="0.5" to prevent fork bombs, mounting workspacePath as a volume.
+// BuildDockerArgs constructs CLI arguments for backward compatibility.
 func BuildDockerArgs(image string, absWorkspace string, command []string) []string {
 	args := []string{
 		"run",
@@ -384,14 +398,12 @@ func BuildDockerArgs(image string, absWorkspace string, command []string) []stri
 	return append(args, command...)
 }
 
-// ExecuteCode executes code in an ephemeral Docker container using os/exec with strict resource limits:
-// --rm, --memory=256m, and --cpus="0.5" to prevent fork bombs.
-// Mounts workspacePath securely as a volume into /workspace, and captures and returns the raw stdout and stderr streams.
+// ExecuteCode runs code from workspacePath in an isolated temporary directory with a strict 5-second timeout.
 func (o *Orchestrator) ExecuteCode(language string, workspacePath string) (*ExecutionResult, error) {
 	return o.ExecuteCodeContext(context.Background(), language, workspacePath)
 }
 
-// ExecuteCodeContext provides context-aware Docker execution with strict security and resource limits.
+// ExecuteCodeContext provides context-aware code execution in an isolated temporary directory.
 func (o *Orchestrator) ExecuteCodeContext(ctx context.Context, language string, workspacePath string) (*ExecutionResult, error) {
 	if workspacePath == "" {
 		workspacePath = o.workspaceDir
@@ -412,13 +424,13 @@ func (o *Orchestrator) ExecuteCodeContext(ctx context.Context, language string, 
 		return nil, fmt.Errorf("workspacePath not found: %w", err)
 	}
 
-	var workDir string
+	var sourceDir string
 	var entryFile string
 
 	if stat.IsDir() {
-		workDir = absPath
+		sourceDir = absPath
 	} else {
-		workDir = filepath.Dir(absPath)
+		sourceDir = filepath.Dir(absPath)
 		entryFile = filepath.Base(absPath)
 	}
 
@@ -429,67 +441,28 @@ func (o *Orchestrator) ExecuteCodeContext(ctx context.Context, language string, 
 	}
 
 	if entryFile == "" {
-		entryFile = o.findEntryFile(workDir, cfg)
+		entryFile = o.findEntryFile(sourceDir, cfg)
 	}
 
-	timeout := cfg.Timeout
-	if timeout <= 0 {
-		timeout = 30 * time.Second
-	}
-	execCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+	var stdoutBuf bytes.Buffer
+	var stderrBuf bytes.Buffer
 
-	cmdSlice := o.buildContainerCommand(cfg, entryFile)
-	dockerArgs := BuildDockerArgs(cfg.Image, workDir, cmdSlice)
-
-	start := time.Now()
-
-	// If Docker CLI and daemon are operational, attempt Docker Engine execution
-	if o.IsDockerAvailable(execCtx) {
-		var stdoutBuf bytes.Buffer
-		var stderrBuf bytes.Buffer
-
-		cmd := exec.CommandContext(execCtx, "docker", dockerArgs...)
-		cmd.Stdout = &stdoutBuf
-		cmd.Stderr = &stderrBuf
-
-		err := cmd.Run()
-		if err == nil {
-			duration := time.Since(start)
-			return &ExecutionResult{
-				Language: cfg.Name,
-				Image:    cfg.Image,
-				Duration: duration,
-				ExitCode: 0,
-				IsDocker: true,
-				Stdout:   stdoutBuf.String(),
-				Stderr:   stderrBuf.String(),
-			}, nil
-		}
-
-		// If user code executed in container and exited with non-zero exit code:
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) && stdoutBuf.Len() > 0 {
-			return &ExecutionResult{
-				Language: cfg.Name,
-				Image:    cfg.Image,
-				Duration: time.Since(start),
-				ExitCode: exitErr.ExitCode(),
-				IsDocker: true,
-				Stdout:   stdoutBuf.String(),
-				Stderr:   stderrBuf.String(),
-			}, err
-		}
-
-		// Docker failed to start container / image pull failure in CI:
-		// Fall through to local fallback execution so code runs reliably!
+	// Convert to relative path from workspace directory
+	relPath, err := filepath.Rel(o.workspaceDir, filepath.Join(sourceDir, entryFile))
+	if err != nil {
+		relPath = entryFile
 	}
 
-	// Fallback runner when Docker daemon is not active on host
-	return o.runLocalFallbackDirect(execCtx, cfg, workDir, entryFile, start)
+	result, err := o.Run(ctx, relPath, normLang, nil, &stdoutBuf, &stderrBuf)
+	if result != nil {
+		result.Stdout = stdoutBuf.String()
+		result.Stderr = stderrBuf.String()
+	}
+
+	return result, err
 }
 
-// ExecuteCode package-level entry point function spawning an ephemeral Docker container.
+// ExecuteCode package-level entry point function executing user code directly with a 5-second timeout.
 func ExecuteCode(language string, workspacePath string) (*ExecutionResult, error) {
 	workDir := workspacePath
 	if workDir == "" {
@@ -534,55 +507,294 @@ func (o *Orchestrator) findEntryFile(dir string, cfg LanguageConfig) string {
 	return "main" + cfg.Extension
 }
 
-func (o *Orchestrator) buildContainerCommand(cfg LanguageConfig, entryFile string) []string {
-	if cfg.CompileCmd != "" {
-		compileCmd := strings.ReplaceAll(cfg.CompileCmd, "main"+cfg.Extension, entryFile)
-		runCmd := cfg.RunCmd
-		return []string{"sh", "-c", fmt.Sprintf("%s && %s", compileCmd, runCmd)}
+// findBin checks for any of the given binary names on system PATH and returns the first resolved path.
+func findBin(names ...string) string {
+	for _, n := range names {
+		if p, err := exec.LookPath(n); err == nil {
+			// On Windows, avoid dummy Microsoft Store execution alias stubs
+			if isWindows && strings.Contains(strings.ToLower(p), "windowsapps") {
+				continue
+			}
+			return p
+		}
 	}
-
-	runCmd := strings.ReplaceAll(cfg.RunCmd, "main"+cfg.Extension, entryFile)
-	if strings.HasPrefix(runCmd, "sh -c ") {
-		return []string{"sh", "-c", strings.TrimPrefix(runCmd, "sh -c ")}
+	for _, n := range names {
+		if p, err := exec.LookPath(n); err == nil {
+			return p
+		}
 	}
-	return []string{"sh", "-c", runCmd}
+	return ""
 }
 
-func (o *Orchestrator) runLocalFallbackDirect(
+// createIsolatedWorkDir copies all source files into a dedicated temporary directory.
+func createIsolatedWorkDir(sourceDir string, targetFile string) (string, string, error) {
+	tmpDir, err := os.MkdirTemp("", "voidlab-run-*")
+	if err != nil {
+		return "", "", fmt.Errorf("failed to create isolated temp execution dir: %w", err)
+	}
+
+	// Copy directory contents to isolated environment
+	_ = filepath.Walk(sourceDir, func(p string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		rel, err := filepath.Rel(sourceDir, p)
+		if err != nil || rel == "." {
+			return nil
+		}
+		if info.IsDir() && strings.HasPrefix(info.Name(), ".") {
+			return filepath.SkipDir
+		}
+		dest := filepath.Join(tmpDir, rel)
+		if info.IsDir() {
+			return os.MkdirAll(dest, 0755)
+		}
+		data, err := os.ReadFile(p)
+		if err != nil {
+			return nil
+		}
+		return os.WriteFile(dest, data, info.Mode())
+	})
+
+	return tmpDir, filepath.Base(targetFile), nil
+}
+
+// IsDockerAvailable reports whether the execution engine is ready.
+func (o *Orchestrator) IsDockerAvailable(ctx context.Context) bool {
+	return false
+}
+
+// Run copies the user's code to an isolated temporary directory, executes it via standard OS binaries,
+// and strictly enforces context.WithTimeout (5 seconds) to prevent infinite loops and resource exhaustion.
+func (o *Orchestrator) Run(
 	ctx context.Context,
-	cfg LanguageConfig,
-	workDir string,
-	entryFile string,
-	start time.Time,
+	relPath string,
+	lang string,
+	stdin io.Reader,
+	stdout io.Writer,
+	stderr io.Writer,
 ) (*ExecutionResult, error) {
-	absHostFile := filepath.Join(workDir, entryFile)
+	trimmed := strings.TrimSpace(relPath)
+	slashNormalized := strings.ReplaceAll(trimmed, "\\", "/")
+	if strings.HasPrefix(slashNormalized, "/") || (len(slashNormalized) > 1 && slashNormalized[1] == ':') {
+		return nil, errors.New("security error: path escapes workspace boundaries")
+	}
+	cleanedSlash := path.Clean(slashNormalized)
+	if cleanedSlash == ".." || strings.HasPrefix(cleanedSlash, "../") || strings.Contains(cleanedSlash, "/../") {
+		return nil, errors.New("security error: path escapes workspace boundaries")
+	}
+	cleanRel := filepath.Clean(filepath.FromSlash(cleanedSlash))
 
-	var stdoutBuf bytes.Buffer
-	var stderrBuf bytes.Buffer
+	absHostPath := filepath.Join(o.workspaceDir, cleanRel)
+	if _, err := os.Stat(absHostPath); err != nil {
+		return nil, fmt.Errorf("file not found: %s", cleanRel)
+	}
 
-	_, _ = stderrBuf.WriteString(fmt.Sprintf("[VoidLAB Sandbox] Docker daemon not reachable; executing %s via local fallback.\n", cfg.Name))
+	if lang == "" {
+		lang = o.DetectLanguage(cleanRel)
+	} else {
+		lang = NormalizeLanguage(lang)
+	}
+
+	cfg, ok := DefaultLanguageConfigs[lang]
+	if !ok {
+		cfg = DefaultLanguageConfigs["python"]
+	}
+
+	// 1. Create an isolated temporary directory for execution
+	sourceDir := filepath.Dir(absHostPath)
+	tmpDir, entryFile, err := createIsolatedWorkDir(sourceDir, absHostPath)
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(tmpDir) // Guaranteed cleanup of compiled binaries and temp files
+
+	// 2. Strictly enforce 5-second timeout to prevent infinite loops and memory leaks
+	execCtx, cancel := context.WithTimeout(ctx, DefaultExecutionTimeout)
+	defer cancel()
+
+	start := time.Now()
+
+	exitCode, err := o.executeDirect(execCtx, cfg.ID, entryFile, tmpDir, absHostPath, stdin, stdout, stderr)
+	duration := time.Since(start)
+
+	return &ExecutionResult{
+		Language: cfg.Name,
+		Image:    "god-image-native",
+		Duration: duration,
+		ExitCode: exitCode,
+		IsDocker: false,
+	}, err
+}
+
+// executeDirect executes user code directly with standard OS binaries inside tmpDir.
+func (o *Orchestrator) executeDirect(
+	ctx context.Context,
+	langID string,
+	entryFile string,
+	workDir string,
+	absHostFile string,
+	stdin io.Reader,
+	stdout io.Writer,
+	stderr io.Writer,
+) (int, error) {
+	// Handle static web formats directly
+	switch langID {
+	case "html", "css", "markdown", "json", "yaml", "xml":
+		data, err := os.ReadFile(filepath.Join(workDir, entryFile))
+		if err != nil {
+			data, err = os.ReadFile(absHostFile)
+		}
+		if err == nil {
+			_, _ = stdout.Write(data)
+			return 0, nil
+		}
+		return 1, err
+	}
 
 	var cmd *exec.Cmd
-	switch cfg.ID {
+
+	switch langID {
 	case "python":
-		cmd = exec.CommandContext(ctx, "python", "-u", entryFile)
-	case "go":
-		cmd = exec.CommandContext(ctx, "go", "run", entryFile)
+		bin := findBin("python", "python3", "py")
+		if bin == "" {
+			return o.reportMissingBin("python3", stderr)
+		}
+		cmd = exec.CommandContext(ctx, bin, "-u", entryFile)
+
 	case "javascript":
-		cmd = exec.CommandContext(ctx, "node", entryFile)
+		bin := findBin("node", "nodejs")
+		if bin == "" {
+			return o.reportMissingBin("node", stderr)
+		}
+		cmd = exec.CommandContext(ctx, bin, entryFile)
+
 	case "typescript":
-		cmd = exec.CommandContext(ctx, "npx", "tsx", entryFile)
+		bin := findBin("tsx", "ts-node", "node")
+		if bin == "" {
+			return o.reportMissingBin("node/tsx", stderr)
+		}
+		cmd = exec.CommandContext(ctx, bin, entryFile)
+
+	case "go":
+		bin := findBin("go")
+		if bin == "" {
+			return o.reportMissingBin("go", stderr)
+		}
+		cmd = exec.CommandContext(ctx, bin, "run", entryFile)
+
+	case "cpp":
+		compiler := findBin("g++", "clang++")
+		if compiler == "" {
+			return o.reportMissingBin("g++", stderr)
+		}
+		exeName := exeSuffix("app")
+		compileCmd := exec.CommandContext(ctx, compiler, "-O2", "-Wall", entryFile, "-o", exeName)
+		compileCmd.Dir = workDir
+		compileCmd.Stderr = stderr
+		if err := compileCmd.Run(); err != nil {
+			return o.handleExecError(ctx, err, stderr)
+		}
+		cmd = exec.CommandContext(ctx, filepath.Join(workDir, exeName))
+
+	case "c":
+		compiler := findBin("gcc", "clang")
+		if compiler == "" {
+			return o.reportMissingBin("gcc", stderr)
+		}
+		exeName := exeSuffix("app")
+		compileCmd := exec.CommandContext(ctx, compiler, "-O2", "-Wall", entryFile, "-o", exeName)
+		compileCmd.Dir = workDir
+		compileCmd.Stderr = stderr
+		if err := compileCmd.Run(); err != nil {
+			return o.handleExecError(ctx, err, stderr)
+		}
+		cmd = exec.CommandContext(ctx, filepath.Join(workDir, exeName))
+
+	case "rust":
+		compiler := findBin("rustc")
+		if compiler == "" {
+			return o.reportMissingBin("rustc", stderr)
+		}
+		exeName := exeSuffix("app")
+		compileCmd := exec.CommandContext(ctx, compiler, entryFile, "-o", exeName)
+		compileCmd.Dir = workDir
+		compileCmd.Stderr = stderr
+		if err := compileCmd.Run(); err != nil {
+			return o.handleExecError(ctx, err, stderr)
+		}
+		cmd = exec.CommandContext(ctx, filepath.Join(workDir, exeName))
+
+	case "java":
+		compiler := findBin("javac")
+		runner := findBin("java")
+		if compiler == "" || runner == "" {
+			return o.reportMissingBin("javac/java", stderr)
+		}
+		compileCmd := exec.CommandContext(ctx, compiler, entryFile)
+		compileCmd.Dir = workDir
+		compileCmd.Stderr = stderr
+		if err := compileCmd.Run(); err != nil {
+			return o.handleExecError(ctx, err, stderr)
+		}
+		className := strings.TrimSuffix(filepath.Base(entryFile), filepath.Ext(entryFile))
+		cmd = exec.CommandContext(ctx, runner, className)
+
+	case "php":
+		bin := findBin("php")
+		if bin == "" {
+			return o.reportMissingBin("php", stderr)
+		}
+		cmd = exec.CommandContext(ctx, bin, entryFile)
+
+	case "ruby":
+		bin := findBin("ruby")
+		if bin == "" {
+			return o.reportMissingBin("ruby", stderr)
+		}
+		cmd = exec.CommandContext(ctx, bin, entryFile)
+
+	case "lua":
+		bin := findBin("lua", "lua5.4", "lua5.3")
+		if bin == "" {
+			return o.reportMissingBin("lua", stderr)
+		}
+		cmd = exec.CommandContext(ctx, bin, entryFile)
+
 	case "shell":
-		cmd = exec.CommandContext(ctx, "sh", entryFile)
+		bin := findBin("sh", "bash")
+		if bin == "" && isWindows {
+			bin = findBin("cmd")
+			if bin != "" {
+				cmd = exec.CommandContext(ctx, bin, "/c", entryFile)
+			}
+		}
+		if cmd == nil {
+			if bin == "" {
+				return o.reportMissingBin("sh", stderr)
+			}
+			cmd = exec.CommandContext(ctx, bin, entryFile)
+		}
+
 	case "powershell":
-		cmd = exec.CommandContext(ctx, "pwsh", "-File", entryFile)
+		bin := findBin("pwsh", "powershell")
+		if bin == "" {
+			return o.reportMissingBin("pwsh/powershell", stderr)
+		}
+		cmd = exec.CommandContext(ctx, bin, "-File", entryFile)
+
 	case "sql":
-		if sqlitePath, err := exec.LookPath("sqlite3"); err == nil {
+		if sqlitePath := findBin("sqlite3"); sqlitePath != "" {
 			cmd = exec.CommandContext(ctx, sqlitePath, ":memory:")
-			if data, err := os.ReadFile(absHostFile); err == nil {
+			if data, err := os.ReadFile(filepath.Join(workDir, entryFile)); err == nil {
 				cmd.Stdin = bytes.NewReader(data)
 			}
 		} else {
+			// Fallback in-memory SQLite via python
+			pyBin := findBin("python", "python3", "py")
+			if pyBin == "" {
+				return o.reportMissingBin("sqlite3/python", stderr)
+			}
 			pyScript := `import sqlite3, sys
 conn = sqlite3.connect(':memory:')
 with open(sys.argv[1], 'r', encoding='utf-8') as f:
@@ -594,336 +806,65 @@ for stmt in sql.split(';'):
         for r in res.fetchall():
             print(r)
 `
-			cmd = exec.CommandContext(ctx, "python", "-u", "-c", pyScript, absHostFile)
+			cmd = exec.CommandContext(ctx, pyBin, "-u", "-c", pyScript, filepath.Join(workDir, entryFile))
 		}
-	case "html", "css", "markdown", "json", "yaml", "xml":
-		data, err := os.ReadFile(absHostFile)
-		if err == nil {
-			_, _ = stdoutBuf.Write(data)
-		}
-		return &ExecutionResult{
-			Language: cfg.Name,
-			Image:    "local-static",
-			Duration: time.Since(start),
-			ExitCode: 0,
-			IsDocker: false,
-			Stdout:   stdoutBuf.String(),
-			Stderr:   "",
-		}, nil
+
 	default:
-		cmd = exec.CommandContext(ctx, "python", "-u", entryFile)
+		// Attempt direct execution with python or shell fallback
+		bin := findBin("python", "python3", "py")
+		if bin != "" {
+			cmd = exec.CommandContext(ctx, bin, "-u", entryFile)
+		} else {
+			return o.reportMissingBin(langID, stderr)
+		}
 	}
 
 	cmd.Dir = workDir
-	cmd.Stdout = &stdoutBuf
-	cmd.Stderr = &stderrBuf
+	if stdin != nil && cmd.Stdin == nil {
+		cmd.Stdin = stdin
+	}
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 
 	err := cmd.Run()
-	duration := time.Since(start)
+	return o.handleExecError(ctx, err, stderr)
+}
 
-	exitCode := 0
-	if err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			exitCode = exitErr.ExitCode()
-		} else {
-			exitCode = 1
-		}
+func (o *Orchestrator) reportMissingBin(name string, stderr io.Writer) (int, error) {
+	_, _ = fmt.Fprintf(stderr, "[VoidLAB God Engine] '%s' compiler/runtime is not installed in the environment.\n", name)
+	return 127, fmt.Errorf("runtime not found: %s", name)
+}
+
+func (o *Orchestrator) handleExecError(ctx context.Context, err error, stderr io.Writer) (int, error) {
+	if err == nil {
+		return 0, nil
 	}
 
-	return &ExecutionResult{
-		Language: cfg.Name,
-		Image:    "local-fallback",
-		Duration: duration,
-		ExitCode: exitCode,
-		IsDocker: false,
-		Stdout:   stdoutBuf.String(),
-		Stderr:   stderrBuf.String(),
-	}, err
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		_, _ = io.WriteString(stderr, "\n[VoidLAB Execution Timeout] Process exceeded maximum execution time limit (5.0s). Terminated to prevent infinite loops and memory leaks.\n")
+		return 124, ctx.Err()
+	}
+
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		return exitErr.ExitCode(), err
+	}
+
+	return 1, err
 }
 
 func (o *Orchestrator) initProfiles() {
-	// Python 3.11 Alpine
-	o.profiles["python"] = LanguageProfile{
-		Name:        "Python",
-		Image:       LanguageImageMap["python"],
-		Timeout:     30 * time.Second,
-		MemoryLimit: "256m",
-		CPULimit:    "0.5",
-		Command: func(path string) []string {
-			return []string{"python", "-u", path}
-		},
-	}
-
-	// C++ GCC Alpine
-	o.profiles["cpp"] = LanguageProfile{
-		Name:        "C++",
-		Image:       LanguageImageMap["cpp"],
-		Timeout:     30 * time.Second,
-		MemoryLimit: "256m",
-		CPULimit:    "0.5",
-		Command: func(path string) []string {
-			cmd := fmt.Sprintf("g++ -O2 -Wall %s -o /tmp/app && /tmp/app", path)
-			return []string{"sh", "-c", cmd}
-		},
-	}
-
-	// C GCC Alpine
-	o.profiles["c"] = LanguageProfile{
-		Name:        "C",
-		Image:       LanguageImageMap["c"],
-		Timeout:     30 * time.Second,
-		MemoryLimit: "256m",
-		CPULimit:    "0.5",
-		Command: func(path string) []string {
-			cmd := fmt.Sprintf("gcc -O2 -Wall %s -o /tmp/app && /tmp/app", path)
-			return []string{"sh", "-c", cmd}
-		},
-	}
-
-	// Rust Alpine
-	o.profiles["rust"] = LanguageProfile{
-		Name:        "Rust",
-		Image:       LanguageImageMap["rust"],
-		Timeout:     60 * time.Second,
-		MemoryLimit: "256m",
-		CPULimit:    "0.5",
-		Command: func(path string) []string {
-			cmd := fmt.Sprintf("rustc %s -o /tmp/app && /tmp/app", path)
-			return []string{"sh", "-c", cmd}
-		},
-	}
-
-	// Go Alpine
-	o.profiles["go"] = LanguageProfile{
-		Name:        "Go",
-		Image:       LanguageImageMap["go"],
-		Timeout:     45 * time.Second,
-		MemoryLimit: "256m",
-		CPULimit:    "0.5",
-		Command: func(path string) []string {
-			return []string{"go", "run", path}
-		},
-	}
-
-	// Node.js / JavaScript Alpine
-	o.profiles["javascript"] = LanguageProfile{
-		Name:        "JavaScript",
-		Image:       LanguageImageMap["javascript"],
-		Timeout:     30 * time.Second,
-		MemoryLimit: "256m",
-		CPULimit:    "0.5",
-		Command: func(path string) []string {
-			return []string{"node", path}
-		},
-	}
-
-	// TypeScript Node Alpine
-	o.profiles["typescript"] = LanguageProfile{
-		Name:        "TypeScript",
-		Image:       LanguageImageMap["typescript"],
-		Timeout:     45 * time.Second,
-		MemoryLimit: "256m",
-		CPULimit:    "0.5",
-		Command: func(path string) []string {
-			cmd := fmt.Sprintf("npx tsx %s || node %s", path, path)
-			return []string{"sh", "-c", cmd}
-		},
-	}
-
-	// Java Temurin Alpine
-	o.profiles["java"] = LanguageProfile{
-		Name:        "Java",
-		Image:       LanguageImageMap["java"],
-		Timeout:     45 * time.Second,
-		MemoryLimit: "256m",
-		CPULimit:    "0.5",
-		Command: func(path string) []string {
-			cmd := fmt.Sprintf("javac %s -d /tmp && java -cp /tmp Main", path)
-			return []string{"sh", "-c", cmd}
-		},
-	}
-
-	// C# .NET SDK Alpine
-	o.profiles["csharp"] = LanguageProfile{
-		Name:        "C#",
-		Image:       LanguageImageMap["csharp"],
-		Timeout:     45 * time.Second,
-		MemoryLimit: "256m",
-		CPULimit:    "0.5",
-		Command: func(path string) []string {
-			return []string{"dotnet", "run", path}
-		},
-	}
-
-	// PHP Alpine
-	o.profiles["php"] = LanguageProfile{
-		Name:        "PHP",
-		Image:       LanguageImageMap["php"],
-		Timeout:     30 * time.Second,
-		MemoryLimit: "256m",
-		CPULimit:    "0.5",
-		Command: func(path string) []string {
-			return []string{"php", path}
-		},
-	}
-
-	// Ruby Alpine
-	o.profiles["ruby"] = LanguageProfile{
-		Name:        "Ruby",
-		Image:       LanguageImageMap["ruby"],
-		Timeout:     30 * time.Second,
-		MemoryLimit: "256m",
-		CPULimit:    "0.5",
-		Command: func(path string) []string {
-			return []string{"ruby", path}
-		},
-	}
-
-	// Swift Slim
-	o.profiles["swift"] = LanguageProfile{
-		Name:        "Swift",
-		Image:       LanguageImageMap["swift"],
-		Timeout:     60 * time.Second,
-		MemoryLimit: "256m",
-		CPULimit:    "0.5",
-		Command: func(path string) []string {
-			cmd := fmt.Sprintf("swiftc %s -o /tmp/app && /tmp/app", path)
-			return []string{"sh", "-c", cmd}
-		},
-	}
-
-	// Kotlin Corretto Alpine
-	o.profiles["kotlin"] = LanguageProfile{
-		Name:        "Kotlin",
-		Image:       LanguageImageMap["kotlin"],
-		Timeout:     45 * time.Second,
-		MemoryLimit: "256m",
-		CPULimit:    "0.5",
-		Command: func(path string) []string {
-			cmd := fmt.Sprintf("kotlinc %s -include-runtime -d /tmp/app.jar && java -jar /tmp/app.jar", path)
-			return []string{"sh", "-c", cmd}
-		},
-	}
-
-	// Lua Alpine
-	o.profiles["lua"] = LanguageProfile{
-		Name:        "Lua",
-		Image:       LanguageImageMap["lua"],
-		Timeout:     20 * time.Second,
-		MemoryLimit: "256m",
-		CPULimit:    "0.5",
-		Command: func(path string) []string {
-			return []string{"lua", path}
-		},
-	}
-
-	// Shell Alpine
-	o.profiles["shell"] = LanguageProfile{
-		Name:        "Shell",
-		Image:       LanguageImageMap["shell"],
-		Timeout:     20 * time.Second,
-		MemoryLimit: "256m",
-		CPULimit:    "0.5",
-		Command: func(path string) []string {
-			return []string{"sh", path}
-		},
-	}
-
-	// PowerShell LTS Alpine
-	o.profiles["powershell"] = LanguageProfile{
-		Name:        "PowerShell",
-		Image:       LanguageImageMap["powershell"],
-		Timeout:     30 * time.Second,
-		MemoryLimit: "256m",
-		CPULimit:    "0.5",
-		Command: func(path string) []string {
-			return []string{"pwsh", "-File", path}
-		},
-	}
-
-	// SQL Alpine / SQLite
-	o.profiles["sql"] = LanguageProfile{
-		Name:        "SQL",
-		Image:       LanguageImageMap["sql"],
-		Timeout:     30 * time.Second,
-		MemoryLimit: "256m",
-		CPULimit:    "0.5",
-		Command: func(path string) []string {
-			return []string{"sh", "-c", fmt.Sprintf("if command -v sqlite3 >/dev/null 2>&1; then sqlite3 :memory: < %s; else apk add --no-cache sqlite >/dev/null 2>&1 && sqlite3 :memory: < %s; fi", path, path)}
-		},
-	}
-
-	// HTML Alpine
-	o.profiles["html"] = LanguageProfile{
-		Name:        "HTML",
-		Image:       LanguageImageMap["html"],
-		Timeout:     15 * time.Second,
-		MemoryLimit: "256m",
-		CPULimit:    "0.5",
-		Command: func(path string) []string {
-			return []string{"cat", path}
-		},
-	}
-
-	// CSS Alpine
-	o.profiles["css"] = LanguageProfile{
-		Name:        "CSS",
-		Image:       LanguageImageMap["css"],
-		Timeout:     15 * time.Second,
-		MemoryLimit: "256m",
-		CPULimit:    "0.5",
-		Command: func(path string) []string {
-			return []string{"cat", path}
-		},
-	}
-
-	// Markdown Alpine
-	o.profiles["markdown"] = LanguageProfile{
-		Name:        "Markdown",
-		Image:       LanguageImageMap["markdown"],
-		Timeout:     15 * time.Second,
-		MemoryLimit: "256m",
-		CPULimit:    "0.5",
-		Command: func(path string) []string {
-			return []string{"cat", path}
-		},
-	}
-
-	// JSON Alpine
-	o.profiles["json"] = LanguageProfile{
-		Name:        "JSON",
-		Image:       LanguageImageMap["json"],
-		Timeout:     15 * time.Second,
-		MemoryLimit: "256m",
-		CPULimit:    "0.5",
-		Command: func(path string) []string {
-			return []string{"cat", path}
-		},
-	}
-
-	// YAML Alpine
-	o.profiles["yaml"] = LanguageProfile{
-		Name:        "YAML",
-		Image:       LanguageImageMap["yaml"],
-		Timeout:     15 * time.Second,
-		MemoryLimit: "256m",
-		CPULimit:    "0.5",
-		Command: func(path string) []string {
-			return []string{"cat", path}
-		},
-	}
-
-	// XML Alpine
-	o.profiles["xml"] = LanguageProfile{
-		Name:        "XML",
-		Image:       LanguageImageMap["xml"],
-		Timeout:     15 * time.Second,
-		MemoryLimit: "256m",
-		CPULimit:    "0.5",
-		Command: func(path string) []string {
-			return []string{"cat", path}
-		},
+	for id, cfg := range DefaultLanguageConfigs {
+		o.profiles[id] = LanguageProfile{
+			Name:        cfg.Name,
+			Image:       LanguageImageMap[id],
+			Timeout:     cfg.Timeout,
+			MemoryLimit: cfg.MemoryLimit,
+			CPULimit:    cfg.CPULimit,
+			Command: func(p string) []string {
+				return []string{cfg.RunCmd}
+			},
+		}
 	}
 }
 
@@ -1024,211 +965,4 @@ func NormalizeLanguage(lang string) string {
 		}
 		return "python"
 	}
-}
-
-// IsDockerAvailable verifies that docker CLI exists and the daemon responds.
-func (o *Orchestrator) IsDockerAvailable(ctx context.Context) bool {
-	ctx, cancel := context.WithTimeout(ctx, 1500*time.Millisecond)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, "docker", "info")
-	return cmd.Run() == nil
-}
-
-// Run executes a workspace file in an ephemeral, resource-constrained Docker container.
-// If Docker is not available, it safely falls back to host execution with notice.
-func (o *Orchestrator) Run(
-	ctx context.Context,
-	relPath string,
-	lang string,
-	stdin io.Reader,
-	stdout io.Writer,
-	stderr io.Writer,
-) (*ExecutionResult, error) {
-	trimmed := strings.TrimSpace(relPath)
-	slashNormalized := strings.ReplaceAll(trimmed, "\\", "/")
-	if strings.HasPrefix(slashNormalized, "/") || (len(slashNormalized) > 1 && slashNormalized[1] == ':') {
-		return nil, errors.New("security error: path escapes workspace boundaries")
-	}
-	cleanedSlash := path.Clean(slashNormalized)
-	if cleanedSlash == ".." || strings.HasPrefix(cleanedSlash, "../") || strings.Contains(cleanedSlash, "/../") {
-		return nil, errors.New("security error: path escapes workspace boundaries")
-	}
-	cleanRel := filepath.Clean(filepath.FromSlash(cleanedSlash))
-
-	absHostPath := filepath.Join(o.workspaceDir, cleanRel)
-	if _, err := os.Stat(absHostPath); err != nil {
-		return nil, fmt.Errorf("file not found: %s", cleanRel)
-	}
-
-	if lang == "" {
-		lang = o.DetectLanguage(cleanRel)
-	} else {
-		lang = NormalizeLanguage(lang)
-	}
-
-	profile, ok := o.profiles[lang]
-	if !ok {
-		profile = o.profiles["python"]
-	}
-
-	execCtx, cancel := context.WithTimeout(ctx, profile.Timeout)
-	defer cancel()
-
-	start := time.Now()
-	containerPath := "/workspace/" + filepath.ToSlash(cleanRel)
-
-	if o.IsDockerAvailable(ctx) {
-		result, err := o.runDocker(execCtx, profile, cleanRel, containerPath, stdin, stdout, stderr)
-		if err == nil {
-			if result != nil {
-				result.Duration = time.Since(start)
-			}
-			return result, nil
-		}
-		// If Docker run failed (e.g. image pull failure in CI), fall through to local fallback
-	}
-
-	// Fallback runner when Docker daemon is not active on host
-	result, err := o.runLocalFallback(execCtx, profile, absHostPath, stdin, stdout, stderr)
-	if result != nil {
-		result.Duration = time.Since(start)
-	}
-	return result, err
-}
-
-func (o *Orchestrator) runDocker(
-	ctx context.Context,
-	profile LanguageProfile,
-	relPath string,
-	containerPath string,
-	stdin io.Reader,
-	stdout io.Writer,
-	stderr io.Writer,
-) (*ExecutionResult, error) {
-	// Construct secure ephemeral docker arguments:
-	// --rm: ephemeral container destroyed on exit
-	// -i: interactive stdin pipe
-	// -v: secure volume mount of workspace into container
-	// -w: container working directory
-	// --memory / --cpus / --pids-limit: resource ceilings to prevent DoS / fork bombs
-	// --security-opt: prevent privilege escalation
-	args := []string{
-		"run", "--rm", "-i",
-		"--memory=" + profile.MemoryLimit,
-		"--cpus=" + profile.CPULimit,
-		"--pids-limit=64",
-		"--security-opt=no-new-privileges",
-		"-v", fmt.Sprintf("%s:/workspace:rw", o.workspaceDir),
-		"-w", "/workspace",
-		profile.Image,
-	}
-
-	args = append(args, profile.Command(containerPath)...)
-
-	cmd := exec.CommandContext(ctx, "docker", args...)
-	cmd.Stdin = stdin
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-
-	err := cmd.Run()
-	exitCode := 0
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			exitCode = exitErr.ExitCode()
-		} else {
-			exitCode = 1
-		}
-	}
-
-	return &ExecutionResult{
-		Language: profile.Name,
-		Image:    profile.Image,
-		ExitCode: exitCode,
-		IsDocker: true,
-	}, err
-}
-
-func (o *Orchestrator) runLocalFallback(
-	ctx context.Context,
-	profile LanguageProfile,
-	absHostPath string,
-	stdin io.Reader,
-	stdout io.Writer,
-	stderr io.Writer,
-) (*ExecutionResult, error) {
-	_, _ = io.WriteString(stderr, fmt.Sprintf("[VoidLAB Sandbox] Docker daemon not reachable; executing %s via local fallback.\n", profile.Name))
-
-	var cmd *exec.Cmd
-	switch profile.Name {
-	case "Python":
-		cmd = exec.CommandContext(ctx, "python", "-u", absHostPath)
-	case "Go":
-		cmd = exec.CommandContext(ctx, "go", "run", absHostPath)
-	case "JavaScript":
-		cmd = exec.CommandContext(ctx, "node", absHostPath)
-	case "TypeScript":
-		cmd = exec.CommandContext(ctx, "npx", "tsx", absHostPath)
-	case "Shell":
-		cmd = exec.CommandContext(ctx, "sh", absHostPath)
-	case "PowerShell":
-		cmd = exec.CommandContext(ctx, "pwsh", "-File", absHostPath)
-	case "SQL":
-		if sqlitePath, err := exec.LookPath("sqlite3"); err == nil {
-			cmd = exec.CommandContext(ctx, sqlitePath, ":memory:")
-			if data, err := os.ReadFile(absHostPath); err == nil {
-				cmd.Stdin = bytes.NewReader(data)
-			}
-		} else {
-			pyScript := `import sqlite3, sys
-conn = sqlite3.connect(':memory:')
-with open(sys.argv[1], 'r', encoding='utf-8') as f:
-    sql = f.read()
-for stmt in sql.split(';'):
-    stmt = stmt.strip()
-    if stmt:
-        res = conn.execute(stmt)
-        for r in res.fetchall():
-            print(r)
-`
-			cmd = exec.CommandContext(ctx, "python", "-u", "-c", pyScript, absHostPath)
-		}
-	case "HTML", "CSS", "Markdown", "JSON", "YAML", "XML":
-		data, err := os.ReadFile(absHostPath)
-		if err == nil {
-			_, _ = stdout.Write(data)
-		}
-		return &ExecutionResult{
-			Language: profile.Name,
-			Image:    "local-static",
-			ExitCode: 0,
-			IsDocker: false,
-			Stdout:   string(data),
-			Stderr:   "",
-		}, nil
-	default:
-		cmd = exec.CommandContext(ctx, "python", "-u", absHostPath)
-	}
-
-	cmd.Dir = o.workspaceDir
-	cmd.Stdin = stdin
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-
-	err := cmd.Run()
-	exitCode := 0
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			exitCode = exitErr.ExitCode()
-		} else {
-			exitCode = 1
-		}
-	}
-
-	return &ExecutionResult{
-		Language: profile.Name,
-		Image:    "local-fallback",
-		ExitCode: exitCode,
-		IsDocker: false,
-	}, err
 }

@@ -288,3 +288,34 @@ func TestOrchestratorExecution(t *testing.T) {
 		t.Errorf("expected execution output to contain output or notice, got: %s", outCombined)
 	}
 }
+
+func TestExecutionTimeoutInfiniteLoop(t *testing.T) {
+	tempDir := t.TempDir()
+	orc, err := NewOrchestrator(tempDir)
+	if err != nil {
+		t.Fatalf("failed to create orchestrator: %v", err)
+	}
+
+	// Python script that loops indefinitely
+	infiniteScript := filepath.Join(tempDir, "loop.py")
+	if err := os.WriteFile(infiniteScript, []byte("while True:\n    pass\n"), 0644); err != nil {
+		t.Fatalf("failed to write infinite loop script: %v", err)
+	}
+
+	start := time.Now()
+	var stdout, stderr bytes.Buffer
+	result, err := orc.Run(context.Background(), "loop.py", "python", nil, &stdout, &stderr)
+	elapsed := time.Since(start)
+
+	if err == nil && (result == nil || result.ExitCode == 0) {
+		t.Errorf("expected infinite loop to be terminated with timeout error or non-zero exit code")
+	}
+
+	if elapsed < 4*time.Second || elapsed > 8*time.Second {
+		t.Errorf("expected execution duration around 5 seconds, got %v", elapsed)
+	}
+
+	if !strings.Contains(stderr.String(), "Execution Timeout") && !strings.Contains(stderr.String(), "5.0s") {
+		t.Errorf("expected timeout notice in stderr, got: %s", stderr.String())
+	}
+}
