@@ -54,6 +54,10 @@
           <span class="truncate max-w-[150px]">{{if .ActiveFile}}{{.ActiveFile.Name}}{{else}}main.py{{end}}</span>
           <button
             class="rounded p-0.5 opacity-50 hover:opacity-100 hover:bg-[var(--control-hover)] transition-all ml-0.5 cursor-pointer"
+            hx-delete="/api/files/close?path={{if .ActiveFile}}{{.ActiveFile.Path}}{{else}}src/main.py{{end}}"
+            hx-target="#main-editor-pane"
+            hx-swap="innerHTML"
+            onclick="event.stopPropagation();"
             title="Close Tab"
             type="button"
           >

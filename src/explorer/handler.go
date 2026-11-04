@@ -177,7 +177,17 @@ func (h *Handler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.RenderTreeFragment(w)
+	data, err := h.service.BuildWorkspaceData()
+	if err != nil {
+		h.RenderTreeFragment(w)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_ = h.templates.ExecuteTemplate(w, "file-tree", data)
+	fmt.Fprint(w, `<div id="main-editor-pane" hx-swap-oob="innerHTML">`)
+	_ = h.templates.ExecuteTemplate(w, "editor", data)
+	fmt.Fprint(w, `</div>`)
 }
 
 // HandleMove handles PATCH /api/explorer/move (and POST fallback).
@@ -362,7 +372,7 @@ func (h *Handler) HandleFileMenu(w http.ResponseWriter, r *http.Request) {
       <span>Rename</span>
     </button>
     <div class="h-px my-1" style="background: var(--border);"></div>
-    <button hx-delete="/api/explorer/delete?path=%s" hx-target="#file-tree" hx-swap="innerHTML" hx-confirm="Permanently delete %s?" onclick="this.closest('.fixed').remove()" class="flex w-full items-center gap-2.5 px-3 py-1.5 rounded-md text-rose-500 hover:bg-rose-500/10 text-left transition-colors cursor-pointer" type="button">
+    <button hx-delete="/api/explorer/delete?path=%s" hx-target="#file-tree" hx-swap="innerHTML" hx-confirm="Permanently delete %s?" hx-on::after-request="var m = document.getElementById('context-menu'); if (m) m.innerHTML = '';" class="flex w-full items-center gap-2.5 px-3 py-1.5 rounded-md text-rose-500 hover:bg-rose-500/10 text-left transition-colors cursor-pointer" type="button">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
       <span>Delete %s</span>
     </button>
@@ -604,6 +614,14 @@ func (h *Handler) HandleDownload(w http.ResponseWriter, r *http.Request) {
 
 // HandleCloseTab closes the current tab and reopens editor canvas.
 func (h *Handler) HandleCloseTab(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimSpace(r.URL.Query().Get("path"))
+	if path == "" {
+		path = strings.TrimSpace(r.FormValue("path"))
+	}
+	if path != "" {
+		h.service.CloseTab(path)
+	}
+
 	data, err := h.service.BuildWorkspaceData()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

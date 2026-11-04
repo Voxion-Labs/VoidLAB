@@ -16,8 +16,12 @@ import (
 )
 
 const (
+	// DefaultCompileTimeout is the dedicated ceiling for compiling code (gcc, g++, rustc, javac).
+	DefaultCompileTimeout = 15 * time.Second
 	// DefaultExecutionTimeout is strictly enforced to eliminate infinite loops and resource leaks.
 	DefaultExecutionTimeout = 5 * time.Second
+	// InteractiveExecutionTimeout provides human-scale duration for typing stdin inputs without premature timeouts.
+	InteractiveExecutionTimeout = 60 * time.Second
 )
 
 var isWindows = runtime.GOOS == "windows"
@@ -609,8 +613,14 @@ func (o *Orchestrator) Run(
 	}
 	defer os.RemoveAll(tmpDir) // Guaranteed cleanup of compiled binaries and temp files
 
-	// 2. Strictly enforce 5-second timeout to prevent infinite loops and memory leaks
-	execCtx, cancel := context.WithTimeout(ctx, DefaultExecutionTimeout)
+	// 2. Enforce execution timeout: honor caller deadline if provided, else use DefaultExecutionTimeout
+	var execCtx context.Context
+	var cancel context.CancelFunc
+	if _, hasDeadline := ctx.Deadline(); hasDeadline {
+		execCtx, cancel = context.WithCancel(ctx)
+	} else {
+		execCtx, cancel = context.WithTimeout(ctx, DefaultExecutionTimeout)
+	}
 	defer cancel()
 
 	start := time.Now()
@@ -689,13 +699,20 @@ func (o *Orchestrator) executeDirect(
 			return o.reportMissingBin("g++", stderr)
 		}
 		exeName := exeSuffix("app")
-		compileCmd := exec.CommandContext(ctx, compiler, "-O2", "-Wall", entryFile, "-o", exeName)
+		compileCtx, compileCancel := context.WithTimeout(context.Background(), DefaultCompileTimeout)
+		defer compileCancel()
+		compileCmd := exec.CommandContext(compileCtx, compiler, "-O2", "-Wall", entryFile, "-o", exeName)
 		compileCmd.Dir = workDir
 		compileCmd.Stderr = stderr
 		if err := compileCmd.Run(); err != nil {
-			return o.handleExecError(ctx, err, stderr)
+			return o.handleExecError(compileCtx, err, stderr)
 		}
-		cmd = exec.CommandContext(ctx, filepath.Join(workDir, exeName))
+		exePath := filepath.Join(workDir, exeName)
+		if stdbuf := findBin("stdbuf"); stdbuf != "" {
+			cmd = exec.CommandContext(ctx, stdbuf, "-i0", "-o0", "-e0", exePath)
+		} else {
+			cmd = exec.CommandContext(ctx, exePath)
+		}
 
 	case "c":
 		compiler := findBin("gcc", "clang")
@@ -703,13 +720,20 @@ func (o *Orchestrator) executeDirect(
 			return o.reportMissingBin("gcc", stderr)
 		}
 		exeName := exeSuffix("app")
-		compileCmd := exec.CommandContext(ctx, compiler, "-O2", "-Wall", entryFile, "-o", exeName)
+		compileCtx, compileCancel := context.WithTimeout(context.Background(), DefaultCompileTimeout)
+		defer compileCancel()
+		compileCmd := exec.CommandContext(compileCtx, compiler, "-O2", "-Wall", entryFile, "-o", exeName)
 		compileCmd.Dir = workDir
 		compileCmd.Stderr = stderr
 		if err := compileCmd.Run(); err != nil {
-			return o.handleExecError(ctx, err, stderr)
+			return o.handleExecError(compileCtx, err, stderr)
 		}
-		cmd = exec.CommandContext(ctx, filepath.Join(workDir, exeName))
+		exePath := filepath.Join(workDir, exeName)
+		if stdbuf := findBin("stdbuf"); stdbuf != "" {
+			cmd = exec.CommandContext(ctx, stdbuf, "-i0", "-o0", "-e0", exePath)
+		} else {
+			cmd = exec.CommandContext(ctx, exePath)
+		}
 
 	case "rust":
 		compiler := findBin("rustc")
@@ -717,11 +741,13 @@ func (o *Orchestrator) executeDirect(
 			return o.reportMissingBin("rustc", stderr)
 		}
 		exeName := exeSuffix("app")
-		compileCmd := exec.CommandContext(ctx, compiler, entryFile, "-o", exeName)
+		compileCtx, compileCancel := context.WithTimeout(context.Background(), DefaultCompileTimeout)
+		defer compileCancel()
+		compileCmd := exec.CommandContext(compileCtx, compiler, entryFile, "-o", exeName)
 		compileCmd.Dir = workDir
 		compileCmd.Stderr = stderr
 		if err := compileCmd.Run(); err != nil {
-			return o.handleExecError(ctx, err, stderr)
+			return o.handleExecError(compileCtx, err, stderr)
 		}
 		cmd = exec.CommandContext(ctx, filepath.Join(workDir, exeName))
 
@@ -731,11 +757,13 @@ func (o *Orchestrator) executeDirect(
 		if compiler == "" || runner == "" {
 			return o.reportMissingBin("javac/java", stderr)
 		}
-		compileCmd := exec.CommandContext(ctx, compiler, entryFile)
+		compileCtx, compileCancel := context.WithTimeout(context.Background(), DefaultCompileTimeout)
+		defer compileCancel()
+		compileCmd := exec.CommandContext(compileCtx, compiler, entryFile)
 		compileCmd.Dir = workDir
 		compileCmd.Stderr = stderr
 		if err := compileCmd.Run(); err != nil {
-			return o.handleExecError(ctx, err, stderr)
+			return o.handleExecError(compileCtx, err, stderr)
 		}
 		className := strings.TrimSuffix(filepath.Base(entryFile), filepath.Ext(entryFile))
 		cmd = exec.CommandContext(ctx, runner, className)
@@ -841,7 +869,14 @@ func (o *Orchestrator) handleExecError(ctx context.Context, err error, stderr io
 	}
 
 	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-		_, _ = io.WriteString(stderr, "\n[VoidLAB Execution Timeout] Process exceeded maximum execution time limit (5.0s). Terminated to prevent infinite loops and memory leaks.\n")
+		timeoutLabel := "5.0s"
+		if d, ok := ctx.Deadline(); ok {
+			total := time.Until(d) + 5*time.Second
+			if total > 10*time.Second {
+				timeoutLabel = "60.0s"
+			}
+		}
+		_, _ = fmt.Fprintf(stderr, "\n[VoidLAB Execution Timeout] Process exceeded maximum execution time limit (%s). Terminated to prevent infinite loops and memory leaks.\n", timeoutLabel)
 		return 124, ctx.Err()
 	}
 

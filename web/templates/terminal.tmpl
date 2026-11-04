@@ -321,9 +321,31 @@
                 if (exitEl) exitEl.textContent = msg.exitCode !== undefined ? msg.exitCode : 0;
                 return;
               }
+              if (msg.type === 'html') {
+                const stream = document.getElementById('terminal-stream');
+                if (stream && msg.html) {
+                  const wrapper = document.createElement('div');
+                  wrapper.innerHTML = msg.html;
+                  stream.appendChild(wrapper.firstElementChild || wrapper);
+                }
+                return;
+              }
+              // Prevent any other JSON protocol metadata from leaking into xterm
+              return;
             } catch (_) {}
           }
+          // Raw stream bytes (ANSI text, process outputs, prompts) write cleanly to xterm.js
           term.write(raw);
+          const stream = document.getElementById('terminal-stream');
+          if (stream && typeof raw === 'string') {
+            const clean = raw.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '');
+            if (clean.trim()) {
+              const line = document.createElement('div');
+              line.className = 'font-mono text-[11px] leading-5 whitespace-pre-wrap';
+              line.textContent = clean;
+              stream.appendChild(line);
+            }
+          }
         };
 
         socket.onclose = function() {

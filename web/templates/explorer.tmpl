@@ -205,21 +205,39 @@
             </span>
           </button>
 
-          <!-- 3-Dots Action Button -->
-          <button
-            hx-get="/api/ui/file/menu?path={{.Path}}&kind=folder"
-            hx-target="#context-menu"
-            hx-swap="innerHTML"
-            class="p-1 opacity-0 group-hover:opacity-100 rounded hover:bg-[var(--control-hover)] transition-opacity duration-100 shrink-0 ml-1 cursor-pointer"
-            title="Folder Actions"
-            type="button"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--muted);">
-              <circle cx="12" cy="12" r="1"></circle>
-              <circle cx="19" cy="12" r="1"></circle>
-              <circle cx="5" cy="12" r="1"></circle>
-            </svg>
-          </button>
+          <!-- Folder Actions (Quick Delete + 3-Dots Menu) -->
+          <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-100 shrink-0 ml-1">
+            <button
+              hx-delete="/api/explorer/delete?path={{.Path}}"
+              hx-target="#file-tree"
+              hx-swap="innerHTML"
+              hx-confirm="Permanently delete folder '{{.Name}}' and all its contents?"
+              onclick="event.stopPropagation();"
+              class="p-1 rounded hover:bg-rose-500/20 text-rose-400 hover:text-rose-500 transition-all cursor-pointer"
+              title="Delete {{.Name}}"
+              type="button"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
+            <button
+              hx-get="/api/ui/file/menu?path={{.Path}}&kind=folder"
+              hx-target="#context-menu"
+              hx-swap="innerHTML"
+              onclick="event.stopPropagation();"
+              class="p-1 rounded hover:bg-[var(--control-hover)] transition-all cursor-pointer"
+              title="Folder Actions"
+              type="button"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--muted);">
+                <circle cx="12" cy="12" r="1"></circle>
+                <circle cx="19" cy="12" r="1"></circle>
+                <circle cx="5" cy="12" r="1"></circle>
+              </svg>
+            </button>
+          </div>
         </div>
       {{else}}
         <!-- File Item (Draggable & Realistic VS Code Icon) -->
@@ -315,21 +333,39 @@
             </span>
           </button>
 
-          <!-- 3-Dots Action Button -->
-          <button
-            hx-get="/api/ui/file/menu?path={{.Path}}&kind=file"
-            hx-target="#context-menu"
-            hx-swap="innerHTML"
-            class="p-1 opacity-0 group-hover:opacity-100 rounded hover:bg-[var(--control-hover)] transition-opacity duration-100 shrink-0 ml-1 cursor-pointer"
-            title="File Actions"
-            type="button"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--muted);">
-              <circle cx="12" cy="12" r="1"></circle>
-              <circle cx="19" cy="12" r="1"></circle>
-              <circle cx="5" cy="12" r="1"></circle>
-            </svg>
-          </button>
+          <!-- File Actions (Quick Delete + 3-Dots Menu) -->
+          <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-100 shrink-0 ml-1">
+            <button
+              hx-delete="/api/explorer/delete?path={{.Path}}"
+              hx-target="#file-tree"
+              hx-swap="innerHTML"
+              hx-confirm="Permanently delete '{{.Name}}'?"
+              onclick="event.stopPropagation();"
+              class="p-1 rounded hover:bg-rose-500/20 text-rose-400 hover:text-rose-500 transition-all cursor-pointer"
+              title="Delete {{.Name}}"
+              type="button"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
+            <button
+              hx-get="/api/ui/file/menu?path={{.Path}}&kind=file"
+              hx-target="#context-menu"
+              hx-swap="innerHTML"
+              onclick="event.stopPropagation();"
+              class="p-1 rounded hover:bg-[var(--control-hover)] transition-all cursor-pointer"
+              title="File Actions"
+              type="button"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--muted);">
+                <circle cx="12" cy="12" r="1"></circle>
+                <circle cx="19" cy="12" r="1"></circle>
+                <circle cx="5" cy="12" r="1"></circle>
+              </svg>
+            </button>
+          </div>
         </div>
       {{end}}
     {{end}}

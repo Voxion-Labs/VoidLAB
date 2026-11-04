@@ -71,16 +71,63 @@ type OutboundMessage struct {
 	Running  bool   `json:"running,omitempty"`
 }
 
+// safeStdinPipe provides a thread-safe, non-blocking in-memory pipe for streaming interactive stdin to subprocesses.
+// Write calls never block the caller, while Read blocks waiting for data or EOF on Close.
+type safeStdinPipe struct {
+	mu     sync.Mutex
+	cond   *sync.Cond
+	buf    bytes.Buffer
+	closed bool
+}
+
+func newSafeStdinPipe() *safeStdinPipe {
+	p := &safeStdinPipe{}
+	p.cond = sync.NewCond(&p.mu)
+	return p
+}
+
+func (p *safeStdinPipe) Write(data []byte) (int, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.closed {
+		return 0, io.ErrClosedPipe
+	}
+	n, err := p.buf.Write(data)
+	p.cond.Broadcast()
+	return n, err
+}
+
+func (p *safeStdinPipe) Read(data []byte) (int, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for p.buf.Len() == 0 {
+		if p.closed {
+			return 0, io.EOF
+		}
+		p.cond.Wait()
+	}
+	return p.buf.Read(data)
+}
+
+func (p *safeStdinPipe) Close() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.closed = true
+	p.cond.Broadcast()
+	return nil
+}
+
 // Client represents an active WebSocket terminal session.
 type Client struct {
-	conn       *websocket.Conn
-	outputChan chan []byte        // Channel to write stdout/stderr (from Docker orchestrator) back to xterm.js
-	sendChan   chan []byte        // Outbound channel consumed by writePump goroutine
-	stdinPipe  io.WriteCloser     // Piped user keystrokes to Docker container stdin
-	cancelFunc context.CancelFunc // Process cancellation context
-	cmdBuf     strings.Builder
-	closed     bool
-	mu         sync.Mutex
+	conn         *websocket.Conn
+	outputChan   chan []byte        // Channel to write stdout/stderr (from Docker orchestrator) back to xterm.js
+	sendChan     chan []byte        // Outbound channel consumed by writePump goroutine
+	stdinPipe    io.WriteCloser     // Piped user keystrokes to Docker container stdin
+	cancelFunc   context.CancelFunc // Process cancellation context
+	cmdBuf       strings.Builder
+	inputLineBuf bytes.Buffer       // Interactive line buffer for active process stdin
+	closed       bool
+	mu           sync.Mutex
 }
 
 // Handler manages WebSocket upgrades, active connections, and execution broadcasts.
@@ -184,7 +231,12 @@ func (h *Handler) dispatchInbound(client *Client, message []byte) {
 				go h.ExecuteRun(client, inbound.Path, inbound.Language)
 				return
 			case "stdin":
-				client.writeStdin([]byte(inbound.Data))
+				data := inbound.Data
+				if !strings.HasSuffix(data, "\n") {
+					data += "\n"
+				}
+				client.writeStdin([]byte(data))
+				client.sendRaw([]byte(data))
 				return
 			case "command":
 				if inbound.Command == "clear" {
@@ -202,32 +254,56 @@ func (h *Handler) dispatchInbound(client *Client, message []byte) {
 
 	// 2. Direct Raw Keystrokes from xterm.js UI
 	if client.hasActiveProcess() {
-		// Active Docker / Sandbox process is running: pipe directly to process stdin
+		// Active Docker / Sandbox process is running: handle interactive user stdin with line-buffering
 		// Check for Ctrl+C (\x03) interrupt
 		if bytes.Equal(message, []byte("\x03")) {
 			client.cancelActiveProcess()
+			client.mu.Lock()
+			client.inputLineBuf.Reset()
+			client.mu.Unlock()
 			client.sendRaw([]byte("^C\r\n\x1b[31m[Process interrupted by user (SIGINT)]\x1b[0m\r\n\x1b[34mvoidlab\x1b[0m:\x1b[32m/workspace\x1b[0m$ "))
 			client.sendJSON(OutboundMessage{Type: "status", Running: false})
 			return
 		}
 
-		// Normalize carriage returns (\r -> \n) for unbuffered process line inputs
-		if bytes.Contains(message, []byte("\r")) {
-			normalized := bytes.ReplaceAll(message, []byte("\r"), []byte("\n"))
-			client.writeStdin(normalized)
+		// Enter key (\r or \n): deliver complete line with \n to process stdin
+		if bytes.Contains(message, []byte("\r")) || bytes.Contains(message, []byte("\n")) {
+			client.mu.Lock()
+			trimmed := bytes.TrimRight(message, "\r\n")
+			if len(trimmed) > 0 {
+				client.inputLineBuf.Write(trimmed)
+			}
+			line := client.inputLineBuf.Bytes()
+			toSend := make([]byte, len(line)+1)
+			copy(toSend, line)
+			toSend[len(line)] = '\n'
+			client.inputLineBuf.Reset()
+			client.mu.Unlock()
+
+			client.writeStdin(toSend)
 			client.sendRaw([]byte("\r\n")) // local terminal echo
 			return
 		}
 
-		// Backspace handling
+		// Backspace handling (\x7f or \b)
 		if bytes.Equal(message, []byte("\x7f")) || bytes.Equal(message, []byte("\b")) {
-			client.writeStdin([]byte("\b"))
-			client.sendRaw([]byte("\b \b"))
+			client.mu.Lock()
+			current := client.inputLineBuf.String()
+			if len(current) > 0 {
+				client.inputLineBuf.Reset()
+				client.inputLineBuf.WriteString(current[:len(current)-1])
+				client.mu.Unlock()
+				client.sendRaw([]byte("\b \b")) // erase on terminal screen
+			} else {
+				client.mu.Unlock()
+			}
 			return
 		}
 
-		// Pipe raw user keystrokes directly to Docker container stdin and echo back to terminal UI
-		client.writeStdin(message)
+		// Normal printable keystroke: buffer line and echo to terminal
+		client.mu.Lock()
+		client.inputLineBuf.Write(message)
+		client.mu.Unlock()
 		client.sendRaw(message)
 		return
 	}
@@ -309,11 +385,12 @@ func (h *Handler) ExecuteRun(client *Client, relPath string, lang string) {
 	if client.cancelFunc != nil {
 		client.cancelFunc()
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), docker.InteractiveExecutionTimeout)
 	client.cancelFunc = cancel
+	client.inputLineBuf.Reset()
 
-	stdinReader, stdinWriter := io.Pipe()
-	client.stdinPipe = stdinWriter
+	safePipe := newSafeStdinPipe()
+	client.stdinPipe = safePipe
 	client.mu.Unlock()
 
 	defer func() {
@@ -322,9 +399,9 @@ func (h *Handler) ExecuteRun(client *Client, relPath string, lang string) {
 			_ = client.stdinPipe.Close()
 			client.stdinPipe = nil
 		}
+		client.inputLineBuf.Reset()
 		client.cancelFunc = nil
 		client.mu.Unlock()
-		_ = stdinReader.Close()
 	}()
 
 	client.sendJSON(OutboundMessage{
@@ -333,26 +410,19 @@ func (h *Handler) ExecuteRun(client *Client, relPath string, lang string) {
 		Running: true,
 	})
 
-	client.sendRaw([]byte(fmt.Sprintf("\r\n\x1b[36m[VoidLAB]\x1b[0m \x1b[1mExecuting %s\x1b[0m...\r\n", html.EscapeString(relPath))))
-
-	client.sendHTML(fmt.Sprintf(
-		`<div class="opacity-80 pt-1 pb-0.5"><span class="text-sky-400 font-semibold">[Running]</span> Executing <strong class="text-[var(--text-strong)]">%s</strong>...</div>`,
-		html.EscapeString(relPath),
-	))
+	client.sendRaw([]byte(fmt.Sprintf("\r\n\x1b[36m[VoidLAB]\x1b[0m \x1b[1mExecuting %s\x1b[0m...\r\n", relPath)))
 
 	// Channel-backed stdout writer that pipes chunks directly to WebSocket xterm.js
 	stdoutWriter := newStreamWriter(func(chunk string) {
 		client.writeOutput([]byte(chunk))
-		client.sendHTML(fmt.Sprintf(`<div class="font-mono text-[11px] leading-5 text-[var(--terminal-text)] whitespace-pre-wrap break-words">%s</div>`, html.EscapeString(chunk)))
 	})
 
 	// Channel-backed stderr writer that pipes errors in ANSI red to WebSocket xterm.js
 	stderrWriter := newStreamWriter(func(chunk string) {
 		client.writeOutput([]byte(fmt.Sprintf("\x1b[31m%s\x1b[0m", chunk)))
-		client.sendHTML(fmt.Sprintf(`<div class="font-mono text-[11px] leading-5 text-rose-400 whitespace-pre-wrap break-words">%s</div>`, html.EscapeString(chunk)))
 	})
 
-	result, err := h.orchestrator.Run(ctx, relPath, lang, stdinReader, stdoutWriter, stderrWriter)
+	result, err := h.orchestrator.Run(ctx, relPath, lang, safePipe, stdoutWriter, stderrWriter)
 
 	durationStr := "0.00s"
 	exitCode := 0
@@ -362,24 +432,11 @@ func (h *Handler) ExecuteRun(client *Client, relPath string, lang string) {
 	}
 
 	exitColor := "\x1b[32m" // green
-	statusTone := "text-emerald-400"
-	statusText := "Execution completed"
 	if err != nil || exitCode != 0 {
 		exitColor = "\x1b[31m" // red
-		statusTone = "text-rose-400"
-		if err != nil {
-			statusText = fmt.Sprintf("Execution error: %v", err)
-		} else {
-			statusText = fmt.Sprintf("Exited with code %d", exitCode)
-		}
 	}
 
 	client.sendRaw([]byte(fmt.Sprintf("\r\n%s[Process finished with exit code %d (%s)]\x1b[0m\r\n\x1b[34mvoidlab\x1b[0m:\x1b[32m/workspace\x1b[0m$ ", exitColor, exitCode, durationStr)))
-
-	client.sendHTML(fmt.Sprintf(
-		`<div class="opacity-80 pt-0.5 pb-1 text-[10px] border-b border-[var(--border)]"><span class="%s font-semibold">[%s]</span> Exit code: %d | Time: %s</div>`,
-		statusTone, statusText, exitCode, durationStr,
-	))
 
 	client.sendJSON(OutboundMessage{
 		Type:     "exit",
@@ -680,9 +737,10 @@ func (c *Client) sendHTML(htmlFragment string) {
 
 func (c *Client) writeStdin(data []byte) {
 	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.stdinPipe != nil {
-		_, _ = c.stdinPipe.Write(data)
+	pipe := c.stdinPipe
+	c.mu.Unlock()
+	if pipe != nil {
+		_, _ = pipe.Write(data)
 	}
 }
 
