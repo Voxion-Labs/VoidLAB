@@ -139,16 +139,8 @@ func (h *Handler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 	client.sendJSON(welcomeMsg)
 
-	// 2. High-impact ANSI Terminal Banner
-	banner := fmt.Sprintf(
-		"\x1b[1;34m╔═════════════════════════════════════════════════════════════════╗\x1b[0m\r\n"+
-			"\x1b[1;34m║\x1b[0m  \x1b[1;37mVoidLAB Engine v0.1.0\x1b[0m - Local-First Cloud Code Editor       \x1b[1;34m║\x1b[0m\r\n"+
-			"\x1b[1;34m║\x1b[0m  Runtime: \x1b[32m%-52s\x1b[0m \x1b[1;34m║\x1b[0m\r\n"+
-			"\x1b[1;34m╚═════════════════════════════════════════════════════════════════╝\x1b[0m\r\n"+
-			"Type \x1b[33mrun\x1b[0m or \x1b[33mhelp\x1b[0m, or execute scripts via the topbar Run button.\r\n\r\n"+
-			"\x1b[34mvoidlab\x1b[0m:\x1b[32m/workspace\x1b[0m$ ",
-		engineLabel,
-	)
+	// 2. Clean Minimal Sandbox Banner (1:1 with Screenshot 582)
+	banner := "VoidLAB Engine v0.1.0 - Sandbox Shell [Local client VFS: /]\r\nConnected to sandbox session. Type commands below (e.g. ls, mkdir, touch) or click Run.\r\n\r\n\x1b[34mvoidlab\x1b[0m:\x1b[32m/workspace\x1b[0m$ "
 	client.sendRaw([]byte(banner))
 
 	// Goroutine 1: writePump pumps all outbound frames and Docker stdout/stderr back to the client xterm.js

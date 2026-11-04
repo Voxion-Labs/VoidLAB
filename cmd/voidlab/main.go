@@ -261,11 +261,30 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 	mux.HandleFunc("POST /api/auth/logout", authHandler.HandleLogout)
 	mux.HandleFunc("GET /api/auth/status", authHandler.HandleAuthStatus)
 
-	// Navigation Panel Page Views (Full-page views with HTMX integration)
+	// Navigation Panel Page Views (Full-page views with HTMX & direct routing)
 	mux.HandleFunc("GET /editor/collaboration", requireAuth(collabHandler.HandleCollabPage))
+	mux.HandleFunc("GET /editor/collab", requireAuth(collabHandler.HandleCollabPage))
 	mux.HandleFunc("GET /editor/ai", requireAuth(aiHandler.HandleAIPage))
 	mux.HandleFunc("GET /editor/profile", requireAuth(authHandler.HandleProfilePage))
-	mux.HandleFunc("GET /editor/manual", requireAuth(explorerHandler.HandleManualPage))
+	mux.HandleFunc("GET /editor/manual", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+		data, err := explorerService.BuildWorkspaceData()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		data.IsEditor = true
+		data.SubView = "manual"
+		data.Title = "VoidLAB Operator Manual"
+		if user, ok := auth.GetAuthenticatedUser(r); ok && user != "" {
+			data.User = user
+			data.UserInitial = strings.ToUpper(string(user[0]))
+		} else {
+			data.User = "Alex"
+			data.UserInitial = "A"
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_ = tmpl.ExecuteTemplate(w, "base.tmpl", data)
+	}))
 	mux.HandleFunc("GET /editor/github", requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		data, err := explorerService.BuildWorkspaceData()
 		if err != nil {
@@ -275,6 +294,13 @@ func setupServer(workspaceDir string, tmplPattern string, publicDir string) (*ht
 		data.IsEditor = true
 		data.SubView = "github"
 		data.Title = "GitHub Sync & Version Control - VoidLAB"
+		if user, ok := auth.GetAuthenticatedUser(r); ok && user != "" {
+			data.User = user
+			data.UserInitial = strings.ToUpper(string(user[0]))
+		} else {
+			data.User = "Alex"
+			data.UserInitial = "A"
+		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_ = tmpl.ExecuteTemplate(w, "base.tmpl", data)
 	}))

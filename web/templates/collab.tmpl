@@ -1,124 +1,342 @@
 {{define "collab"}}
-<div
-  id="collab-view"
-  class="flex-1 flex flex-col h-full overflow-hidden select-none font-sans transition-colors"
-  style="background: var(--background-main); color: var(--text);"
->
-  <!-- ── Top Header Toolbar ── -->
-  <div
-    class="h-9 px-3 flex items-center justify-between shrink-0 select-none font-sans text-xs border-b transition-colors"
-    style="background: var(--surface-soft); border-color: var(--border);"
-  >
+<!-- Fragment compatibility for side-panel or dynamic swaps -->
+<div id="collab-view" class="flex-1 flex flex-col h-full overflow-hidden select-none font-sans transition-colors" style="background: var(--background-main); color: var(--text);">
+  <div class="h-10 px-4 flex items-center justify-between shrink-0 border-b select-none transition-colors" style="background: var(--surface-soft); border-color: var(--border);">
     <div class="flex items-center gap-2">
       <span class="w-2 h-2 rounded-full" style="background: var(--accent);"></span>
-      <span class="font-bold tracking-tight text-xs" style="color: var(--text-strong);">Multiplayer Collaboration</span>
-      <span class="text-[10px] px-1.5 py-0.5 rounded font-mono" style="background: var(--control-background); border: 1px solid var(--border); color: var(--muted);">
-        Peer-to-Peer WebSocket
-      </span>
+      <span class="font-bold tracking-tight text-xs text-[var(--text-strong)]">Multiplayer Collaboration</span>
     </div>
-
-    <!-- Close Side Panel Button (Directive 1) -->
-    <button
-      onclick="closeSidePanel()"
-      class="inline-flex items-center justify-center w-6 h-6 rounded text-xs font-medium hover:bg-[var(--control-hover)] transition-colors cursor-pointer text-[var(--muted)] hover:text-[var(--text-strong)]"
-      title="Close Collab side-panel"
-      type="button"
-    >
-      <span>✕</span>
-    </button>
+    <a href="/editor/collaboration" class="text-xs px-2.5 py-1 rounded bg-[var(--control-background)] hover:bg-[var(--control-hover)] border border-[var(--border)] text-[var(--text)] transition cursor-pointer">
+      Open Full Page ↗
+    </a>
   </div>
-
-  <!-- ── Collab Main Content ── -->
-  <div class="flex-1 overflow-y-auto p-5 space-y-5 scrollbar-thin text-xs font-sans">
-    <!-- Active Room Status Banner -->
-    <div
-      class="p-4 rounded-xl border flex items-center justify-between transition-colors shadow-sm"
-      style="background: var(--surface-soft); border-color: var(--border-strong);"
-    >
-      <div>
-        <div class="font-bold text-sm" style="color: var(--text-strong);">Active Pair Room: VOID-LAB-01</div>
-        <div class="text-[11px] mt-0.5" style="color: var(--muted);">
-          WebSocket synchronized live session for pair-programming and code reviews.
-        </div>
-      </div>
-      <div class="flex items-center gap-2">
-        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-          Connected
-        </span>
-      </div>
-    </div>
-
-    <!-- Participants Grid -->
-    <div class="space-y-2">
-      <div class="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">Active Collaborators (2 Online)</div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <!-- Host -->
-        <div class="p-3 rounded-lg border border-[var(--border)] bg-[var(--panel-background)] flex items-center gap-3">
-          <div class="w-8 h-8 rounded-full bg-[var(--accent)] text-white font-bold text-xs flex items-center justify-center shrink-0">
-            {{if .UserInitial}}{{.UserInitial}}{{else}}R{{end}}
-          </div>
-          <div class="min-w-0 flex-1">
-            <div class="font-semibold text-xs truncate" style="color: var(--text-strong);">
-              {{if .User}}{{.User}}{{else}}Rudra{{end}} (You)
-            </div>
-            <div class="text-[10px] text-emerald-500 flex items-center gap-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              Host & Editor
-            </div>
-          </div>
-        </div>
-
-        <!-- Peer -->
-        <div class="p-3 rounded-lg border border-[var(--border)] bg-[var(--panel-background)] flex items-center gap-3">
-          <div class="w-8 h-8 rounded-full bg-indigo-500 text-white font-bold text-xs flex items-center justify-center shrink-0">
-            A
-          </div>
-          <div class="min-w-0 flex-1">
-            <div class="font-semibold text-xs truncate" style="color: var(--text-strong);">
-              Alex Mercer
-            </div>
-            <div class="text-[10px] text-sky-500 flex items-center gap-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span>
-              Reviewer / Cursor Sync
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Interactive Room Launcher / Connect Card -->
-    <div class="p-4 rounded-xl border border-[var(--border)] bg-[var(--panel-background)] space-y-3">
-      <div class="font-bold text-xs text-[var(--text-strong)]">Join or Spawn a Peer Room</div>
-      <div class="flex flex-col sm:flex-row gap-2">
-        <input
-          type="text"
-          id="collab-room-input"
-          value="VOID-PAIR-77"
-          placeholder="Enter room token (e.g. VOID-ROOM-01)"
-          class="flex-1 px-3 py-2 text-xs rounded-lg border outline-none font-mono transition-colors"
-          style="background: var(--input-background); border-color: var(--border); color: var(--text);"
-        />
-        <button
-          hx-post="/api/collab/room"
-          hx-include="#collab-room-input"
-          hx-target="#collab-log"
-          hx-swap="beforeend"
-          class="px-4 py-2 rounded-lg text-xs font-semibold text-white transition-all cursor-pointer shadow-sm hover:shadow"
-          style="background: var(--action-background);"
-          type="button"
-        >
-          Connect Room
-        </button>
-      </div>
-      <div id="collab-log" class="text-[11px] font-mono text-[var(--muted)] pt-1">
-        ✓ WebSocket signaling endpoint ready at /api/collab/room
-      </div>
-    </div>
+  <div class="p-4 text-xs text-[var(--muted)]">
+    Collaborate live in shared rooms with workspace snapshots and peer chat.
   </div>
 </div>
 {{end}}
 
-{{define "collab.tmpl"}}
-  {{template "collab" .}}
+{{define "collab-page"}}
+<main class="min-h-screen w-full flex flex-col font-sans select-none antialiased transition-colors" style="background: var(--background-main); color: var(--text);">
+  <!-- Universal Tool Header (← Back, VoidLAB Logo, Theme, Profile, Logout) -->
+  {{template "tool-header" .}}
+
+  <!-- Main Collaboration Content Container (Exact 1:1 with Screenshot 2) -->
+  <div class="w-full max-w-6xl mx-auto px-4 sm:px-6 pb-12">
+    <!-- Category Badge -->
+    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider mb-2.5" style="background: var(--accent-soft); color: var(--accent);">
+      WORKSPACE TOOLS
+    </div>
+
+    <!-- Page Title & Subtitle -->
+    <h1 class="text-3xl font-extrabold tracking-tight display-font text-[var(--text-strong)] mb-2">
+      Collaboration rooms
+    </h1>
+    <p class="text-xs sm:text-sm text-[var(--muted)] max-w-3xl leading-relaxed mb-6">
+      Create shareable collaboration rooms, invite teammates, exchange room messages, and push or pull workspace snapshots during live teamwork.
+    </p>
+
+    <!-- Main Grid: Left Controls (4 cols), Right Views (8 cols) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <!-- Left Column: Local Room Controls Card -->
+      <div class="lg:col-span-4 rounded-2xl border p-5 shadow-sm transition-colors space-y-4" style="background: var(--surface-soft); border-color: var(--border);">
+        <!-- Card Header -->
+        <div class="flex items-start gap-3">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm" style="background: var(--accent-soft); color: var(--accent);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-sm font-bold text-[var(--text-strong)]">Local room controls</h2>
+            <p class="text-[11px] text-[var(--muted)] leading-tight mt-0.5">
+              Room codes, chat, and workspace snapshots without backend storage.
+            </p>
+          </div>
+        </div>
+
+        <!-- Room Inputs Form -->
+        <div class="space-y-2.5 pt-1">
+          <div>
+            <input
+              id="collab-room-name"
+              type="text"
+              value="VoidLAB Local Room"
+              class="w-full px-3.5 py-2.5 rounded-xl text-xs font-sans border outline-none transition-colors"
+              style="background: var(--input-background); border-color: var(--border); color: var(--text);"
+            />
+          </div>
+          <div>
+            <input
+              id="collab-room-code"
+              type="text"
+              placeholder="ENTER ROOM CODE"
+              class="w-full px-3.5 py-2.5 rounded-xl text-xs font-mono tracking-wider uppercase border outline-none transition-colors placeholder:text-[var(--muted)]"
+              style="background: var(--input-background); border-color: var(--border); color: var(--text);"
+            />
+          </div>
+
+          <!-- Create Room Action (Solid Blue) -->
+          <button
+            type="button"
+            onclick="handleCreateCollabRoom()"
+            class="w-full py-2.5 px-4 rounded-xl text-xs font-bold shadow-sm transition-all hover:opacity-90 active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2"
+            style="background: var(--action-background); color: var(--action-foreground);"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="18" cy="5" r="3"></circle>
+              <circle cx="6" cy="12" r="3"></circle>
+              <circle cx="18" cy="19" r="3"></circle>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+            </svg>
+            <span>Create room</span>
+          </button>
+
+          <!-- Join Room Action (Clean Border/White) -->
+          <button
+            type="button"
+            onclick="handleJoinCollabRoom()"
+            class="w-full py-2.5 px-4 rounded-xl text-xs font-semibold border transition-all hover:bg-[var(--control-hover)] cursor-pointer flex items-center justify-center gap-1.5"
+            style="background: var(--control-background); border-color: var(--border); color: var(--text-strong);"
+          >
+            <span>Join room</span>
+          </button>
+        </div>
+
+        <!-- Info Box (Exact 1:1 with Screenshot 2) -->
+        <div class="p-3 rounded-xl border text-[11px] text-[var(--muted)] leading-relaxed" style="background: var(--control-background); border-color: var(--border);">
+          Create or join a local room. Works across tabs on this browser origin.
+        </div>
+
+        <!-- Snapshot Action Trays -->
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <button
+            type="button"
+            onclick="handleShareWorkspaceSnapshot()"
+            class="py-2 px-3 rounded-lg border text-xs font-medium transition-colors hover:bg-[var(--control-hover)] cursor-pointer text-center"
+            style="background: var(--control-background); border-color: var(--border); color: var(--text);"
+          >
+            Share workspace
+          </button>
+          <button
+            type="button"
+            onclick="handlePullWorkspaceSnapshot()"
+            class="py-2 px-3 rounded-lg border text-xs font-medium transition-colors hover:bg-[var(--control-hover)] cursor-pointer text-center"
+            style="background: var(--control-background); border-color: var(--border); color: var(--text);"
+          >
+            Pull workspace
+          </button>
+        </div>
+      </div>
+
+      <!-- Right Column: Participants, Shared Workspace, Team Chat -->
+      <div class="lg:col-span-8 space-y-6">
+        <!-- Top Row: Participants & Shared Workspace Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Card: Participants -->
+          <div class="rounded-2xl border p-5 shadow-sm transition-colors" style="background: var(--surface-soft); border-color: var(--border);">
+            <h2 class="text-xs font-bold text-[var(--text-strong)] mb-3">Participants</h2>
+            <div id="collab-participants-box" class="text-xs text-[var(--muted)]">
+              No active room yet.
+            </div>
+          </div>
+
+          <!-- Card: Shared Workspace -->
+          <div class="rounded-2xl border p-5 shadow-sm transition-colors relative" style="background: var(--surface-soft); border-color: var(--border);">
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="text-xs font-bold text-[var(--text-strong)]">Shared workspace</h2>
+              <button
+                type="button"
+                onclick="handleRefreshWorkspaceSnapshot()"
+                class="p-1 rounded-md transition-colors hover:bg-[var(--control-hover)] cursor-pointer text-[var(--muted)]"
+                title="Refresh snapshot"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                  <path d="M3 3v5h5"></path>
+                </svg>
+              </button>
+            </div>
+            <p id="collab-snapshot-status" class="text-xs text-[var(--muted)] mb-3">
+              No workspace snapshot yet.
+            </p>
+            <div class="p-3 rounded-xl border text-[11px] text-[var(--muted)] leading-relaxed" style="background: var(--control-background); border-color: var(--border);">
+              Share the current editor state to send a local snapshot.
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Card: Team Chat Box (Exact 1:1 with Screenshot 2) -->
+        <div class="rounded-2xl border p-5 shadow-sm transition-colors flex flex-col min-h-[340px]" style="background: var(--surface-soft); border-color: var(--border);">
+          <div class="flex items-center gap-2 pb-3 border-b" style="border-color: var(--border);">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent);">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <h2 class="text-xs font-bold text-[var(--text-strong)]">Team chat</h2>
+          </div>
+
+          <!-- Messages Container -->
+          <div id="collab-chat-messages" class="flex-1 py-4 space-y-2.5 overflow-y-auto scrollbar-thin text-xs text-[var(--muted)]">
+            Messages will appear here once a room is active.
+          </div>
+
+          <!-- Chat Input Line -->
+          <form id="collab-chat-form" onsubmit="handleSendCollabChat(event)" class="pt-3 border-t flex items-center gap-2" style="border-color: var(--border);">
+            <input
+              id="collab-chat-input"
+              type="text"
+              placeholder="Type team chat message..."
+              class="flex-1 px-3.5 py-2 rounded-xl text-xs outline-none transition-colors"
+              style="background: var(--input-background); border: 1px solid var(--border); color: var(--text);"
+            />
+            <button
+              type="submit"
+              class="px-3.5 py-2 rounded-xl text-xs font-semibold shadow-sm transition-all hover:opacity-90 active:scale-[0.98] cursor-pointer"
+              style="background: var(--action-background); color: var(--action-foreground);"
+            >
+              Send
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  var currentCollabRoom = null;
+  var collabChannel = null;
+
+  function initCollabChannel() {
+    if (!window.BroadcastChannel) return;
+    if (collabChannel) return;
+    collabChannel = new BroadcastChannel('voidlab_collab_bus');
+    collabChannel.onmessage = function(e) {
+      var data = e.data;
+      if (!data) return;
+      if (data.type === 'chat' && data.room === currentCollabRoom) {
+        addChatMessage(data.author, data.text);
+      } else if (data.type === 'snapshot' && data.room === currentCollabRoom) {
+        updateSnapshotStatus('Received workspace snapshot (' + (data.timestamp || 'just now') + ')');
+      }
+    };
+  }
+
+  function handleCreateCollabRoom() {
+    initCollabChannel();
+    var code = 'ROOM-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+    document.getElementById('collab-room-code').value = code;
+    currentCollabRoom = code;
+    updateRoomUI(code, true);
+  }
+
+  function handleJoinCollabRoom() {
+    initCollabChannel();
+    var input = document.getElementById('collab-room-code');
+    var code = (input ? input.value.trim().toUpperCase() : '');
+    if (!code) {
+      alert('Please enter a room code.');
+      return;
+    }
+    currentCollabRoom = code;
+    updateRoomUI(code, false);
+  }
+
+  function updateRoomUI(code, isHost) {
+    var pBox = document.getElementById('collab-participants-box');
+    var profile = window.voidlabGetProfile();
+    var u = (profile && profile.username) ? profile.username : 'Alex';
+    if (pBox) {
+      pBox.innerHTML = '<div class="space-y-2">' +
+        '<div class="flex items-center justify-between p-2 rounded-lg border" style="background: var(--panel-background); border-color: var(--border);">' +
+          '<div class="flex items-center gap-2">' +
+            '<span class="w-2 h-2 rounded-full bg-emerald-500"></span>' +
+            '<span class="font-bold text-[var(--text-strong)]">' + u + ' (You)</span>' +
+          '</div>' +
+          '<span class="text-[10px] px-2 py-0.5 rounded font-mono" style="background: var(--accent-soft); color: var(--accent);">' + (isHost ? 'Host' : 'Peer') + '</span>' +
+        '</div>' +
+        '<div class="text-[11px] text-[var(--muted)]">Active Room: <strong>' + code + '</strong></div>' +
+      '</div>';
+    }
+
+    var chatBox = document.getElementById('collab-chat-messages');
+    if (chatBox) {
+      chatBox.innerHTML = '<div class="text-[11px] text-emerald-500 font-medium">Joined room ' + code + '. Ready for live synchronization.</div>';
+    }
+  }
+
+  function handleSendCollabChat(e) {
+    if (e) e.preventDefault();
+    var input = document.getElementById('collab-chat-input');
+    if (!input) return;
+    var text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+
+    var profile = window.voidlabGetProfile();
+    var u = (profile && profile.username) ? profile.username : 'Alex';
+    addChatMessage(u, text);
+
+    if (collabChannel && currentCollabRoom) {
+      collabChannel.postMessage({
+        type: 'chat',
+        room: currentCollabRoom,
+        author: u,
+        text: text
+      });
+    }
+  }
+
+  function addChatMessage(author, text) {
+    var chatBox = document.getElementById('collab-chat-messages');
+    if (!chatBox) return;
+    if (chatBox.textContent.includes('Messages will appear here once a room is active.')) {
+      chatBox.innerHTML = '';
+    }
+    var div = document.createElement('div');
+    div.className = 'p-2.5 rounded-xl border text-xs leading-relaxed';
+    div.style.background = 'var(--panel-background)';
+    div.style.borderColor = 'var(--border)';
+    div.innerHTML = '<strong class="text-[var(--text-strong)]">' + author + ':</strong> ' +
+      '<span class="text-[var(--text)]">' + text + '</span>';
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  function handleShareWorkspaceSnapshot() {
+    if (!currentCollabRoom) {
+      alert('Please create or join a room first.');
+      return;
+    }
+    updateSnapshotStatus('Workspace snapshot shared at ' + new Date().toLocaleTimeString());
+    if (collabChannel) {
+      collabChannel.postMessage({
+        type: 'snapshot',
+        room: currentCollabRoom,
+        timestamp: new Date().toLocaleTimeString()
+      });
+    }
+  }
+
+  function handlePullWorkspaceSnapshot() {
+    if (!currentCollabRoom) {
+      alert('Please join a room first.');
+      return;
+    }
+    alert('Pulling latest peer snapshot into workspace...');
+  }
+
+  function handleRefreshWorkspaceSnapshot() {
+    updateSnapshotStatus('Workspace snapshot up to date (' + new Date().toLocaleTimeString() + ')');
+  }
+
+  function updateSnapshotStatus(msg) {
+    var el = document.getElementById('collab-snapshot-status');
+    if (el) el.textContent = msg;
+  }
+</script>
 {{end}}

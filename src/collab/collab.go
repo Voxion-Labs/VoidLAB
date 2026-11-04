@@ -531,8 +531,8 @@ func (h *Handler) HandleUICollab(w http.ResponseWriter, r *http.Request) {
 	data.IsEditor = true
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if h.templates != nil {
-		if err := h.templates.ExecuteTemplate(w, "collab.tmpl", data); err != nil {
-			_ = h.templates.ExecuteTemplate(w, "collab", data)
+		if err := h.templates.ExecuteTemplate(w, "collab", data); err != nil {
+			_ = h.templates.ExecuteTemplate(w, "collab.tmpl", data)
 		}
 	}
 }
@@ -553,7 +553,15 @@ func (h *Handler) HandleCollabPage(w http.ResponseWriter, r *http.Request) {
 
 	data.IsEditor = true
 	data.SubView = "collab"
-	data.Title = "Multiplayer Collaboration - VoidLAB"
+	data.Title = "Collaboration Rooms - VoidLAB"
+	if user, ok := auth.GetAuthenticatedUser(r); ok && user != "" {
+		data.User = user
+		data.UserInitial = strings.ToUpper(string(user[0]))
+	} else {
+		data.User = "Alex"
+		data.UserInitial = "A"
+	}
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if h.templates != nil {
 		_ = h.templates.ExecuteTemplate(w, "base.tmpl", data)

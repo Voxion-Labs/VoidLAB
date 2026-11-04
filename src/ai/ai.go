@@ -12,6 +12,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"github.com/Voxion-Labs/VoidLAB/src/auth"
 	"github.com/Voxion-Labs/VoidLAB/src/explorer"
 )
 
@@ -381,8 +382,8 @@ func (h *Handler) HandleUIAI(w http.ResponseWriter, r *http.Request) {
 	data.IsEditor = true
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if h.templates != nil {
-		if err := h.templates.ExecuteTemplate(w, "ai.tmpl", data); err != nil {
-			_ = h.templates.ExecuteTemplate(w, "ai", data)
+		if err := h.templates.ExecuteTemplate(w, "ai", data); err != nil {
+			_ = h.templates.ExecuteTemplate(w, "ai.tmpl", data)
 		}
 	}
 }
@@ -404,6 +405,14 @@ func (h *Handler) HandleAIPage(w http.ResponseWriter, r *http.Request) {
 	data.IsEditor = true
 	data.SubView = "ai"
 	data.Title = "Local AI Guide - VoidLAB"
+	if user, ok := auth.GetAuthenticatedUser(r); ok && user != "" {
+		data.User = user
+		data.UserInitial = strings.ToUpper(string(user[0]))
+	} else {
+		data.User = "Alex"
+		data.UserInitial = "A"
+	}
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if h.templates != nil {
 		_ = h.templates.ExecuteTemplate(w, "base.tmpl", data)

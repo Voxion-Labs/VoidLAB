@@ -1,150 +1,237 @@
 {{define "ai"}}
-<div
-  id="ai-guide-view"
-  class="flex-1 flex flex-col h-full overflow-hidden select-none font-sans transition-colors"
-  style="background: var(--background-main); color: var(--text);"
->
-  <!-- ── Top Header Toolbar ── -->
-  <div
-    class="h-9 px-3 flex items-center justify-between shrink-0 select-none font-sans text-xs border-b transition-colors"
-    style="background: var(--surface-soft); border-color: var(--border);"
-  >
+<!-- Fragment compatibility for side-panel or dynamic swaps -->
+<div id="ai-guide-view" class="flex-1 flex flex-col h-full overflow-hidden select-none font-sans transition-colors" style="background: var(--background-main); color: var(--text);">
+  <div class="h-10 px-4 flex items-center justify-between shrink-0 border-b select-none transition-colors" style="background: var(--surface-soft); border-color: var(--border);">
     <div class="flex items-center gap-2">
       <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-      <span class="font-bold tracking-tight text-xs" style="color: var(--text-strong);">AI Guide & Copilot</span>
-      <span class="text-[10px] px-1.5 py-0.5 rounded font-mono" style="background: var(--control-background); border: 1px solid var(--border); color: var(--muted);">
-        VoidLAB 2.0 Local
-      </span>
+      <span class="font-bold tracking-tight text-xs text-[var(--text-strong)]">AI Guide & Copilot</span>
     </div>
-
-    <!-- Action Buttons -->
-    <div class="flex items-center gap-2">
-      <button
-        onclick="var el = document.getElementById('ai-messages-list'); if(el) el.innerHTML = '';"
-        class="px-2 py-0.5 rounded text-xs transition-colors hover:bg-[var(--control-hover)] cursor-pointer"
-        style="color: var(--muted);"
-        title="Clear chat history"
-        type="button"
-      >
-        Clear
-      </button>
-
-      <!-- Close Side Panel Button (Directive 1) -->
-      <button
-        onclick="closeSidePanel()"
-        class="inline-flex items-center justify-center w-6 h-6 rounded text-xs font-medium hover:bg-[var(--control-hover)] transition-colors cursor-pointer text-[var(--muted)] hover:text-[var(--text-strong)]"
-        title="Close AI side-panel"
-        type="button"
-      >
-        <span>✕</span>
-      </button>
+    <a href="/editor/ai" class="text-xs px-2.5 py-1 rounded bg-[var(--control-background)] hover:bg-[var(--control-hover)] border border-[var(--border)] text-[var(--text)] transition cursor-pointer">
+      Open Full Page ↗
+    </a>
+  </div>
+  <div id="ai-messages-list" class="flex-1 overflow-y-auto p-4 space-y-3 text-xs">
+    <div class="p-3 rounded-xl border" style="background: var(--surface-soft); border-color: var(--border);">
+      Explore the full AI Guide tool page with real-time prompt models, contextual walk-throughs, and debugging guides.
     </div>
   </div>
-
-  <!-- ── Chat Conversation Stream ── -->
-  <div
-    id="ai-messages-list"
-    class="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin text-xs font-sans"
-  >
-    <!-- Default Welcome Message from AI Assistant -->
-    <div class="flex items-start gap-2.5">
-      <div class="w-6 h-6 rounded-md flex items-center justify-center font-bold text-[10px] bg-[var(--accent)] text-white shadow-sm shrink-0 mt-0.5">
-        AI
-      </div>
-      <div
-        class="flex-1 max-w-[92%] rounded-xl rounded-tl-none p-3.5 text-xs font-sans transition-colors border"
-        style="background: var(--surface-soft); border-color: var(--border-strong); color: var(--text);"
-      >
-        <div class="flex items-center justify-between pb-1.5 mb-1.5 border-b border-[var(--border)]">
-          <span class="font-semibold text-[11px] text-[var(--text-strong)] flex items-center gap-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            Welcome to VoidLAB AI Assistant
-          </span>
-          <span class="text-[9px] font-mono text-[var(--muted)]">Ready</span>
-        </div>
-        <div class="text-[11px] leading-relaxed text-[var(--text)]">
-          Hello! I am your local-first architecture copilot. I can assist you with:
-          <ul class="list-disc pl-4 mt-2 space-y-1">
-            <li><strong>Interactive Stdin & Keystroke Streaming:</strong> Learn how terminal input maps to ephemeral Docker containers.</li>
-            <li><strong>Compilation & Sandboxing:</strong> Understand the 16-language execution pipeline and security resource limits.</li>
-            <li><strong>WebAssembly Client Engine:</strong> Discover zero-latency syntax validation and on-device formatting.</li>
-            <li><strong>Multiplayer Collab:</strong> Share real-time pairing rooms with zero cloud reliance.</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Suggested Prompts Strip ── -->
-  <div class="px-4 py-2 border-t border-[var(--border)] bg-[var(--panel-background)]">
-    <div class="text-[10px] font-semibold uppercase tracking-wider mb-1.5 text-[var(--muted)]">Suggested Topics:</div>
-    <div class="flex flex-wrap gap-1.5">
-      <button
-        hx-post="/api/ai/prompt"
-        hx-vals='{"prompt": "How do I run input-output programs correctly?"}'
-        hx-target="#ai-messages-list"
-        hx-swap="beforeend"
-        class="px-2.5 py-1 rounded-full text-[10px] bg-[var(--surface-soft)] hover:bg-[var(--control-hover)] text-[var(--text)] border border-[var(--border)] transition-colors cursor-pointer text-left"
-        type="button"
-      >
-        💬 Handling Stdin & Input
-      </button>
-      <button
-        hx-post="/api/ai/prompt"
-        hx-vals='{"prompt": "Explain Docker sandboxing and security limits"}'
-        hx-target="#ai-messages-list"
-        hx-swap="beforeend"
-        class="px-2.5 py-1 rounded-full text-[10px] bg-[var(--surface-soft)] hover:bg-[var(--control-hover)] text-[var(--text)] border border-[var(--border)] transition-colors cursor-pointer text-left"
-        type="button"
-      >
-        🔒 Container Security Limits
-      </button>
-      <button
-        hx-post="/api/ai/prompt"
-        hx-vals='{"prompt": "How does WebAssembly client formatting work?"}'
-        hx-target="#ai-messages-list"
-        hx-swap="beforeend"
-        class="px-2.5 py-1 rounded-full text-[10px] bg-[var(--surface-soft)] hover:bg-[var(--control-hover)] text-[var(--text)] border border-[var(--border)] transition-colors cursor-pointer text-left"
-        type="button"
-      >
-        ⚡ WASM Validation & Formatting
-      </button>
-    </div>
-  </div>
-
-  <!-- ── Input Prompt Bar ── -->
-  <form
-    hx-post="/api/ai/prompt"
-    hx-target="#ai-messages-list"
-    hx-swap="beforeend"
-    class="p-3 border-t border-[var(--border)] bg-[var(--surface-soft)] flex items-center gap-2"
-    onsubmit="setTimeout(function(){ var list = document.getElementById('ai-messages-list'); if(list) list.scrollTop = list.scrollHeight; }, 100);"
-  >
-    <input
-      type="text"
-      name="prompt"
-      required
-      autocomplete="off"
-      placeholder="Ask about compiler errors, Docker limits, WASM, or code architecture..."
-      class="flex-1 px-3 py-2 text-xs rounded-lg border outline-none transition-colors"
-      style="background: var(--input-background); border-color: var(--border); color: var(--text);"
-    />
-    <input type="hidden" name="lang" value="{{if .ActiveFile}}{{.ActiveFile.Language}}{{else}}python{{end}}">
-    <button
-      type="submit"
-      class="px-4 py-2 rounded-lg text-xs font-semibold text-white shadow-sm transition-all hover:shadow cursor-pointer flex items-center gap-1.5"
-      style="background: var(--action-background);"
-    >
-      <span>Ask</span>
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="22" y1="2" x2="11" y2="13"></line>
-        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-      </svg>
-    </button>
-  </form>
 </div>
 {{end}}
 
-{{define "ai.tmpl"}}
-  {{template "ai" .}}
+{{define "ai-page"}}
+<main class="min-h-screen w-full flex flex-col font-sans select-none antialiased transition-colors" style="background: var(--background-main); color: var(--text);">
+  <!-- Universal Tool Header (← Back, VoidLAB Logo, Theme, Profile, Logout) -->
+  {{template "tool-header" .}}
+
+  <!-- Main AI Guide Content Container (Exact 1:1 with Screenshot 3) -->
+  <div class="w-full max-w-6xl mx-auto px-4 sm:px-6 pb-12">
+    <!-- Category Badge -->
+    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider mb-2.5" style="background: var(--accent-soft); color: var(--accent);">
+      WORKSPACE TOOLS
+    </div>
+
+    <!-- Page Title & Subtitle -->
+    <h1 class="text-3xl font-extrabold tracking-tight display-font text-[var(--text-strong)] mb-2">
+      AI guide
+    </h1>
+    <p class="text-xs sm:text-sm text-[var(--muted)] max-w-3xl leading-relaxed mb-6">
+      Use the built-in basic real-time model for product walkthroughs, debugging direction, input-output help, and faster onboarding inside VoidLAB.
+    </p>
+
+    <!-- Two-Column Grid (Left: Chat / Right: Fixed Prompts Palette) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <!-- Left Column: Local AI Guide Interactive Chat Box -->
+      <div class="lg:col-span-8 rounded-2xl border p-6 shadow-sm transition-colors flex flex-col min-h-[520px]" style="background: var(--surface-soft); border-color: var(--border);">
+        <!-- Card Header -->
+        <div class="flex items-center gap-3 pb-4 border-b" style="border-color: var(--border);">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm" style="background: var(--accent-soft); color: var(--accent);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v2"></path>
+              <rect width="16" height="12" x="4" y="6" rx="2"></rect>
+              <circle cx="9" cy="12" r="1"></circle>
+              <circle cx="15" cy="12" r="1"></circle>
+              <path d="M8 20v2"></path>
+              <path d="M16 20v2"></path>
+            </svg>
+          </div>
+          <div class="min-w-0 flex-1">
+            <h2 class="text-sm font-bold text-[var(--text-strong)]">Local AI guide</h2>
+            <p class="text-[11px] text-[var(--muted)] truncate">
+              Fixed responses for <span class="voidlab-user-name font-medium">{{if .User}}{{.User}}{{else}}Alex{{end}}</span> workspace. Context: {{if .ActiveFile}}{{.ActiveFile.Path}}{{else}}/main.js{{end}} · {{if .ActiveFile}}{{.ActiveFile.LanguageLabel}}{{else}}JavaScript{{end}} · {{if .TreeItems}}{{len .TreeItems}}{{else}}2{{end}} files.
+            </p>
+          </div>
+        </div>
+
+        <!-- Chat Stream Messages Container -->
+        <div id="ai-page-chat-stream" class="flex-1 py-5 space-y-4 overflow-y-auto scrollbar-thin">
+          <!-- Initial Assistant Message Bubble (Exact 1:1 with Screenshot 3) -->
+          <div class="flex items-start gap-3">
+            <div class="p-4 rounded-2xl rounded-tl-sm text-xs leading-relaxed max-w-xl border transition-colors shadow-sm" style="background: var(--panel-background); border-color: var(--border); color: var(--text);">
+              I am the local VoidLAB guide. Choose a prompt and I will answer instantly, without a backend request.
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat Input Field -->
+        <form id="ai-page-form" onsubmit="handleAIPageSubmit(event)" class="pt-4 border-t flex items-center gap-2" style="border-color: var(--border);">
+          <input
+            id="ai-page-input"
+            type="text"
+            placeholder="Ask AI Guide anything about your code or workspace..."
+            autocomplete="off"
+            class="flex-1 px-4 py-2.5 rounded-xl text-xs outline-none transition-colors font-sans"
+            style="background: var(--input-background); border: 1px solid var(--border); color: var(--text);"
+          />
+          <button
+            type="submit"
+            class="px-4 py-2.5 rounded-xl text-xs font-semibold shadow-sm transition-all hover:opacity-90 active:scale-[0.98] cursor-pointer flex items-center gap-1.5 shrink-0"
+            style="background: var(--action-background); color: var(--action-foreground);"
+            title="Send Message"
+          >
+            <span>Ask</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </form>
+      </div>
+
+      <!-- Right Column: Fixed Prompts Palette (Exact 1:1 with Screenshot 3) -->
+      <div class="lg:col-span-4 rounded-2xl border p-5 shadow-sm transition-colors space-y-3" style="background: var(--surface-soft); border-color: var(--border);">
+        <div class="flex items-center gap-2 pb-2 border-b" style="border-color: var(--border);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent);">
+            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path>
+          </svg>
+          <h2 class="text-sm font-bold text-[var(--text-strong)]">Fixed prompts</h2>
+        </div>
+
+        <div class="space-y-2.5 pt-1">
+          <!-- Prompt Card 1 -->
+          <button
+            type="button"
+            onclick="triggerFixedAIPrompt('How do I run input-output programs correctly?')"
+            class="w-full text-left p-3.5 rounded-xl border text-xs font-medium transition-all hover:border-[var(--accent)] hover:shadow-sm cursor-pointer block leading-snug group"
+            style="background: var(--panel-background); border-color: var(--border); color: var(--text-strong);"
+          >
+            How do I run input-output programs correctly?
+          </button>
+
+          <!-- Prompt Card 2 -->
+          <button
+            type="button"
+            onclick="triggerFixedAIPrompt('How should I organize files and folders?')"
+            class="w-full text-left p-3.5 rounded-xl border text-xs font-medium transition-all hover:border-[var(--accent)] hover:shadow-sm cursor-pointer block leading-snug group"
+            style="background: var(--panel-background); border-color: var(--border); color: var(--text-strong);"
+          >
+            How should I organize files and folders?
+          </button>
+
+          <!-- Prompt Card 3 -->
+          <button
+            type="button"
+            onclick="triggerFixedAIPrompt('What does local-first mean in VoidLAB?')"
+            class="w-full text-left p-3.5 rounded-xl border text-xs font-medium transition-all hover:border-[var(--accent)] hover:shadow-sm cursor-pointer block leading-snug group"
+            style="background: var(--panel-background); border-color: var(--border); color: var(--text-strong);"
+          >
+            What does local-first mean in VoidLAB?
+          </button>
+
+          <!-- Prompt Card 4 -->
+          <button
+            type="button"
+            onclick="triggerFixedAIPrompt('How do I debug a failing run?')"
+            class="w-full text-left p-3.5 rounded-xl border text-xs font-medium transition-all hover:border-[var(--accent)] hover:shadow-sm cursor-pointer block leading-snug group"
+            style="background: var(--panel-background); border-color: var(--border); color: var(--text-strong);"
+          >
+            How do I debug a failing run?
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  var localAIPromptBank = {
+    "How do I run input-output programs correctly?": "VoidLAB supports bi-directional streaming for standard input. When running programs that call input() in Python, cin in C++, or readline() in Node.js, the terminal switches to interactive stdin mode. You can type directly into the terminal or use the Input Required box to deliver data straight to your ephemeral execution process.",
+    "How should I organize files and folders?": "Keep your entry script in the workspace root or under /src (e.g., /src/main.js or /src/main.py). VoidLAB's file explorer preserves full hierarchy in local browser storage, syncing changes automatically with the virtual file system without external database dependency.",
+    "What does local-first mean in VoidLAB?": "VoidLAB is built on a 100% stateless architecture. Your profile, settings, files, and workspace state persist directly inside your browser via localStorage and IndexedDB. No external database tracks your project data.",
+    "How do I debug a failing run?": "1. Check the Stderr stream in the Unified Console for compiler or runtime traces.\n2. Note the strict process bounds (256MB RAM / 0.5 CPU) designed to keep execution completely safe.\n3. Use WebAssembly client formatting to verify bracket balancing and syntax."
+  };
+
+  function triggerFixedAIPrompt(promptText) {
+    appendUserBubble(promptText);
+    var stream = document.getElementById('ai-page-chat-stream');
+    var answer = localAIPromptBank[promptText] || ("Regarding \"" + promptText + "\": VoidLAB runs on an ephemeral containerized execution pipeline with zero database dependency. Use the Topbar Run button or WASM syntax validation to test code instantly.");
+    setTimeout(function() {
+      appendAssistantBubble(answer);
+    }, 150);
+  }
+
+  function handleAIPageSubmit(e) {
+    if (e) e.preventDefault();
+    var input = document.getElementById('ai-page-input');
+    if (!input) return;
+    var query = input.value.trim();
+    if (!query) return;
+    input.value = '';
+
+    appendUserBubble(query);
+
+    // Check local bank first, or query stateless backend endpoint
+    if (localAIPromptBank[query]) {
+      setTimeout(function() {
+        appendAssistantBubble(localAIPromptBank[query]);
+      }, 150);
+    } else {
+      fetch('/api/ai/prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'prompt=' + encodeURIComponent(query)
+      })
+      .then(function(res) { return res.text(); })
+      .then(function(html) {
+        var stream = document.getElementById('ai-page-chat-stream');
+        if (stream) {
+          var wrapper = document.createElement('div');
+          wrapper.innerHTML = html;
+          stream.appendChild(wrapper);
+          stream.scrollTop = stream.scrollHeight;
+        }
+      })
+      .catch(function() {
+        appendAssistantBubble("VoidLAB AI Guide is running locally. You can ask about compilation, stdin input streaming, file management, or sandboxing.");
+      });
+    }
+  }
+
+  function appendUserBubble(text) {
+    var stream = document.getElementById('ai-page-chat-stream');
+    if (!stream) return;
+    var div = document.createElement('div');
+    div.className = 'flex justify-end';
+    div.innerHTML = '<div class="px-4 py-2.5 rounded-2xl rounded-tr-sm text-xs font-sans shadow-sm max-w-lg leading-relaxed" style="background: var(--action-background); color: var(--action-foreground);">' +
+      escapeHtml(text) +
+    '</div>';
+    stream.appendChild(div);
+    stream.scrollTop = stream.scrollHeight;
+  }
+
+  function appendAssistantBubble(text) {
+    var stream = document.getElementById('ai-page-chat-stream');
+    if (!stream) return;
+    var div = document.createElement('div');
+    div.className = 'flex items-start gap-3';
+    div.innerHTML = '<div class="p-4 rounded-2xl rounded-tl-sm text-xs leading-relaxed max-w-xl border transition-colors shadow-sm whitespace-pre-wrap" style="background: var(--panel-background); border-color: var(--border); color: var(--text);">' +
+      escapeHtml(text) +
+    '</div>';
+    stream.appendChild(div);
+    stream.scrollTop = stream.scrollHeight;
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+</script>
 {{end}}

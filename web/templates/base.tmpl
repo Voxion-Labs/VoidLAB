@@ -394,10 +394,22 @@
     }
   </style>
 </head>
-<body class="min-h-screen w-full flex flex-col font-sans select-none antialiased transition-colors" style="background: var(--background-main); color: var(--text);">
+<body class="{{if and .IsEditor (or (eq .SubView "") (eq .SubView "editor"))}}h-screen w-screen overflow-hidden{{else}}min-h-screen w-full overflow-y-auto{{end}} flex flex-col font-sans select-none antialiased transition-colors" style="background: var(--background-main); color: var(--text);">
   {{block "content" .}}
     {{if .IsEditor}}
-      {{template "editor-page" .}}
+      {{if eq .SubView "manual"}}
+        {{template "manual-page" .}}
+      {{else if or (eq .SubView "collab") (eq .SubView "collaboration")}}
+        {{template "collab-page" .}}
+      {{else if eq .SubView "ai"}}
+        {{template "ai-page" .}}
+      {{else if eq .SubView "profile"}}
+        {{template "profile-page" .}}
+      {{else if eq .SubView "github"}}
+        {{template "github-page" .}}
+      {{else}}
+        {{template "editor-page" .}}
+      {{end}}
     {{else}}
       {{template "index" .}}
     {{end}}
@@ -540,6 +552,17 @@
       document.querySelectorAll('.voidlab-user-initial').forEach(function(el) { el.textContent = initial; });
       var tagUser = document.getElementById('navbar-user-initial');
       if (tagUser) tagUser.textContent = initial;
+
+      var profFull = document.getElementById('prof-fullname');
+      if (profFull && !profFull.value) profFull.value = u;
+      var profUser = document.getElementById('prof-username');
+      if (profUser && (!profUser.value || profUser.value === 'Alex')) profUser.value = u;
+      var profEmail = document.getElementById('prof-email');
+      if (profEmail && (!profEmail.value || profEmail.value === 'me@local.dev')) profEmail.value = u + '@local.dev';
+      var heroEmail = document.getElementById('profile-hero-email');
+      if (heroEmail) heroEmail.textContent = u + '@local.dev';
+      var profBio = document.getElementById('prof-bio');
+      if (profBio && profile.bio) profBio.value = profile.bio;
     };
 
     window.voidlabLogout = function() {

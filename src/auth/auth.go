@@ -454,8 +454,8 @@ func (h *Handler) HandleUIProfile(w http.ResponseWriter, r *http.Request) {
 	data.IsEditor = true
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if h.templates != nil {
-		if err := h.templates.ExecuteTemplate(w, "profile.tmpl", data); err != nil {
-			_ = h.templates.ExecuteTemplate(w, "profile", data)
+		if err := h.templates.ExecuteTemplate(w, "profile", data); err != nil {
+			_ = h.templates.ExecuteTemplate(w, "profile.tmpl", data)
 		}
 	}
 }
@@ -464,7 +464,8 @@ func (h *Handler) HandleUIProfile(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleProfilePage(w http.ResponseWriter, r *http.Request) {
 	user, _ := GetAuthenticatedUser(r)
 	if user == "" {
-		SetAuthCookie(w, r, DefaultUsername)
+		user = DefaultUsername
+		SetAuthCookie(w, r, user)
 	}
 
 	var data *explorer.WorkspaceData
@@ -481,7 +482,14 @@ func (h *Handler) HandleProfilePage(w http.ResponseWriter, r *http.Request) {
 
 	data.IsEditor = true
 	data.SubView = "profile"
-	data.Title = "Developer Profile - VoidLAB"
+	data.Title = "Developer Profile & Identity - VoidLAB"
+	data.User = user
+	if len(user) > 0 {
+		data.UserInitial = strings.ToUpper(string(user[0]))
+	} else {
+		data.UserInitial = "A"
+	}
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if h.templates != nil {
 		_ = h.templates.ExecuteTemplate(w, "base.tmpl", data)

@@ -1,70 +1,63 @@
 {{define "topbar"}}
 <header
-  class="h-12 shrink-0 px-4 flex items-center justify-between z-30 relative select-none transition-colors border-b"
+  class="h-14 shrink-0 px-4 sm:px-5 flex items-center justify-between z-30 relative select-none transition-colors border-b"
   style="background: var(--panel-background); border-color: var(--border);"
 >
-  <!-- Left: Brand Logo & File Path & Run Trigger -->
-  <div class="flex items-center gap-3">
+  <!-- Left: Brand Logo & File Path & Run/Save Controls (Exact 1:1 with Screenshot 582) -->
+  <div class="flex items-center gap-3.5">
     <a
       href="/"
-      class="flex items-center gap-2 group transition-opacity opacity-90 hover:opacity-100"
+      class="flex items-center gap-2.5 group transition-opacity opacity-90 hover:opacity-100"
       title="VoidLAB Home"
     >
-      <div class="flex items-center gap-2.5">
-        <!-- Brand SVG Logo (Exact 1:1 from Brand.tsx) -->
-        <svg
-          width="28"
-          height="28"
-          viewBox="0 0 128 128"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          class="brand-logo-fill flex-shrink-0"
-          aria-hidden="true"
-        >
-          <path d="M18 10 L54 110 L64 90 L36 10 Z" fill="currentColor" />
-          <path d="M110 10 L74 110 L64 90 L92 10 Z" fill="currentColor" />
-          <path d="M80 8 L44 122" stroke="currentColor" stroke-width="7" stroke-linecap="round" />
-        </svg>
+      <!-- Brand SVG Logo -->
+      <svg
+        width="28"
+        height="28"
+        viewBox="0 0 128 128"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        class="brand-logo-fill flex-shrink-0"
+        aria-hidden="true"
+      >
+        <path d="M18 10 L54 110 L64 90 L36 10 Z" fill="currentColor" />
+        <path d="M110 10 L74 110 L64 90 L92 10 Z" fill="currentColor" />
+        <path d="M80 8 L44 122" stroke="currentColor" stroke-width="7" stroke-linecap="round" />
+      </svg>
 
-        <div>
-          <div
-            class="display-font font-bold theme-text-strong leading-none"
-            style="font-size: 1.1rem; letter-spacing: -0.02em;"
-          >
-            VoidLAB
-          </div>
-        </div>
-      </div>
+      <span
+        class="display-font font-bold theme-text-strong leading-none hidden sm:inline"
+        style="font-size: 1.15rem; letter-spacing: -0.02em;"
+      >
+        VoidLAB
+      </span>
     </a>
 
-    <div class="h-4 w-px" style="background: var(--border);"></div>
+    <div class="h-5 w-px hidden sm:block" style="background: var(--border);"></div>
 
-    <!-- Active File Path Tag -->
+    <!-- Active File Path Tag (Clean pill matching Screenshot 582) -->
     <div
       id="active-file-tag"
-      class="flex items-center gap-2 px-2.5 py-1 rounded-md text-xs font-sans transition-colors"
+      class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-sans transition-colors"
       style="background: var(--surface-soft); border: 1px solid var(--border); color: var(--muted);"
     >
       <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
-      <span id="active-file-tag-path" class="font-medium font-sans" style="color: var(--text-strong);">
-        {{if .ActiveFile}}{{.ActiveFile.Path}}{{else}}src/main.py{{end}}
+      <span id="active-file-tag-path" class="font-medium font-sans text-xs" style="color: var(--text-strong);">
+        {{if .ActiveFile}}{{.ActiveFile.Path}}{{else}}/main.js{{end}}
       </span>
       <span style="color: var(--border);">/</span>
       <span id="active-file-tag-lang" class="font-mono text-[11px]" style="color: var(--muted);">
-        {{if .ActiveFile}}{{.ActiveFile.LanguageLabel}}{{else}}Python{{end}}
+        {{if .ActiveFile}}{{.ActiveFile.LanguageLabel}}{{else}}JavaScript{{end}}
       </span>
     </div>
 
-    <!-- Action Run Pill Button -->
+    <!-- Action Run Button (Larger, bold, beautiful pill matching Screenshot 582) -->
     <button
       id="topbar-run-btn"
       onclick="handleVoidLabRun(event)"
-      hx-post="/api/code/run"
-      hx-target="#terminal-stream"
-      hx-swap="beforeend"
-      class="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md shadow-sm active:scale-[0.98] transition-all disabled:opacity-40 ml-1 cursor-pointer font-sans"
+      class="inline-flex items-center gap-2 px-4 py-1.5 text-xs font-semibold rounded-lg shadow-sm active:scale-[0.98] transition-all cursor-pointer font-sans"
       style="background: var(--action-background); color: var(--action-foreground);"
-      title="Execute script (Ctrl+Enter)"
+      title="Execute active script (Ctrl+Enter)"
       type="button"
     >
       <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
@@ -73,14 +66,14 @@
       <span>Run</span>
     </button>
 
-    <!-- Save Trigger -->
+    <!-- Save Trigger (Slightly larger with clean border) -->
     <button
       hx-post="/api/files/save"
       hx-target="#status-message"
       hx-swap="innerHTML"
-      class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer font-sans"
-      style="background: var(--surface-soft); border: 1px solid var(--border); color: var(--text);"
-      title="Save file (Ctrl+S)"
+      class="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-lg border transition-colors cursor-pointer font-sans hover:bg-[var(--control-hover)]"
+      style="background: var(--surface-soft); border-color: var(--border); color: var(--text);"
+      title="Save active file (Ctrl+S)"
       type="button"
     >
       <svg class="w-3.5 h-3.5 stroke-current" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -94,136 +87,117 @@
     <!-- Status Message -->
     <span
       id="status-message"
-      class="text-[11px] font-sans pl-1 truncate max-w-[140px]"
+      class="text-xs font-sans pl-1 truncate max-w-[140px] hidden md:inline"
       style="color: var(--muted);"
     >
       {{if .StatusMessage}}{{.StatusMessage}}{{else}}Ready{{end}}
     </span>
   </div>
 
-  <!-- Right: Sub-Views Navigation (Editor, Manual, GitHub, Collab, AI Guide), Logout, Switcher & Profile -->
-  <div class="flex items-center gap-2.5">
+  <!-- Right: Navigation to Full Tool Pages (Manual, GitHub, Collab, AI Guide), Dual Theme, Settings & Profile -->
+  <div class="flex items-center gap-2 sm:gap-3">
     <nav class="flex items-center gap-1 text-xs font-medium font-sans">
-      <!-- Switch back to Code Editor -->
-      <button
-        hx-get="/api/ui/editor"
-        hx-target="#side-panel-container"
-        hx-swap="innerHTML"
-        class="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)] cursor-pointer"
+      <!-- Manual Full Page Link -->
+      <a
+        href="/editor/manual"
+        class="px-3 py-1.5 rounded-lg transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)] cursor-pointer"
         style="color: var(--muted);"
-        title="Code Editor Canvas"
-        type="button"
-      >
-        Editor
-      </button>
-
-      <!-- Manual Handbook Button (Dynamic Sub-View) -->
-      <button
-        hx-get="/api/ui/manual"
-        hx-target="#side-panel-container"
-        hx-swap="innerHTML"
-        class="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)] cursor-pointer"
-        style="color: var(--muted);"
-        title="Operator Handbook & Reference Manual"
-        type="button"
+        title="Open VoidLAB Operator Manual"
       >
         Manual
-      </button>
+      </a>
 
-      <!-- GitHub Sync Button (Dynamic Sub-View) -->
-      <button
-        hx-get="/api/ui/github"
-        hx-target="#side-panel-container"
-        hx-swap="innerHTML"
-        class="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)] cursor-pointer flex items-center gap-1 font-sans"
+      <!-- GitHub Sync Full Page Link -->
+      <a
+        href="/editor/github"
+        class="px-3 py-1.5 rounded-lg transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)] cursor-pointer inline-flex items-center gap-1"
         style="color: var(--muted);"
-        title="GitHub Sync & Command Cheatsheet"
-        type="button"
+        title="GitHub Sync & Remote Publishing"
       >
-        GitHub
-      </button>
+        <span>GitHub</span>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+          <polyline points="15 3 21 3 21 9"></polyline>
+          <line x1="10" y1="14" x2="21" y2="3"></line>
+        </svg>
+      </a>
 
-      <!-- Collab Button (Dynamic Sub-View) -->
-      <button
+      <!-- Collab Full Page Link -->
+      <a
+        href="/editor/collaboration"
         hx-get="/api/ui/collab"
-        hx-target="#side-panel-container"
-        hx-swap="innerHTML"
-        class="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)] flex items-center gap-1.5 cursor-pointer font-sans"
+        class="px-3 py-1.5 rounded-lg transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)] cursor-pointer inline-flex items-center gap-1.5"
         style="color: var(--muted);"
-        title="Multiplayer Collaboration & Live Pair Programming"
-        type="button"
+        title="Multiplayer Collaboration Rooms"
       >
         <span class="w-1.5 h-1.5 rounded-full" style="background: var(--accent);"></span>
-        Collab
-      </button>
+        <span>Collab</span>
+      </a>
 
-      <!-- AI Guide Button (Dynamic Sub-View) -->
-      <button
+      <!-- AI Guide Full Page Link -->
+      <a
+        href="/editor/ai"
         hx-get="/api/ui/ai"
-        hx-target="#side-panel-container"
-        hx-swap="innerHTML"
-        class="px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)] cursor-pointer font-sans"
+        class="px-3 py-1.5 rounded-lg transition-colors hover:text-[var(--text-strong)] hover:bg-[var(--surface-soft)] cursor-pointer"
         style="color: var(--muted);"
         title="Local AI Guide Copilot"
-        type="button"
       >
         AI Guide
-      </button>
+      </a>
     </nav>
 
-    <div class="h-4 w-px" style="background: var(--border);"></div>
+    <div class="h-5 w-px hidden sm:block" style="background: var(--border);"></div>
 
-    <!-- Dual Theme Switcher (Light / Dark) -->
+    <!-- Dual Theme Toggle Pill (Exact 1:1 with Screenshot 582) -->
     <button
       onclick="toggleVoidLabTheme()"
       hx-post="/api/ui/theme"
       hx-target="html"
       hx-swap="outerHTML"
       aria-label="Toggle theme"
-      class="theme-control inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm theme-text select-none cursor-pointer"
+      class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs border transition-colors cursor-pointer"
+      style="background: var(--control-background); border-color: var(--border); color: var(--text);"
       type="button"
     >
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="accent-text text-sky-500">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-sky-500">
         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
       </svg>
-      <span class="hidden sm:inline theme-muted text-xs">Theme</span>
+      <span class="hidden sm:inline text-xs">Dark</span>
     </button>
 
-    <!-- Settings Trigger -->
+    <!-- Settings Gear Trigger -->
     <button
       hx-get="/api/ui/modal/settings"
       hx-target="#modal-container"
       hx-swap="innerHTML"
-      class="p-1.5 rounded-md transition-colors hover:bg-[var(--surface-soft)] cursor-pointer"
+      class="p-2 rounded-lg transition-colors hover:bg-[var(--surface-soft)] cursor-pointer"
       style="color: var(--muted);"
-      title="Workspace Settings (Language, Region, Shortcuts)"
+      title="Workspace Settings"
       type="button"
     >
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="3"></circle>
         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
       </svg>
     </button>
 
-    <!-- User Profile Avatar Button (Dynamic Sub-View into Side-Panel or Modal) -->
-    <button
+    <!-- User Profile Avatar Pill (Links to /editor/profile, exact initial badge) -->
+    <a
+      href="/editor/profile"
       hx-get="/api/ui/profile"
-      hx-target="#side-panel-container"
-      hx-swap="innerHTML"
-      class="h-6 w-6 rounded-md flex items-center justify-center text-[10px] font-semibold transition-all hover:scale-105 cursor-pointer voidlab-user-initial"
+      class="h-8 w-8 rounded-lg border flex items-center justify-center text-xs font-bold transition-all hover:scale-105 cursor-pointer voidlab-user-initial"
       id="navbar-user-initial"
-      style="background: var(--surface-soft); border: 1px solid var(--border); color: var(--text-strong);"
+      style="background: var(--surface-soft); border-color: var(--border); color: var(--text-strong);"
       title="Developer Profile & Identity"
-      type="button"
     >
-      {{if .UserInitial}}{{.UserInitial}}{{else}}R{{end}}
-    </button>
+      {{if .UserInitial}}{{.UserInitial}}{{else}}A{{end}}
+    </a>
 
     <!-- Logout Button (Stateless: clears localStorage and cookie) -->
     <button
       hx-post="/api/auth/logout"
       onclick="window.voidlabLogout()"
-      class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-colors text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 cursor-pointer font-sans"
+      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 border-transparent hover:border-rose-500/20 cursor-pointer font-sans"
       title="Sign out of VoidLAB"
       type="button"
     >
@@ -232,7 +206,7 @@
         <polyline points="16 17 21 12 16 7"></polyline>
         <line x1="21" y1="12" x2="9" y2="12"></line>
       </svg>
-      <span>Logout</span>
+      <span class="hidden md:inline">Logout</span>
     </button>
   </div>
 </header>

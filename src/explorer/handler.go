@@ -742,8 +742,8 @@ func (h *Handler) HandleUIManual(w http.ResponseWriter, r *http.Request) {
 	data.IsEditor = true
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if h.templates != nil {
-		if err := h.templates.ExecuteTemplate(w, "manual.tmpl", data); err != nil {
-			_ = h.templates.ExecuteTemplate(w, "manual", data)
+		if err := h.templates.ExecuteTemplate(w, "manual", data); err != nil {
+			_ = h.templates.ExecuteTemplate(w, "manual.tmpl", data)
 		}
 	}
 }
@@ -774,8 +774,8 @@ func (h *Handler) HandleUIGitHub(w http.ResponseWriter, r *http.Request) {
 	data.IsEditor = true
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if h.templates != nil {
-		if err := h.templates.ExecuteTemplate(w, "github.tmpl", data); err != nil {
-			_ = h.templates.ExecuteTemplate(w, "github", data)
+		if err := h.templates.ExecuteTemplate(w, "github", data); err != nil {
+			_ = h.templates.ExecuteTemplate(w, "github.tmpl", data)
 		}
 	}
 }
