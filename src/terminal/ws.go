@@ -121,26 +121,15 @@ func (h *Handler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		_ = conn.Close()
 	}()
 
-	isDocker := h.orchestrator.IsDockerAvailable(r.Context())
-	engineLabel := "God Image Native Runtime"
-	if isDocker {
-		engineLabel = "Docker Ephemeral Container Engine"
-	}
-
 	// 1. Initial Status Frame for programmatic consumers
 	welcomeMsg := OutboundMessage{
 		Type:    "status",
-		Message: fmt.Sprintf("VoidLAB Terminal Stream Online [%s]", engineLabel),
-		HTML: fmt.Sprintf(
-			`<div class="opacity-80 text-[10px] pb-1"><span class="text-emerald-400 font-semibold">[Connected]</span> VoidLAB Engine Active (%s)</div>`,
-			engineLabel,
-		),
 		Running: false,
 	}
 	client.sendJSON(welcomeMsg)
 
-	// 2. Clean Minimal Sandbox Banner (1:1 with Screenshot 582)
-	banner := "VoidLAB Engine v0.1.0 - Sandbox Shell [Local client VFS: /]\r\nConnected to sandbox session. Type commands below (e.g. ls, mkdir, touch) or click Run.\r\n\r\n\x1b[34mvoidlab\x1b[0m:\x1b[32m/workspace\x1b[0m$ "
+	// 2. Clean Minimal Sandbox Banner (Zero clutter)
+	banner := "\x1b[34mvoidlab\x1b[0m:\x1b[32m/workspace\x1b[0m$ "
 	client.sendRaw([]byte(banner))
 
 	// Goroutine 1: writePump pumps all outbound frames and Docker stdout/stderr back to the client xterm.js

@@ -108,12 +108,8 @@
       <span>EXIT: <strong id="metric-exit" style="color: var(--text-strong);">0</strong></span>
     </div>
 
-    <!-- Execution Output Stream (Clean: No dummy clutter!) -->
-    <div id="terminal-stream" class="space-y-1">
-      <div class="opacity-60 text-[10px]">
-        [system] Run the active file to stream compiler logs, stdout, diagnostics, and metrics.
-      </div>
-    </div>
+    <!-- Execution Output Stream (100% Clean) -->
+    <div id="terminal-stream" class="space-y-1 font-mono text-[11px] leading-5"></div>
 
     <!-- Stdin Interactive Session Box -->
     <div
@@ -269,6 +265,7 @@
 
       let socket = null;
       let reconnectTimer = null;
+      let hasConnectedOnce = false;
 
       function updateStatus(running, statusLabel) {
         const dot = document.getElementById('terminal-status-dot');
@@ -292,6 +289,10 @@
 
         socket.onopen = function() {
           try { fitAddon.fit(); } catch (_) {}
+          if (hasConnectedOnce) {
+            term.clear();
+          }
+          hasConnectedOnce = true;
         };
 
         socket.onmessage = function(event) {
@@ -312,7 +313,6 @@
               }
               if (msg.type === 'status') {
                 if (msg.running !== undefined) updateStatus(msg.running, msg.message);
-                if (msg.message) term.write(`\r\n\x1b[36m[VoidLAB]\x1b[0m ${msg.message}\r\n`);
                 return;
               }
               if (msg.type === 'exit') {

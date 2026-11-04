@@ -1,393 +1,288 @@
 <p align="center">
-  <img src="public/assets/logo-full.svg" alt="VoidLAB logo" width="280" />
+  <a href="https://voidlab-5f16.onrender.com">
+    <img src="public/assets/logo-full.svg" alt="VoidLAB logo" width="280" />
+  </a>
 </p>
 
 <p align="center">
-  A modern AI-powered web IDE built for real code execution, polished developer workflows, and premium product feel.
-</p>
-
-<p align="center">
-  <a href="https://voidlab.vercel.app/">Live Product</a>
-  |
-  <a href="https://github.com/Voxion-Labs/VoidLAB">Repository</a>
+  <strong>Local-First Browser IDE, Ephemeral Execution Engine & Developer Workspace</strong>
 </p>
 
 ---
 
-## Overview
+## Architectural Overview
 
-VoidLAB is a full-stack cloud coding environment designed to feel like a real premium product, not just a code editor running in the browser. It combines a Monaco-powered workspace, multi-file editing, online code execution, inline stdin handling for interactive programs, GitHub publishing, collaboration-ready tools, a built-in AI guide, and a polished high-end interface.
+VoidLAB is a browser-based software development workspace built around a **100% stateless backend architecture**. The platform eliminates external database dependencies by storing all file trees, editor buffers, user preferences, and session tokens locally within browser storage (`localStorage` and `IndexedDB`), while delegating code execution to an isolated host runtime.
 
-The project is engineered as an ultra-fast, zero-bloat standalone Go engine utilizing:
+### Technical Foundation
 
-- a high-performance `Golang` backend server with streaming HTTP handlers and WebSocket upgrader
-- reactive, zero-JavaScript overhead UI rendered via `HTMX` and `TailwindCSS`
-- client-side syntax validation, formatting, and metrics via `WebAssembly (WASM)` compiled from Go
-- ephemeral containerized sandboxes powered by `Docker` with strict cgroups security limits (256MB RAM, 0.5 CPU)
-- live multi-file Virtual File System (VFS) with path-traversal protection and reactive tab management
-
----
-
-## What Is VoidLAB?
-
-VoidLAB is a browser-based coding application for developers, learners, and builders who want one premium workspace for writing, importing, running, debugging, and managing code online.
-
-At the product level, VoidLAB acts as:
-
-- an online compiler for multiple languages
-- a browser IDE with Monaco-powered editing
-- a structured execution workspace with inline stdin support
-- a developer tool hub with GitHub, collaboration, profile, and AI guidance features
+- **Backend Runtime**: Pure Go standard library HTTP multiplexer (`net/http`, Go 1.22+ routing) with zero external ORM or database drivers.
+- **Frontend Layer**: Server-driven UI templates rendered via `html/template`, styled with utility CSS, and driven by `HTMX` for targeted fragment swaps without single-page application framework bloat.
+- **Client Persistence**: Local-first Virtual File System (VFS) retaining full directory structures and workspace state on-device.
+- **Terminal & Execution**: Bi-directional WebSocket pipeline (`/api/ws/terminal`) streaming process `stdin`, `stdout`, and `stderr` directly between an `xterm.js` terminal emulator and sandboxed OS execution binaries.
+- **Security & Sandboxing**: Strict process isolation using `context.WithTimeout`, resource limits, path traversal verification, and HMAC-SHA256 signed stateless JWT session authentication.
 
 ---
 
-## Problem It Solves
+## System Architecture
 
-Most web-based compilers and lightweight online editors break down in the exact places that matter during real use:
+```
+===================================================================================
+                               VOIDLAB SYSTEM ARCHITECTURE
+===================================================================================
 
-- they feel too basic for serious coding workflows
-- interactive input handling is clunky or unreliable
-- execution output is hard to read
-- publishing and collaboration are completely disconnected from the editor
-- the product looks functional but not premium
-
-VoidLAB is built to solve that by giving users a cleaner end-to-end workflow:
-
-- write or import code
-- run it in one click
-- provide stdin inline when required
-- get accurate output in a structured console
-- continue working with GitHub, collaboration, and AI support inside the same product
-
----
-
-## Links
-
-- **Live Product**: [https://voidlab.vercel.app/](https://void-lab-web.vercel.app/)
-- **GitHub Repository**: [https://github.com/Voxion-Labs/VoidLAB](https://github.com/Voxion-Labs/VoidLAB)
-
----
-
-## Latest Product State
-
-VoidLAB currently ships with:
-
-- a unified console with `Output`, `Terminal`, and `Ports` tabs
-- inline stdin capture for interactive programs instead of a clunky separate flow
-- multi-language execution powered by WebAssembly and containerized environments
-- dedicated feature pages for `Manual`, `GitHub`, `Collaboration`, `AI Guide`, and `Profile`
-- personalized workspace UI with themes, activity context, and polished controls
-- refreshed product documentation and visual demo assets in this repository
-
----
-
-## Core Highlights
-
-- Monaco-powered editor with multi-file workspace management
-- support for many runnable and editor-focused languages
-- inline stdin capture for interactive code execution
-- unified output, terminal, and ports console
-- direct GitHub publishing workflow from inside the workspace
-- collaboration room interface for team workflows
-- built-in AI guide for product walkthroughs and debugging help
-- polished theme system across dark and light workspace modes
-- responsive layout tuned for desktop and mobile
-
----
-
-## Product Surface
-
-### Workspace experience
-
-- personalized workspace greeting
-- active project shell with editor tabs and file explorer
-- language switching, save, export, boilerplate, and run controls
-- keyboard shortcuts for fast editing flow
-
-### Execution experience
-
-- client-side code execution through WebAssembly (WASM)
-- isolated execution in containerized Docker environments for complex workloads
-- inline stdin routing for input-based programs
-- structured stdout, stderr, compile output, and runtime messages
-- execution status, timing, and memory feedback
-
-### Productivity tools
-
-- built-in product manual
-- GitHub publishing interface
-- collaboration rooms
-- AI guide
-- profile management and workspace personalization
+ [ Browser Client ]
+  +-------------------------------------------------------------------------------+
+  |  UI Layer (HTML5 / HTMX / TailwindCSS)                                        |
+  |  - Editor Canvas: Multi-tab buffer manager, syntax highlighter                |
+  |  - Tool Views: Manual, Collaboration, AI Guide, Developer Profile             |
+  |  - Unified Console: xterm.js live stream, output metrics, forwarded ports    |
+  |                                                                               |
+  |  Client Storage Engine (100% Stateless Server)                                |
+  |  +-------------------------------------+  +--------------------------------+  |
+  |  | localStorage: Profile, Theme, Cache |  | IndexedDB: Multi-file VFS      |  |
+  |  +-------------------------------------+  +--------------------------------+  |
+  +-------------------------------------------------------------------------------+
+                                  |                     |
+                   HTTP / REST    |                     | WebSocket Streaming
+                  (Go Handlers)   |                     | (/api/ws/terminal)
+                                  v                     v
+ [ Go Application Server ]
+  +-------------------------------------------------------------------------------+
+  |  cmd/voidlab/main.go (Port 8080)                                              |
+  |  +-------------------+  +-------------------+  +----------------------------+ |
+  |  | src/auth          |  | src/explorer      |  | src/collab                 | |
+  |  | - JWT HMAC-SHA256 |  | - Safe VFS Sync   |  | - In-Memory Ephemeral Room | |
+  |  | - Cookie Sessions |  | - Path Traversal  |  | - Broadcast Bus            | |
+  |  +-------------------+  +-------------------+  +----------------------------+ |
+  |  +-------------------+  +-------------------+  +----------------------------+ |
+  |  | src/ai            |  | src/wasmcore      |  | src/terminal               | |
+  |  | - Guidance Engine |  | - Syntax Analysis |  | - Upgrader & Pumping       | |
+  |  | - SSE Streaming   |  | - Code Formatting |  | - Process Stdin Pipe       | |
+  |  +-------------------+  +-------------------+  +----------------------------+ |
+  +-------------------------------------------------------------------------------+
+                                  |
+                        Subprocess Fork & Exec
+                     (os/exec + context.WithTimeout)
+                                  v
+ [ Ephemeral Execution Engine (God Image Architecture) ]
+  +-------------------------------------------------------------------------------+
+  |  Isolated Temporary Directory (/tmp/voidlab-run-XXXXXX)                       |
+  |  +--------------------+  +--------------------+  +--------------------------+ |
+  |  | GCC / G++ (C, C++) |  | Python 3 / Node.js |  | Go Compiler / Rust Cargo | |
+  |  +--------------------+  +--------------------+  +--------------------------+ |
+  |  | OpenJDK 17 (Java)  |  | PHP / Ruby / Perl  |  | Bash / Shell Scripting   | |
+  |  +--------------------+  +--------------------+  +--------------------------+ |
+  |                                                                               |
+  |  Enforced Constraints:                                                        |
+  |  - Wall-clock timeout: 5.0 seconds (prevents runaway computation)             |
+  |  - Immediate directory clean-up on process termination                        |
+  +-------------------------------------------------------------------------------+
+===================================================================================
+```
 
 ---
 
-## Demo Gallery
+## Execution & Stdin Streaming Pipeline
+
+The execution engine streams input and output bi-directionally without intermediate file polling:
+
+```
++-------------+                 +------------------+                 +-------------------+
+|  xterm.js   | -- Keystroke -> |  src/terminal/   | -- stdin pipe ->| Subprocess Target |
+|   Terminal  | <- stdout/err - |     ws.go        | <- stdout/err - | (python, gcc, go) |
++-------------+  (WebSocket)    +------------------+   (OS IO Pipe)  +-------------------+
+       |                                                                       |
+       |                                                                       |
+       +------------ Process Completion (Exit Code, Duration) ---------------+
+```
+
+1. **Trigger**: User initiates execution via `Ctrl+Enter` or Topbar `Run`.
+2. **Directory Isolation**: Source files from active editor buffers are written to an isolated temporary directory.
+3. **Process Fork**: Host binary is invoked with an execution timeout context (`context.WithTimeout`).
+4. **Bi-directional Pipe**: Standard input from the client is written directly to the child process's `stdin` pipe; standard output and diagnostic errors are streamed chunk-by-chunk to the client terminal over WebSockets.
+5. **Teardown**: On termination, exit codes and runtime metrics are finalized, and temporary build artifacts are purged immediately.
+
+---
+
+## Authentication & Stateless Session Lifecycle
+
+```
+[ Client Browser ]                                        [ VoidLAB Server ]
+        |                                                          |
+        | 1. POST /api/auth/login (username)                       |
+        |--------------------------------------------------------->|
+        |                                                          | Signs HMAC-SHA256 JWT
+        |                                                          | with SESSION_SECRET
+        | 2. Set-Cookie: voidlab_session=<JWT>; HttpOnly; Secure   |
+        |<---------------------------------------------------------|
+        |                                                          |
+        | 3. Authenticated Navigation (/editor, /editor/*)         |
+        |--------------------------------------------------------->|
+        |                                                          | Validates JWT Signature
+        | 4. Render Requested View (Full Page HTML)                |
+        |<---------------------------------------------------------|
+```
+
+- **Stateless Validation**: The server verifies token integrity on every request without contacting an external authentication authority or database.
+- **Client Cache**: Non-sensitive UI data (active theme, display aliases, and local preferences) are cached in browser `localStorage`.
+
+---
+
+## Interface & Workspace Surfaces
+
+VoidLAB provides focused full-page views engineered for specific development tasks:
 
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/readme/demo-workspace-home.png" alt="VoidLAB workspace home" />
+      <img src="docs/readme/workspace-editor.png" alt="VoidLAB Workspace Editor" />
       <br />
-      <strong>1. Personalized workspace home</strong>
+      <strong>1. Main Editor & Unified Console</strong>
       <br />
-      The main workspace gives users a premium first impression with a personalized greeting, feature hub, language card, file explorer, active code editor, and one-click run workflow.
+      Locked viewport layout with file tree, multi-tab buffer manager, boilerplate generator, WebAssembly syntax validator, and an interactive terminal.
     </td>
     <td width="50%" valign="top">
-      <img src="docs/readme/demo-terminal-legacy.png" alt="VoidLAB execution and command workflow" />
+      <img src="docs/readme/operator-manual.png" alt="VoidLAB Operator Manual" />
       <br />
-      <strong>2. Execution and command workflow</strong>
+      <strong>2. Operator Manual</strong>
       <br />
-      This view highlights the execution area, command workflow, workspace shortcuts, and the output-focused development flow that powers coding inside VoidLAB.
+      Illustrated technical handbook detailing workspace architecture blueprints, runtime models, execution flows, and console commands.
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/readme/demo-collaboration.png" alt="VoidLAB collaboration rooms" />
+      <img src="docs/readme/collaboration-rooms.png" alt="VoidLAB Collaboration Rooms" />
       <br />
-      <strong>3. Collaboration rooms</strong>
+      <strong>3. Collaboration Rooms</strong>
       <br />
-      VoidLAB includes a dedicated collaboration interface for creating rooms, inviting teammates, syncing shared workspace state, and preparing live teamwork features.
+      In-memory multiplayer rooms featuring peer-to-peer workspace snapshot transfers and live room chat with zero backend persistence.
     </td>
     <td width="50%" valign="top">
-      <img src="docs/readme/demo-github-publishing.png" alt="VoidLAB GitHub publishing" />
+      <img src="docs/readme/ai-guide.png" alt="VoidLAB AI Guide" />
       <br />
-      <strong>4. GitHub publishing</strong>
+      <strong>4. Local AI Guide</strong>
       <br />
-      The GitHub publishing page lets users connect GitHub, review the active file, choose a repository target, and prepare code for direct publishing from inside the product.
+      Embedded guidance console offering contextual product walk-throughs, input-output streaming guidance, and runtime diagnostic tips.
     </td>
   </tr>
   <tr>
     <td colspan="2" align="center" valign="top">
-      <img src="docs/readme/demo-ai-guide.png" alt="VoidLAB AI guide" />
+      <img src="docs/readme/developer-profile.png" alt="VoidLAB Developer Profile & Identity" width="75%" />
       <br />
-      <strong>5. Built-in AI guide</strong>
+      <strong>5. Developer Profile & Identity</strong>
       <br />
-      The AI guide helps users with input-output handling, workspace structure, debugging direction, and onboarding support without leaving the platform.
+      Stateless identity dashboard displaying credentials, local inventory counters (files/folders), storage mode meters, and session audit logs.
     </td>
   </tr>
 </table>
 
 ---
 
-## Why VoidLAB
+## Supported Runtime Environments
 
-VoidLAB is built around a simple product promise:
+The execution orchestrator detects and compiles the following environments out of the box:
 
-- write code or import it
-- click `Run`
-- get clean, accurate execution feedback
-- handle stdin inline when the program requires input
-- keep the workflow inside one polished browser workspace
-
-That simplicity drives the architecture, UI design, and execution flow across the entire product.
-
----
-
-## Language Support
-
-VoidLAB supports many languages and formats for editing, and a broad set of runnable languages through the execution engine.
-
-### Runnable language examples
-
-- JavaScript
-- TypeScript
-- Python
-- Java
-- C
-- C++
-- Go
-- Rust
-- PHP
-- Ruby
-- Swift
-- Kotlin
-- Bash
-- Lua
-- C#
-
-### Editor-oriented formats
-
-- HTML
-- CSS
-- JSON
-- Markdown
-- YAML
-- SQL
-- XML
-- PowerShell
+| Language | Runtime / Compiler | Execution Mode | Target Extensions |
+| :--- | :--- | :--- | :--- |
+| **Python** | `python3` (3.10+) | Direct execution | `.py` |
+| **JavaScript** | `node` (Node.js LTS) | V8 engine execution | `.js`, `.mjs` |
+| **TypeScript** | `ts-node` / `esbuild` | Transpiled execution | `.ts` |
+| **C** | `gcc` (C17/C23) | Compiled binary execution | `.c` |
+| **C++** | `g++` (C++20 standard) | Compiled binary execution | `.cpp`, `.cc`, `.cxx` |
+| **Go** | `go run` (Go 1.22+) | Native compilation | `.go` |
+| **Rust** | `rustc` | Compiled binary execution | `.rs` |
+| **Java** | `javac` + `java` (OpenJDK 17) | Bytecode execution | `.java` |
+| **PHP** | `php-cli` | CLI script execution | `.php` |
+| **Ruby** | `ruby` | Interpreted execution | `.rb` |
+| **Perl** | `perl` | Interpreted execution | `.pl` |
+| **Bash** | `bash` | Shell execution | `.sh` |
+| **SQL** | `sqlite3` | In-memory relational queries | `.sql` |
+| **Web Preview** | Direct HTTP Canvas | In-browser preview canvas | `.html`, `.css` |
 
 ---
 
-## Tech Stack
+## Project Structure
 
-### Frontend & Client Execution
-
-- Next.js `16.2.4`
-- React
-- TypeScript
-- Tailwind CSS
-- Monaco Editor
-- WebAssembly (WASM)
-
-### Environment Infrastructure
-
-- Docker for containerized environments
-- No traditional backend framework (Serverless execution model)
-- No traditional database (Fully client-side state handling)
-
-### Platform and deployment
-
-- Vercel for frontend hosting
-
----
-
-## Repository Structure
-
-```text
+```
 VoidLAB/
-|- public/
-|  |- assets/
-|  `- ...
-|- src/
-|  |- app/
-|  |- components/
-|  |- context/
-|  |- hooks/
-|  `- lib/
-|- docs/
-|  `- readme/
-|- docker-compose.yml
-|- package.json
-|- package-lock.json
-`- README.md
+|-- cmd/
+|   `-- voidlab/
+|       |-- main.go                 # Application entrypoint & HTTP router wiring
+|       |-- main_test.go            # Route and integration tests
+|       `-- routes_test.go          # HTMX endpoint audit tests
+|-- src/
+|   |-- ai/                         # AI guide handlers & streaming response engine
+|   |-- auth/                       # JWT token signing, middleware & authentication
+|   |-- collab/                     # Ephemeral in-memory collaboration rooms
+|   |-- docker/                     # Subprocess execution orchestrator & security limits
+|   |-- explorer/                   # Virtual File System (VFS) & workspace file management
+|   |-- terminal/                   # WebSocket terminal upgrader & xterm.js streaming
+|   `-- wasmcore/                   # WebAssembly core module for client-side validation
+|-- web/
+|   `-- templates/                  # Server-rendered HTML templates
+|       |-- base.tmpl               # Root HTML structure, themes & scripts
+|       |-- topbar.tmpl             # Top navigation bar
+|       |-- tool_header.tmpl        # Shared tool header (Back, Theme, User, Logout)
+|       |-- editor.tmpl             # Main editor canvas & buffer tabs
+|       |-- explorer.tmpl           # File tree explorer & modals
+|       |-- terminal.tmpl           # Terminal emulator & output metric panels
+|       |-- ai.tmpl                 # AI guide full page & fragments
+|       |-- collab.tmpl             # Collaboration full page & room controls
+|       |-- profile.tmpl            # Developer profile & session audit full page
+|       |-- manual.tmpl             # Operator handbook full page
+|       |-- github.tmpl             # GitHub sync & CLI reference full page
+|       `-- index.tmpl              # Public landing & login page
+|-- public/
+|   |-- assets/                     # Brand vectors and icons
+|   |-- showcase/                   # Product preview images
+|   `-- wasm/                       # Pre-compiled WebAssembly binaries
+|-- Dockerfile                      # God-image multi-language production container
+|-- Makefile                        # Build, test, and run automation targets
+`-- go.mod                          # Go module definitions
 ```
 
 ---
 
-## Architecture
-
-### Frontend responsibilities
-
-- onboarding and direct entry experience
-- profile and workspace personalization
-- file management and editor interactions
-- console, output, and terminal presentation
-- GitHub publishing UI
-- collaboration and AI tool pages
-- isolated execution logic via WebAssembly
-- managing containerized orchestration for external environments
-
-### Execution flow
-
-1. User opens VoidLAB.
-2. User writes code or imports files into the workspace.
-3. User clicks `Run`.
-4. If the program expects input, VoidLAB asks for stdin inline in the output area.
-5. Code is executed natively in the browser using WebAssembly or dispatched to a secure Docker container for isolated execution.
-6. VoidLAB returns normalized output, errors, and status details back to the workspace.
-
----
-
-## Validation Snapshot
-
-The latest verified repo state includes:
-
-- lint passing
-- typecheck passing
-- production build passing
-
----
-
-## Authentication and GitHub
-
-- direct entry flow without leaving the app
-- optional Google, GitHub, and X login support
-- GitHub connect plus repository publishing support
-- visible repository target and publishing controls inside the workspace
-
----
-
-## Key Capabilities
-
-- polished onboarding and workspace personalization
-- shareable public product URL
-- cloud editor workflow
-- inline stdin-based execution for interactive programs
-- GitHub repository publishing support
-- responsive design
-- project tabs and file explorer
-- dedicated tool pages for manual, profile, AI guide, GitHub, and collaboration
-- professional UI suitable for demos, portfolio presentation, and product showcases
-- clean standalone Next.js structure for optimal deployment
-
----
-
-## Current Scope
-
-VoidLAB is built as a strong production-style application with:
-
-- multi-language editing
-- broad execution support
-- a modern UI
-- fully client-side WASM execution architecture
-- real auth options
-- GitHub publish flow
-- live deployment links
-- product-level workspace tooling
-
----
-
-## Local Setup
+## Local Development & Build
 
 ### Prerequisites
 
-- Node.js 18+
-- npm 10+
-- Docker (for executing containerized environments)
+- **Go**: Version 1.22 or higher
+- **Compilers / Interpreters**: `python3`, `gcc`, `g++`, `node` installed on system path
 
-### Install dependencies
-
-```bash
-npm install
-```
-
-### Environment
-
-Create `.env.local`:
-
-```env
-# Optional environment variables
-```
-
-### Run frontend
+### Running Locally
 
 ```bash
-npm run dev
+# Clone repository
+git clone https://github.com/Voxion-Labs/VoidLAB.git
+cd VoidLAB
+
+# Run test suite across all packages
+go test -v ./...
+
+# Build binary
+go build -o bin/voidlab ./cmd/voidlab
+
+# Launch server
+./bin/voidlab
 ```
 
-### Local URLs
-
-- Frontend: `http://localhost:3000`
+The workspace will be available at `http://127.0.0.1:8080/`.
 
 ---
 
-## Build Commands
+## Container Deployment
 
-### Build web
+The project includes a multi-stage `Dockerfile` creating a self-contained God-Image equipped with all language compilers:
 
 ```bash
-npm run build
+# Build container image
+docker build -t voidlab .
+
+# Run container
+docker run -p 8080:8080 --rm voidlab
 ```
-
----
-
-## Deployment
-
-### Frontend deployment
-
-- hosted on `Vercel`
-- root directory: `./` (Root of the repository)
 
 ---
 

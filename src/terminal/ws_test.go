@@ -80,8 +80,8 @@ func TestWebSocketTerminalUpgradeAndStreaming(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to read banner frame: %v", err)
 	}
-	if !strings.Contains(string(bannerBytes), "VoidLAB Engine") {
-		t.Errorf("expected banner to contain VoidLAB Engine, got %s", string(bannerBytes))
+	if !strings.Contains(string(bannerBytes), "voidlab") {
+		t.Errorf("expected banner to contain voidlab prompt, got %s", string(bannerBytes))
 	}
 
 	// 3. Send ping message

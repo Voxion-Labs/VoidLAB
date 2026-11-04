@@ -348,80 +348,105 @@
         </p>
       </div>
 
-      <!-- Device Mockup Collage Presentation -->
-      <div class="grid md:grid-cols-3 gap-8 mb-16">
-        <!-- Desktop Screen -->
-        <div class="border border-[var(--border)] bg-[var(--background-main)] rounded-2xl p-5 shadow-sm space-y-4 hover:shadow-md transition-shadow">
+      <!-- Device Mockup Presentation (4 New Tool Showcases) -->
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+        <!-- 1. AI Guide -->
+        <div class="border border-[var(--border)] bg-[var(--background-main)] rounded-2xl p-4 shadow-sm space-y-3 hover:shadow-md transition-shadow">
           <div class="flex items-center justify-between">
             <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0284c7]">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-              Desktop IDE
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>
+              AI Guide
             </span>
-            <span class="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-              Monaco Engine
-            </span>
-          </div>
-          <div class="rounded-xl overflow-hidden border border-[var(--border)] aspect-[16/10] bg-slate-950 flex items-center justify-center">
-            <img 
-              src="/showcase/demo-workspace-home.png" 
-              alt="Desktop IDE" 
-              class="w-full h-full object-cover"
-              loading="lazy"
-            />
-          </div>
-          <h3 class="font-bold text-base text-[var(--text-strong)]">Full-Featured Workspace</h3>
-          <p class="text-xs text-[var(--muted)] leading-relaxed">
-            Multi-tab editing, auto-completion, keyboard shortcuts, and file explorer running in-browser.
-          </p>
-        </div>
-
-        <!-- Terminal / Interactive Screen -->
-        <div class="border border-[var(--border)] bg-[var(--background-main)] rounded-2xl p-5 shadow-sm space-y-4 hover:shadow-md transition-shadow">
-          <div class="flex items-center justify-between">
-            <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
-              Interactive Console
-            </span>
-            <span class="text-[11px] font-medium text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full">
-              Stdin Capture
+            <span class="text-[10px] font-medium text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full font-mono">
+              Real-time
             </span>
           </div>
           <div class="rounded-xl overflow-hidden border border-[var(--border)] aspect-[16/10] bg-slate-950 flex items-center justify-center">
             <img 
-              src="/showcase/demo-terminal-legacy.png" 
-              alt="Terminal & Execution" 
-              class="w-full h-full object-cover"
+              src="/showcase/ai-guide.png" 
+              alt="AI Guide" 
+              class="w-full h-full object-cover object-top"
               loading="lazy"
             />
           </div>
-          <h3 class="font-bold text-base text-[var(--text-strong)]">Unified Execution Output</h3>
+          <h3 class="font-bold text-sm text-[var(--text-strong)]">Local AI Guide</h3>
           <p class="text-xs text-[var(--muted)] leading-relaxed">
-            Live stdin input routing, memory profiling, execution timing, and compiler logs.
+            Built-in prompt assistance, interactive debugging, and code walkthroughs without server storage.
           </p>
         </div>
 
-        <!-- Mobile / Collaboration Screen -->
-        <div class="border border-[var(--border)] bg-[var(--background-main)] rounded-2xl p-5 shadow-sm space-y-4 hover:shadow-md transition-shadow">
+        <!-- 2. Collaboration Rooms -->
+        <div class="border border-[var(--border)] bg-[var(--background-main)] rounded-2xl p-4 shadow-sm space-y-3 hover:shadow-md transition-shadow">
           <div class="flex items-center justify-between">
             <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-600 dark:text-purple-400">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
-              Mobile & Team
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+              Collab Rooms
             </span>
-            <span class="text-[11px] font-medium text-purple-600 dark:text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full">
-              Live Rooms
+            <span class="text-[10px] font-medium text-purple-600 dark:text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full font-mono">
+              WebSockets
             </span>
           </div>
           <div class="rounded-xl overflow-hidden border border-[var(--border)] aspect-[16/10] bg-slate-950 flex items-center justify-center">
             <img 
-              src="/showcase/demo-collaboration.png" 
-              alt="Collaboration & Mobile" 
-              class="w-full h-full object-cover"
+              src="/showcase/collaboration-rooms.png" 
+              alt="Collaboration Rooms" 
+              class="w-full h-full object-cover object-top"
               loading="lazy"
             />
           </div>
-          <h3 class="font-bold text-base text-[var(--text-strong)]">Pair Programming & Sync</h3>
+          <h3 class="font-bold text-sm text-[var(--text-strong)]">Multiplayer Rooms</h3>
           <p class="text-xs text-[var(--muted)] leading-relaxed">
-            Generate instant room codes, invite teammates, and pair program in real time from any device.
+            Ephemeral peer rooms, live team chat, and workspace snapshot sync with zero cloud database.
+          </p>
+        </div>
+
+        <!-- 3. Developer Profile -->
+        <div class="border border-[var(--border)] bg-[var(--background-main)] rounded-2xl p-4 shadow-sm space-y-3 hover:shadow-md transition-shadow">
+          <div class="flex items-center justify-between">
+            <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              Profile & Identity
+            </span>
+            <span class="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full font-mono">
+              Stateless
+            </span>
+          </div>
+          <div class="rounded-xl overflow-hidden border border-[var(--border)] aspect-[16/10] bg-slate-950 flex items-center justify-center">
+            <img 
+              src="/showcase/developer-profile.png" 
+              alt="Developer Profile & Identity" 
+              class="w-full h-full object-cover object-top"
+              loading="lazy"
+            />
+          </div>
+          <h3 class="font-bold text-sm text-[var(--text-strong)]">Profile & Session Audit</h3>
+          <p class="text-xs text-[var(--muted)] leading-relaxed">
+            Local credentials, workspace inventory metrics, and browser storage activity logging.
+          </p>
+        </div>
+
+        <!-- 4. Operator Manual -->
+        <div class="border border-[var(--border)] bg-[var(--background-main)] rounded-2xl p-4 shadow-sm space-y-3 hover:shadow-md transition-shadow">
+          <div class="flex items-center justify-between">
+            <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+              Operator Manual
+            </span>
+            <span class="text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full font-mono">
+              Handbook
+            </span>
+          </div>
+          <div class="rounded-xl overflow-hidden border border-[var(--border)] aspect-[16/10] bg-slate-950 flex items-center justify-center">
+            <img 
+              src="/showcase/operator-manual.png" 
+              alt="Operator Manual" 
+              class="w-full h-full object-cover object-top"
+              loading="lazy"
+            />
+          </div>
+          <h3 class="font-bold text-sm text-[var(--text-strong)]">Illustrated Handbook</h3>
+          <p class="text-xs text-[var(--muted)] leading-relaxed">
+            Architectural blueprints, execution pipelines, unified console guides, and CLI references.
           </p>
         </div>
       </div>
