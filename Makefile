@@ -33,7 +33,7 @@ else
     PRINT_CMD   = cat $(BENCH_OUTPUT)
 endif
 
-.PHONY: all build wasm clean test bench regression bot-rebase help
+.PHONY: all build wasm run clean test bench regression bot-rebase help
 
 all: build wasm
 
@@ -41,6 +41,11 @@ all: build wasm
 build:
 	@echo "==> Building $(BINARY_NAME)..."
 	$(GO) build $(GOFLAGS) -ldflags="$(LDFLAGS)" -o $(TARGET_BIN) $(MAIN_PKG)
+
+## run: Compiles and runs the VoidLAB server
+run: build
+	@echo "==> Running $(BINARY_NAME)..."
+	$(TARGET_BIN)
 
 ## wasm: Compiles the Go WebAssembly client-side engine
 wasm:
@@ -88,6 +93,7 @@ help:
 	@echo ""
 	@echo "Targets:"
 	@echo "  build       Compiles the VoidLAB server binary"
+	@echo "  run         Compiles and runs the VoidLAB server"
 	@echo "  wasm        Compiles the Go WebAssembly client-side engine"
 	@echo "  clean       Removes build artifacts, benchmarks, and coverage profiles"
 	@echo "  test        Runs test suite with coverage profile"

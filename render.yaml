@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: voidlab
+    env: docker
+    region: singapore
+    plan: starter
+    branch: main
+    dockerCommand: ./bin/voidlab
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: SESSION_SECRET
+        generateValue: true # Render automatically provisions a cryptographically secure secret for HMAC-SHA256 JWT signing
